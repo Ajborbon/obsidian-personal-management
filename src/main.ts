@@ -1,10 +1,13 @@
   import { Plugin } from 'obsidian';
+  import { activateModuloBase } from "./modules/moduloBase/index";
+  import { activateModuloRegistroTiempo } from "./modules/moduloRegistroTiempo/index";
 
-  export default class SamplePlugin extends Plugin {
+  export default class ManagementPlugin extends Plugin {
       async onload() {
-        // Código de inicialización aquí
-	    console.log('Cargando mi plugin de ejemplo.');
-	    return Promise.resolve();
+        console.log('Iniciando carga de plugin de gestión personal AJB');
+        //activateModuloBase(this); 
+        activateModuloRegistroTiempo(this); 
+        
       }
 
       async onunload() {
