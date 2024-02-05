@@ -1,5 +1,7 @@
   {
+    "extends": "@tsconfig/svelte/tsconfig.json",
     "compilerOptions": {
+      "types": ["svelte"],
       "target": "es6",
       "module": "es6",
       "strict": true,
