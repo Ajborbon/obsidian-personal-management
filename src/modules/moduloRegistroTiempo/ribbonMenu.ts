@@ -3,7 +3,9 @@ import { cumpleCondicion } from "./utils";
 
 export function registerRibbonMenu(plugin: Plugin): void {
     // Este es el ícono del menú en el ribbon, cambia "dice" por el ícono que prefieras
-    plugin.addRibbonIcon("clock", "Registro de Tiempo", async (event) => {
+    
+    plugin.ribbonButtonRT = plugin.addRibbonIcon("clock", "Registro de Tiempo", async (event) => {
+        
         // Crear el menú al hacer clic en el ícono
         const menu = new Menu(plugin.app);
 
@@ -55,6 +57,9 @@ export function registerRibbonMenu(plugin: Plugin): void {
     });
 }
 
-
-
-
+export function deactivateRibbonMenu(plugin: Plugin): void {
+    if (plugin.ribbonButtonRT) {
+        plugin.ribbonButtonRT.remove();
+        plugin.ribbonButtonRT = null;
+    }
+}

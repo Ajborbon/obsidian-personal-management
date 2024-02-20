@@ -1,0 +1,15 @@
+{
+    "pieces.code-lens": false,
+    "pieces.autoExpansion": false,
+    "pieces.automaticallyCopyLink": false,
+    "pieces.autoSave": false,
+    "pieces.exploredSnippetInsights.documentWithPiecesInsights": false,
+    "pieces.save.git.description": false,
+    "pieces.save.git.relatedLinks": false,
+    "pieces.save.git.relatedPeople": false,
+    "pieces.sidePanelViews.exploredMaterials": false,
+    "pieces.sidePanelViews.relatedMaterials": false,
+    "pieces.sidePanelViews.savedMaterials": false,
+    "pieces.sidePanelViews.suggestedMaterials": false,
+    "pieces.telemetry": false
+}

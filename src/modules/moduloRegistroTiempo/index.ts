@@ -1,9 +1,26 @@
+// ModuloRegistroTiempo.ts
+
 import { Plugin } from "obsidian";
-import { registerRibbonMenu } from "./ribbonMenu";
-import { registerCommands } from "./commands";
+import { registerRibbonMenu, deactivateRibbonMenu } from "./ribbonMenu";
+import { registerCommands, deactivateCommands } from "./commands";
 
-export function activateModuloRegistroTiempo(plugin: Plugin): void {
-    registerRibbonMenu(plugin);
-    registerCommands(plugin);
+export class ModuloRegistroTiempo {
+    plugin: Plugin;
+
+    constructor(plugin: Plugin) {
+        this.plugin = plugin;
+    }
+
+    activate() {
+        // Asegúrate de que el ribbon solo se registre si aún no ha sido registrado
+        if (!this.plugin.ribbonButtonRT) {
+            registerRibbonMenu(this.plugin);
+        }
+        registerCommands(this.plugin);
+    }
+
+    deactivate() {
+        deactivateRibbonMenu(this.plugin);
+        deactivateCommands(this.plugin);
+    }
 }
-

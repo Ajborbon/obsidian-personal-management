@@ -1,18 +1,76 @@
   import { Plugin } from 'obsidian';
+  import { PluginMainSettingsTab } from './settingsTab';
   import { activateModuloBase } from "./modules/moduloBase/index";
-  import { activateModuloRegistroTiempo } from "./modules/moduloRegistroTiempo/index";
   import {activateModuloBusquedaAvanzada} from "./modules/M_busquedaAvanzada/activadores"
-  export default class ManagementPlugin extends Plugin {
-      async onload() {
+  import { StatusBarExtension } from "./modules/moduloAliasStatusBar/statusBar";
+  import { ModuloRegistroTiempo } from "./modules/moduloRegistroTiempo/index";
+  import { PluginMainSettings } from './interfaces/pluginMainSettings';
+  import { DEFAULT_SETTINGS } from './defaults/defaultSettings';
+  
+
+
+
+export default class ManagementPlugin extends Plugin {
+  settings: PluginMainSettings;
+  // Declara una propiedad `settings` para almacenar la configuración del plugin.
+  statusBarExtension: StatusBarExtension | null = null;
+  moduloRegistroTiempo: ModuloRegistroTiempo | null = null;
+  registeredCommandIdsRT: string[] = [];
+  ribbonButtonRT: ReturnType<Plugin['addRibbonIcon']> | null = null;
+  // Declara una propiedad para mantener una instancia de `StatusBarExtension`.
+  
+
+    async onload() {
+        
+        await this.loadSettings();
+        // Añade la pestaña de configuración
+        this.addSettingTab(new PluginMainSettingsTab(this));
+        // Inicializa las instancias de los módulos
+        this.statusBarExtension = new StatusBarExtension(this);
+        this.moduloRegistroTiempo = new ModuloRegistroTiempo(this);
+        this.applyConfiguration();
+        // Aplica la configuración inicial basada en los ajustes cargados o predeterminados.
         console.log('Iniciando carga de plugin de Gestión Personal');
-        //activateModuloBase(this); 
-        activateModuloRegistroTiempo(this); 
-        activateModuloBusquedaAvanzada(this);
+      
       }
 
+      applyConfiguration() {
+        
+        if (this.settings.moduloRegistroTiempo) {
+            this.moduloRegistroTiempo?.activate(this);
+        } else {
+            this.moduloRegistroTiempo?.deactivate(this);
+        }
+         if (this.settings.moduloBusquedaAvanzada) {
+            activateModuloBusquedaAvanzada(this);
+         }
+         if (this.settings.moduloAliasStatusBar) {
+          this.statusBarExtension?.activate();
+          // Si la configuración para `moduloAliasStatusBar` es verdadera, activa el módulo.
+        } else {
+          this.statusBarExtension?.deactivate();
+          // Si es falsa, desactiva el módulo.
+        }
+    }
+    
       async onunload() {
           // Código de limpieza aquí
           console.log('Descargando plugin Gestión Personal');
           return Promise.resolve();
+      }
+
+      async loadSettings() {
+        // Método para cargar la configuración desde el almacenamiento de Obsidian.
+        this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
+        // Intenta cargar la configuración y mezcla los valores cargados con los predeterminados.
+      }
+
+      async saveSettings() {
+        // Método para guardar la configuración actual en el almacenamiento de Obsidian.
+        await this.saveData(this.settings);
+        // Guarda la configuración actual.
+        
+        this.applyConfiguration();
+        // Vuelve a aplicar la configuración para asegurarse de que los cambios recientes se reflejen inmediatamente.
       }
   }
