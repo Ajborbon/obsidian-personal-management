@@ -1,5 +1,5 @@
 import { Plugin, Notice, Modal } from "obsidian";
-import { buscarRegistrosActivos, crearObjetoRegistro, verificarTareasActivas } from "./utils"
+import { buscarRegistrosActivos, crearObjetoRegistro, verificarTareasActivas, definirTipoRegistro } from "./utils"
 import {modal_Ahora} from "./modals/modal_Ahora"
 
 export function registerCommands(plugin: Plugin): void {
@@ -54,6 +54,7 @@ export function registerCommands(plugin: Plugin): void {
                 return;
             }
             await verificarTareasActivas(registro, plugin.app)
+            await definirTipoRegistro(registro,plugin.app)
             // Asumiendo que se tiene una función o método para procesar el objeto `registro`
             // Por ejemplo, podría ser crear una nueva nota con la información de `registro`
             

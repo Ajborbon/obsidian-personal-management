@@ -1,4 +1,5 @@
-import { App, TFile, Modal } from "obsidian";
+import { App, TFile, Modal, FuzzySuggestModal, FuzzyMatch, Notice } from "obsidian";
+import {SeleccionModal} from "../modales/seleccionModal"
 
 export async function cumpleCondicion(app: App): Promise<boolean> {
     const files = app.vault.getMarkdownFiles();
@@ -179,6 +180,57 @@ function mostrarSugerencia(mensaje: string): Promise<boolean | undefined> {
 }
 
 
+        export async function definirTipoRegistro(registro: any, app: App) {
+            const totTareas = await encontrarTareasPendientes(app); // Paso `app` como argumento
+            let opcionesTitulo, valoresOpcion;
+            if (totTareas.length > 0) {
+                opcionesTitulo = [registro.nombre, "Alguna tarea en Ejecución", "Otro"];
+                valoresOpcion = ["Nota", "Tarea", "Otro"];
+            } else {
+                opcionesTitulo = [registro.nombre, "Otro"];
+                valoresOpcion = ["Nota", "Otro"];
+            }
+            debugger
+            // Define un mapeo entre el texto mostrado y el valor a retornar
+
+           // Uso:
+            // Suponiendo que app es tu instancia de App de Obsidian.
+            // titles y values deben tener la misma longitud y esta
+            const placeholder = "Sobre que es el registro de tiempo?";
+            
+            const modal = new SeleccionModal(app, opcionesTitulo, valoresOpcion, placeholder);
+            modal.openAndAwaitSelection().then(selection => {
+                debugger
+                new Notice(selection);
+            }).catch(error => {
+                debugger
+                console.error("Error o modal cerrado sin selección:", error);
+            });
+            
+            }
+
+       
+        
+        
+        
+  
+
+        async function encontrarTareasPendientes(app: App): Promise<string[]> {
+            let tareasPendientes: string[] = [];
+            const archivos = app.vault.getMarkdownFiles();
+            const archivosRelevantes = archivos.filter(archivo => !archivo.path.includes("Plantillas"));
+        
+            for (const archivo of archivosRelevantes) {
+                const contenido = await app.vault.read(archivo);
+                const coincidencias = contenido.match(/^ *- \[\/\] .*/gm) || [];
+        
+                // Elimina los espacios al inicio de cada coincidencia antes de agregarla al arreglo
+                const tareasLimpias = coincidencias.map(tarea => tarea.trim());
+                tareasPendientes = tareasPendientes.concat(tareasLimpias);
+            }
+            return tareasPendientes;
+        }
+        
 
 async function detenerTarea(tareaActiva: { file: TFile; titulo: string }, app: App): Promise<void> {
     // Aquí iría la lógica para marcar la tarea como no activa, probablemente actualizando su frontmatter
