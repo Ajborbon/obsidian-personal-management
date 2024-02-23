@@ -20,8 +20,8 @@ export class menuOtro {
       }
     
       async menuOtro (app: App, registro: any){
-        const opcionesOtro = ["Habituales", "Ninguno", "Areas de Vida", "Areas de Interés", "Proyectos de Q", "Proyectos GTD", "Tema de Interés", "Recurso Recurrente", "Buscar"] ;
-        const valoresOtro = ["hab", "nin", "actsAV", "actsAI", "actsPQ", "actsPGTD", "actsTI", "actsRR", "bus"];
+        const opcionesOtro = ["Propias", "Areas de Vida", "Areas de Interés", "Proyectos de Q", "Proyectos GTD", "Tema de Interés", "Recurso Recurrente"] ;
+        const valoresOtro = ["hab", "nin", "actsAV", "actsAI", "actsPQ", "actsPGTD", "actsTI", "actsRR"];
         const placeholderOtro = "¿Que categoria?";
         const modalOtro = new SeleccionModal(app, opcionesOtro, valoresOtro, placeholderOtro);
         let temaOtro:{grupo:string;actividad:string,nombre:string};
@@ -32,9 +32,6 @@ export class menuOtro {
                   
                 case "hab":
                     temaOtro = await this.habitual(app);
-                    break;
-                case "nin":
-                    temaOtro = await this.ninguno(app);
                     break;
                 case "actsAV":
                 case "actsAI":
@@ -58,7 +55,21 @@ export class menuOtro {
         }
 
         async habitual (app: App){
-
+            debugger
+            const grupos = await this.getFrontmatterField(app,this.pathCampos, "temas");
+            const actsGrupos = await this.resultYaml(app,"actsTemas")
+            // Filtrar y preparar las actividades existentes para la búsqueda
+            let itemsForSearch = actsGrupos
+            .filter((item) => grupos.includes(item.grupo)) // Usa la propiedad 'grupo' en lugar de item[0]
+            .map((item) => ({
+                value: `${item.actividad} / ${item.grupo}`, // Cambia el orden si es necesario
+                activity: item.actividad, // Usa la propiedad 'actividad' en lugar de item[1]
+                group: item.grupo,
+                // Usa la propiedad 'grupo' en lugar de item[0]
+            }));
+            let eleccion = await this.fuzzySelectOrC.showFuzzySearchModal(itemsForSearch, grupos);
+            let objEleccion = {grupo: eleccion[1], actividad: eleccion[0], nombre: ""};
+            return objEleccion;   
         }
 
         async ninguno (app: App){
@@ -129,6 +140,38 @@ export class menuOtro {
             // Devuelve un arreglo vacío si no se encuentra el archivo o si ocurre cualquier otro problema
             return [];
         }
+
+        async getFrontmatterField(app: App, file: string, field: string): Promise<any> {
+            try {
+                const tFile = app.vault.getAbstractFileByPath(file);
+                if (tFile instanceof TFile) {
+                    const cache = app.metadataCache.getFileCache(tFile);
+                    const frontmatter = cache?.frontmatter;
+        
+                    if (frontmatter && frontmatter.hasOwnProperty(field)) {
+                        const fieldValue = frontmatter[field];
+        
+                        if (fieldValue === undefined || fieldValue === null || fieldValue === "") {
+                            console.log("El campo está vacío o no existe.");
+                            return null; // O manejar según lo necesites
+                        } else {
+                            console.log("Frontmatter consultado con éxito");
+                            return fieldValue; // Devuelve el valor del campo
+                        }
+                    } else {
+                        console.log("El campo no existe en el frontmatter.");
+                        return null; // O manejar según lo necesites
+                    }
+                } else {
+                    console.error("El archivo no existe o no es un archivo de texto.");
+                    return null; // O manejar según lo necesites
+                }
+            } catch (err) {
+                console.error("Error al consultar el frontmatter", err);
+                return null; // O manejar según lo necesites
+            }
+        }
+        
 
         // Esta función encuentra los archivos de subsistemas y cuyo estado es 🟢
         async findMainFilesWithState(app, tipo) {

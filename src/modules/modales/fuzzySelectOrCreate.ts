@@ -130,6 +130,8 @@ export class fuzzySelectOrCreate {
             createNewDiv.style.color = "blue";
             createNewDiv.onclick = () => {
               selectedValue = input.value; // Guardar la nueva actividad
+              debugger
+              if (tipo== undefined){ tipo = "actsTemas"}
               selectGroupForNewActivity(menuOtro, tipo); // Proceder a seleccionar un grupo
             };
             resultsDiv.appendChild(createNewDiv);
