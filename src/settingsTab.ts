@@ -62,6 +62,16 @@ export class PluginMainSettingsTab extends PluginSettingTab {
                             await this.plugin.saveSettings();
                         }));
 
+                    new Setting(tabContent)
+                    .setName('Activar Módulo Base - Pruebas')
+                    .setDesc('Activa o desactiva el módulo de pruebas.')
+                    .addToggle(toggle => toggle
+                        .setValue(this.plugin.settings.moduloBase)
+                        .onChange(async (value) => {
+                            this.plugin.settings.moduloBase = value;
+                            await this.plugin.saveSettings();
+                        }));
+
             
 
             }

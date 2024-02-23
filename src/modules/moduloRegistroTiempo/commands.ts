@@ -64,40 +64,6 @@ export function registerCommands(plugin: Plugin): void {
     // Almacenar el ID del comando en registeredCommandIds.
     plugin.registeredCommandIdsRT.push(id3.id);
 
-
-    const id4 = plugin.addCommand({
-        id: "crear-archivo-template",
-        name: "Crear archivo desde template",
-        callback: async () => {
-            
-            const pluginId = 'templater-obsidian';
-            const isPluginInstalled = plugin.app.plugins.enabledPlugins.has(pluginId);
-            //const templaterPlugin = plugin.app.plugins.plugins[pluginId];
-            // Intenta obtener la plantilla como TFile
-            let template = "Plantillas/Anotaciones/Plt - Anotaciones.md";
-            
-            // Intenta obtener la carpeta como TFolder
-            let folderObj = plugin.app.vault.getAbstractFileByPath("Inbox");
-            if (!(folderObj instanceof TFolder)) {
-                new Notice("La carpeta especificada no existe o no es una carpeta.");
-                return; // Salir si no se encuentra la carpeta o no es una carpeta
-            }
-
-            let fileName = "toDefine"
-            let openNote = true
-            
-            debugger
-            const archivo = await createNoteFromTemplate(plugin, template, folderObj, fileName, openNote);
-
-            if (!archivo) {
-                new Notice("No se pudo crear el archivo.");
-                return;
-            }
-         
-        },
-    });
-    // Almacenar el ID del comando en registeredCommandIds.
-    plugin.registeredCommandIdsRT.push(id4.id);
 }
 
 

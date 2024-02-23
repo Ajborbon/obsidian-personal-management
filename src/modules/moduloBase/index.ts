@@ -1,16 +1,25 @@
-import { Plugin } from "obsidian";
-import { ejemploCommand } from "./commands";
-import { ejemploView } from "./views";
+import { Plugin, TFile } from 'obsidian';
+import { registerCommands, deactivateCommands } from "./commands";
 
-export function activateModuloBase(plugin: Plugin): void {
-    // Registra comandos del módulo
-    plugin.addCommand(ejemploCommand);
+export class ModuloBase {
+    plugin: Plugin;
+    moduloBase: ModuloBase | null = null;
 
-    // Registra vistas o elementos de UI específicos del módulo
-    plugin.addRibbonIcon("dice", "Ejemplo View", () => {
-        new ejemploView().show();
-    });
+    constructor(plugin: Plugin) {
+        this.plugin = plugin;
+    }
 
-    // Aquí podrías inicializar otras funcionalidades del módulo
+    activate() {
+        if (this.moduloBase) return; // Si ya está activo, no hacer nada
+
+        registerCommands(this.plugin);
+    }
+
+    deactivate() {
+        if (!this.statusBar) return; // Si ya está desactivado, no hacer nada
+        deactivateCommands(this.plugin);
+       
+    }
+
+
 }
-

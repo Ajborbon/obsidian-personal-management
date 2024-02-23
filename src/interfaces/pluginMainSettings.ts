@@ -3,6 +3,7 @@
 export interface PluginMainSettings {
     moduloRegistroTiempo: boolean,
     moduloAliasStatusBar: boolean,
+    moduloBase: boolean,
     // DEFINICION DE ESTRUCTURA DE SUBSISTEMAS
     // Articulos Blog
     folder_ABlog: string,
@@ -53,5 +54,17 @@ export interface PluginMainSettings {
     // Registro Tiempo
     folder_RegistroTiempo: string,
     indice_RegistroTiempo: string,
-    // Añade aquí más configuraciones para otros módulos si es necesario
+    
+    // Estructura
+    folder_AreasVida: string,
+    indice_AreasVida: string,
+    nameFile_AreasVida : string,
+    folder_AreasInteres: string,
+    indice_AreasInteres: string,
+    nameFile_AreasInteres : string,
+    folder_TemasInteres: string,
+    indice_TemasInteres: string,
+
+
 }
+

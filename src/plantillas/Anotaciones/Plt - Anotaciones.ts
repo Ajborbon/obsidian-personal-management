@@ -1,4 +1,4 @@
-<%*
+export const plantilla = `<%*
 debugger
 const dv = this.DataviewAPI;
 const {update} = this.app.plugins.plugins["metaedit"].api
@@ -124,9 +124,9 @@ asunto: <%* if(asunto){ %>
 - "[[<%nombre%>]]" <%*}%>
 related:
 ---
-# `VIEW[{aliases}]` 
+# \`VIEW[{aliases}]\` 
 >[!info]- Descripcion
->`VIEW[{descripcion}]`
+>\`VIEW[{descripcion}]\`
 > 
 
 Plantilla oculta
@@ -145,9 +145,9 @@ _Frases que apoyan mi objetivo_
 	- [ ] Meditación de <% titulo %> #cx/Meditacion 🔁 every day when done 📅 <% tp.date.now("YYYY-MM-DD") %>
 <%*}else if(clasificacion =="Feedback Semanal"){-%>
 ## Feedback
-```dataviewjs
+\`\`\`dataviewjs
 dv.paragraph(dv.current().descripcion)
-```
+\`\`\`
 <%*}else if(clasificacion =="Video Youtube"){-%>
 ## Video
 
@@ -167,12 +167,12 @@ dv.paragraph(dv.current().descripcion)
 <%*}else if(clasificacion =="Grupo de Hojas de Trabajo"){-%>
 
 ## [[Comentarios a las plantillas#Temas relacionados a este grupo de hojas de trabajo|Temas relacionados a este grupo de hojas de trabajo:]]
-```dataviewjs
+\`\`\`dataviewjs
 const {crearAx} = customJS
 let hijos = dv.pages().filter(b=> dv.func.contains(b.asunto, dv.current().file.link))
 let totalHijos = 
 dv.table(["Tema","Tipo","Fecha Modificación", "Pendientes","Hijos"], hijos.map(b=> [b.file.link, b.tema, b.fecha, b.file.tasks.filter(b=> b.status == ' ' || b.status == '/').length, crearAx.paginasHijos(dv,b).length-1]))
-```
+\`\`\`
 
 
 <%*}%>
@@ -180,17 +180,19 @@ dv.table(["Tema","Tipo","Fecha Modificación", "Pendientes","Hijos"], hijos.map(
 
 # Fin
 - [/] Finalizado el desarrollo de Anotación <%id%> #cx/Computador/OrganizarNotas  
-Estado de la nota:  `INPUT[estadoNota][:estado]`
-```dataviewjs
+Estado de la nota:  \`INPUT[estadoNota][:estado]\`
+\`\`\`dataviewjs
 const {callDV} = customJS
 callDV.CambiarTituloDescripcion(dv)
-```
+\`\`\`
 ---
-```dataviewjs
+\`\`\`dataviewjs
 const {callDV} = customJS
 callDV.CarruselAnotaciones(dv)
-```
-```dataviewjs
+\`\`\`
+\`\`\`dataviewjs
 const {callDV} = customJS
 callDV.BotonesStandar(dv)
-```
+\`\`\`
+
+`
