@@ -21,7 +21,7 @@ export class menuOtro {
     
       async menuOtro (app: App, registro: any){
         const opcionesOtro = ["Propias", "Areas de Vida", "Areas de Interés", "Proyectos de Q", "Proyectos GTD", "Tema de Interés", "Recurso Recurrente"] ;
-        const valoresOtro = ["hab", "nin", "actsAV", "actsAI", "actsPQ", "actsPGTD", "actsTI", "actsRR"];
+        const valoresOtro = ["hab", "actsAV", "actsAI", "actsPQ", "actsPGTD", "actsTI", "actsRR"];
         const placeholderOtro = "¿Que categoria?";
         const modalOtro = new SeleccionModal(app, opcionesOtro, valoresOtro, placeholderOtro);
         let temaOtro:{grupo:string;actividad:string,nombre:string};
@@ -39,6 +39,7 @@ export class menuOtro {
                 case "actsPGTD":
                 case "actsTI":
                 case "actsRR":
+                    debugger
                     temaOtro = await this.elemSG(app,selectionOtro); 
                     siAsunto = true;
                     break;
@@ -55,7 +56,6 @@ export class menuOtro {
         }
 
         async habitual (app: App){
-            debugger
             const grupos = await this.getFrontmatterField(app,this.pathCampos, "temas");
             const actsGrupos = await this.resultYaml(app,"actsTemas")
             // Filtrar y preparar las actividades existentes para la búsqueda
