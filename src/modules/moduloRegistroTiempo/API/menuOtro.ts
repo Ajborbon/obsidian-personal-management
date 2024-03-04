@@ -39,7 +39,6 @@ export class menuOtro {
                 case "actsPGTD":
                 case "actsTI":
                 case "actsRR":
-                    debugger
                     temaOtro = await this.elemSG(app,selectionOtro); 
                     siAsunto = true;
                     break;

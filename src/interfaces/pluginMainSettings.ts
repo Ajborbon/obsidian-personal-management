@@ -4,7 +4,13 @@ export interface PluginMainSettings {
     moduloRegistroTiempo: boolean,
     moduloAliasStatusBar: boolean,
     moduloBase: boolean,
+    // Archivos de campos
+    file_camposCentral: string,
+
     // DEFINICION DE ESTRUCTURA DE SUBSISTEMAS
+    // Anotaciones
+    folder_Anotaciones: string,
+    indice_Anotaciones: string,
     // Articulos Blog
     folder_ABlog: string,
     indice_ABlog: string,

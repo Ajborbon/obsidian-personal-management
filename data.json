@@ -1,5 +1,5 @@
 {
-  "moduloRegistroTiempo": false,
+  "moduloRegistroTiempo": true,
   "moduloAliasStatusBar": false,
   "moduloBase": true,
   "folder_ABlog": "Subsistemas/Articulos Blog/Articulos",
@@ -35,5 +35,13 @@
   "folder_RecursosRecurrentes": "Subsistemas/Recursos Recurrentes/Recursos",
   "indice_RecursosRecurrentes": "Subsistemas/Recursos Recurrentes/Indice Recursos Recurrentes",
   "folder_RegistroTiempo": "Subsistemas/Registro Tiempo/Registros",
-  "indice_RegistroTiempo": "Subsistemas/Registro Tiempo/Indice Registro Tiempo"
+  "indice_RegistroTiempo": "Subsistemas/Registro Tiempo/Indice Registro Tiempo",
+  "folder_AreasVida": "Estructura/Areas de Vida",
+  "indice_AreasVida": "Estructura/Areas de Vida/Indice Areas de Vida",
+  "nameFile_AreasVida": "indexAV",
+  "folder_AreasInteres": "Estructura/Areas de Interes",
+  "indice_AreasInteres": "Estructura/Areas de Interes/Indice Areas de Interes",
+  "nameFile_AreasInteres": "indexAI",
+  "folder_TemasInteres": "Estructura/Temas de Interes",
+  "indice_TemasInteres": "Estructura/Temas de Interes/Indice Temas de Interes"
 }

@@ -90,6 +90,35 @@ export class PluginMainSettingsTab extends PluginSettingTab {
                     }
                 };
             
+
+                // Bloque desplegable para "Anotaciones"
+                const anotacionesTitle = tabContent.createEl('p', { text: '▶ Subsistema de "Anotaciones"' });
+                anotacionesTitle.setAttribute('data-title', 'Subsistema de "Anotaciones"');
+                anotacionesTitle.style.cursor = 'pointer';
+                const anotacionesContent = tabContent.createDiv();
+                anotacionesContent.style.display = 'none'; // Oculta inicialmente los ajustes
+                anotacionesTitle.onclick = toggleCollapse;
+            
+                new Setting(anotacionesContent) // Usamos `blogContent` en lugar de `tabContent`
+                    .setName('Carpeta de Anotaciones')
+                    .setDesc('Establece la ruta de la carpeta donde se guardarán todas las Anotaciones.')
+                    .addText(text => text
+                        .setValue(this.plugin.settings.folder_Anotaciones)
+                        .onChange(async (value) => {
+                            this.plugin.settings.folder_Anotaciones = value;
+                            await this.plugin.saveSettings();
+                        }));
+            
+                new Setting(anotacionesContent) // Usamos `blogContent` en lugar de `tabContent`
+                    .setName('Indice de Anotaciones')
+                    .setDesc('Establece la ruta del índice de las Anotaciones.')
+                    .addText(text => text
+                        .setValue(this.plugin.settings.indice_Anotaciones)
+                        .onChange(async (value) => {
+                            this.plugin.settings.indice_Anotaciones = value;
+                            await this.plugin.saveSettings();
+                        }));
+
                 // Bloque desplegable para "Artículos de Blog"
                 const blogTitle = tabContent.createEl('p', { text: '▶ Subsistema de "Artículos de Blog"' });
                 blogTitle.setAttribute('data-title', 'Subsistema de "Artículos de Blog"');

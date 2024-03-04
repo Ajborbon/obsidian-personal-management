@@ -7,7 +7,7 @@
   import { PluginMainSettings } from './interfaces/pluginMainSettings';
   import { DEFAULT_SETTINGS } from './defaults/defaultSettings';
   import {registroTiempoAPI} from './modules/moduloRegistroTiempo/API/registroTiempoAPI'
-  
+  import { starterAPI } from './modules/inicializacionSubsistemas/API/starterAPI';
 
 
 
@@ -29,7 +29,7 @@ export default class ManagementPlugin extends Plugin {
         // cargar API registro Tiempo
         this.app.plugins.plugins['Total-Personal-Management'] = this;
         this.registroTiempoAPI = new registroTiempoAPI(this);
-
+        this.starterAPI = new starterAPI(this);
         // Añade la pestaña de configuración
         this.addSettingTab(new PluginMainSettingsTab(this));
         // Inicializa las instancias de los módulos
