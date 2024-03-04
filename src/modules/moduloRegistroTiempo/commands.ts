@@ -1,5 +1,5 @@
 import { Plugin, Notice, Modal, TFile, TFolder } from "obsidian";
-import { buscarRegistrosActivos, crearObjetoRegistro, verificarTareasActivas, definirTipoRegistro, createNoteFromTemplate } from "./utils"
+import { buscarRegistrosActivos, crearObjetoRegistro, verificarTareasActivas, definirTipoRegistro } from "./utils"
 import {modal_Ahora} from "./modals/modal_Ahora"
 
 export function registerCommands(plugin: Plugin): void {
@@ -72,7 +72,7 @@ export function deactivateCommands(plugin: Plugin): void {
     
     if (!plugin.registeredCommandIdsRT) return;
     // Ejemplo de cómo podrías manejar la "desactivación" de comandos.
-    plugin.registeredCommandIdsRT.forEach(commandId => {
+    plugin.registeredCommandIdsRT.forEach((commandId: string | number) => {
         const command = plugin.app.commands.commands[commandId];
         
         if (command) {

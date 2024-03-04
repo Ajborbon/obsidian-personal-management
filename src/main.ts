@@ -4,7 +4,7 @@
   import {activateModuloBusquedaAvanzada} from "./modules/M_busquedaAvanzada/activadores"
   import { StatusBarExtension } from "./modules/moduloAliasStatusBar/statusBar";
   import { ModuloRegistroTiempo } from "./modules/moduloRegistroTiempo/index";
-  import { PluginMainSettings } from './interfaces/pluginMainSettings';
+  import type { PluginMainSettings } from './interfaces/pluginMainSettings';
   import { DEFAULT_SETTINGS } from './defaults/defaultSettings';
   import {registroTiempoAPI} from './modules/moduloRegistroTiempo/API/registroTiempoAPI'
   import { starterAPI } from './modules/inicializacionSubsistemas/API/starterAPI';
@@ -12,7 +12,7 @@
 
 
 export default class ManagementPlugin extends Plugin {
-  settings: PluginMainSettings;
+  settings: PluginMainSettings | undefined;
   // Declara una propiedad `settings` para almacenar la configuración del plugin.
   statusBarExtension: StatusBarExtension | null = null;
   moduloRegistroTiempo: ModuloRegistroTiempo | null = null;
@@ -20,10 +20,13 @@ export default class ManagementPlugin extends Plugin {
   registeredCommandIdsRT: string[] = [];
   registeredCommandIdsMB: string[] = [];
   ribbonButtonRT: ReturnType<Plugin['addRibbonIcon']> | null = null;
+  app: any;
+  registroTiempoAPI: registroTiempoAPI | undefined;
+  starterAPI: starterAPI | undefined;
   // Declara una propiedad para mantener una instancia de `StatusBarExtension`.
   
 
-    async onload() {
+    async onload() { 
         
         await this.loadSettings();
         // cargar API registro Tiempo
@@ -41,6 +44,9 @@ export default class ManagementPlugin extends Plugin {
         console.log('Iniciando carga de plugin de Gestión Personal');
       
       }
+  addSettingTab(arg0: PluginMainSettingsTab) {
+    throw new Error('Method not implemented.');
+  }
 
       applyConfiguration() {
         // Modulo Base es el módulo sobre el que estoy haciendo pruebas de desarrollo.

@@ -8,3 +8,4 @@ export function addCommands(plugin: SamplePlugin) {
         console.log("¡Hey, tú!");
       },
     });
+  }

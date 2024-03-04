@@ -46,17 +46,17 @@ export class fuzzySelectOrCreate {
     return modal;
   }
 
-  filterItems(query, items) {
-    return items.filter(item =>
+  filterItems(query: string, items: any[]) {
+    return items.filter((item: { value: string; }) =>
       item.value.toLowerCase().includes(query.toLowerCase())
     );
   }
 
-  async updateYAMLFields(tipo, selectedValue, selectedGroup) {
+  async updateYAMLFields(tipo: string | number, selectedValue: any, selectedGroup: any) {
     try {
         debugger
         const file = app.vault.getAbstractFileByPath(this.pathCampos);
-        await app.fileManager.processFrontMatter(file, frontmatter => {
+        await app.fileManager.processFrontMatter(file, (frontmatter: { [x: string]: any[]; }) => {
             // Asumiendo que 'actsTemas' es el campo a modificar
             debugger;
             let currentActs = frontmatter[tipo] || [];
@@ -69,7 +69,7 @@ export class fuzzySelectOrCreate {
             }
         }
 
-  async showFuzzySearchModal(items, groups, tipo) {
+  async showFuzzySearchModal(items: any, groups: any[], tipo: string | undefined) {
     return new Promise((resolve, reject) => {
         let selectedValue = ""; // Variable para guardar la opción seleccionada o ingresada por el usuario
         let selectedGroup = "";
@@ -104,9 +104,9 @@ export class fuzzySelectOrCreate {
         const resultsDiv = document.createElement("div");
         modal.appendChild(resultsDiv);
       
-        function updateResultsDisplay(filteredResults, menuOtro) {
+        function updateResultsDisplay(filteredResults: any[], menuOtro: this) {
           resultsDiv.innerHTML = ""; // Limpiar resultados previos
-          filteredResults.forEach((result) => {
+          filteredResults.forEach((result: { value: string | null; activity: string; group: string; }) => {
             const div = document.createElement("div");
             div.textContent = result.value;
             div.style.cursor = "pointer";
@@ -138,7 +138,7 @@ export class fuzzySelectOrCreate {
           }
         }
       
-        function selectGroupForNewActivity(menuOtro, tipo) {
+        function selectGroupForNewActivity(menuOtro: { esRecurrente: (arg0: string) => any; updateYAMLFields: (arg0: any, arg1: string, arg2: string) => any; }, tipo: any) {
           resultsDiv.innerHTML = "";
           input.remove();
           spacer.remove();
@@ -149,7 +149,7 @@ export class fuzzySelectOrCreate {
           texto.style.textAlign = "center"; // Centrar el título, ajusta los estilos según sea necesario
           resultsDiv.appendChild(texto); 
       
-          groups.forEach((group) => {
+          groups.forEach((group: string | null) => {
             const groupDiv = document.createElement("div");
             groupDiv.textContent = group;
             groupDiv.style.cursor = "pointer";
@@ -169,7 +169,7 @@ export class fuzzySelectOrCreate {
           });
         }
       
-        function displaySelectedValue(activity, group) {
+        function displaySelectedValue(activity: any, group: any) {
           resultsDiv.innerHTML = `Seleccionado: ${activity} / ${group}`;
           // Aquí puedes cerrar el modal o permitir al usuario hacer más acciones
         }

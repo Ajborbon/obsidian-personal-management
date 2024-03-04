@@ -1,5 +1,5 @@
 // src/defaults/defaultSettings.ts
-import { PluginMainSettings } from '../interfaces/pluginMainSettings';
+import type { PluginMainSettings } from '../interfaces/pluginMainSettings';
 
 export const DEFAULT_SETTINGS: PluginMainSettings = {
   moduloRegistroTiempo: true,

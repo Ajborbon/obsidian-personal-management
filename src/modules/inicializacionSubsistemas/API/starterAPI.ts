@@ -18,7 +18,7 @@ export class starterAPI {
     }
     
 
-    async crearNota(infoSubsistema, campos) {
+    async crearNota(infoSubsistema: { folder: string | number; indice: string | number; }, campos: any) {
         
         let nota = {}; // Inicializa el objeto nota.
         Object.assign(this.infoSubsistema, infoSubsistema); 
@@ -78,9 +78,9 @@ export class starterAPI {
         // Obtén todos los archivos Markdown
         const files = app.vault.getMarkdownFiles();
         // Filtra por los archivos en la carpeta deseada
-        const registrosExistentes = files.filter(file => file.path.startsWith(this.infoSubsistema.folder));
+        const registrosExistentes = files.filter((file: { path: string; }) => file.path.startsWith(this.infoSubsistema.folder));
         // Usa metadataCache para buscar los IDs en el frontmatter
-        registrosExistentes.forEach(file => {
+        registrosExistentes.forEach((file: any) => {
             const metadata = app.metadataCache.getFileCache(file)?.frontmatter;
             if (metadata && metadata.id && !isNaN(metadata.id)) {
                 const id = parseInt(metadata.id);
@@ -171,7 +171,7 @@ export class starterAPI {
 
 
     async getClasificacion(){
-        let clasificacion, tagClasificacion, clasificacionAX, tagsClasificacionAX;
+        let clasificacion: string | null, tagClasificacion: string | null, clasificacionAX: { [x: string]: any; }, tagsClasificacionAX: string | any[];
         let nuevaClasificacion = false;
         const file = app.vault.getAbstractFileByPath(this.pathCampos);
         
@@ -209,7 +209,7 @@ export class starterAPI {
 
         if (nuevaClasificacion) {
             try {
-                await app.fileManager.processFrontMatter(file, frontmatter => {
+                await app.fileManager.processFrontMatter(file, (frontmatter: { tituloClasificacionAX: any[]; tagsClasificacionAX: any[]; }) => {
                     // Asumiendo que 'actsTemas' es el campo a modificar
                 let newClasificacion = [...clasificacionAX, clasificacion]
                 let newTagClasificacion = [...tagsClasificacionAX, tagClasificacion]

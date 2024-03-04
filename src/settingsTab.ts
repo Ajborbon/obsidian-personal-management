@@ -45,9 +45,9 @@ export class PluginMainSettingsTab extends PluginSettingTab {
                 new Setting(tabContent)
                 .setName('Ver Alias en el Status Bar')
                 .setDesc('Elige si deseas ver el Aliases de las notas en el Status Bar.')
-                .addToggle(toggle => toggle
+                .addToggle((toggle: { setValue: (arg0: any) => { (): any; new(): any; onChange: { (arg0: (value: any) => Promise<void>): any; new(): any; }; }; }) => toggle
                     .setValue(this.plugin.settings.moduloAliasStatusBar)
-                    .onChange(async (value) => {
+                    .onChange(async (value: any) => {
                         this.plugin.settings.moduloAliasStatusBar = value;
                         await this.plugin.saveSettings();
                     }));
@@ -55,9 +55,9 @@ export class PluginMainSettingsTab extends PluginSettingTab {
                     new Setting(tabContent)
                     .setName('Activar Módulo Registro Tiempo')
                     .setDesc('Activa o desactiva el módulo de registro de tiempo.')
-                    .addToggle(toggle => toggle
+                    .addToggle((toggle: { setValue: (arg0: any) => { (): any; new(): any; onChange: { (arg0: (value: any) => Promise<void>): any; new(): any; }; }; }) => toggle
                         .setValue(this.plugin.settings.moduloRegistroTiempo)
-                        .onChange(async (value) => {
+                        .onChange(async (value: any) => {
                             this.plugin.settings.moduloRegistroTiempo = value;
                             await this.plugin.saveSettings();
                         }));
@@ -65,9 +65,9 @@ export class PluginMainSettingsTab extends PluginSettingTab {
                     new Setting(tabContent)
                     .setName('Activar Módulo Base - Pruebas')
                     .setDesc('Activa o desactiva el módulo de pruebas.')
-                    .addToggle(toggle => toggle
+                    .addToggle((toggle: { setValue: (arg0: any) => { (): any; new(): any; onChange: { (arg0: (value: any) => Promise<void>): any; new(): any; }; }; }) => toggle
                         .setValue(this.plugin.settings.moduloBase)
-                        .onChange(async (value) => {
+                        .onChange(async (value: any) => {
                             this.plugin.settings.moduloBase = value;
                             await this.plugin.saveSettings();
                         }));
@@ -79,7 +79,7 @@ export class PluginMainSettingsTab extends PluginSettingTab {
             // Contenido para la segunda pestaña
             if (index === 1) {
                 // Función para manejar el clic en el título del bloque desplegable
-                const toggleCollapse = (event) => {
+                const toggleCollapse = (event: { target: { nextElementSibling: any; innerHTML: string; getAttribute: (arg0: string) => string; }; }) => {
                     const nextElement = event.target.nextElementSibling;
                     if (nextElement.style.display === 'none') {
                         nextElement.style.display = 'block';
@@ -102,9 +102,9 @@ export class PluginMainSettingsTab extends PluginSettingTab {
                 new Setting(anotacionesContent) // Usamos `blogContent` en lugar de `tabContent`
                     .setName('Carpeta de Anotaciones')
                     .setDesc('Establece la ruta de la carpeta donde se guardarán todas las Anotaciones.')
-                    .addText(text => text
+                    .addText((text: { setValue: (arg0: any) => { (): any; new(): any; onChange: { (arg0: (value: any) => Promise<void>): any; new(): any; }; }; }) => text
                         .setValue(this.plugin.settings.folder_Anotaciones)
-                        .onChange(async (value) => {
+                        .onChange(async (value: any) => {
                             this.plugin.settings.folder_Anotaciones = value;
                             await this.plugin.saveSettings();
                         }));
@@ -112,9 +112,9 @@ export class PluginMainSettingsTab extends PluginSettingTab {
                 new Setting(anotacionesContent) // Usamos `blogContent` en lugar de `tabContent`
                     .setName('Indice de Anotaciones')
                     .setDesc('Establece la ruta del índice de las Anotaciones.')
-                    .addText(text => text
+                    .addText((text: { setValue: (arg0: any) => { (): any; new(): any; onChange: { (arg0: (value: any) => Promise<void>): any; new(): any; }; }; }) => text
                         .setValue(this.plugin.settings.indice_Anotaciones)
-                        .onChange(async (value) => {
+                        .onChange(async (value: any) => {
                             this.plugin.settings.indice_Anotaciones = value;
                             await this.plugin.saveSettings();
                         }));
@@ -130,9 +130,9 @@ export class PluginMainSettingsTab extends PluginSettingTab {
                 new Setting(blogContent) // Usamos `blogContent` en lugar de `tabContent`
                     .setName('Carpeta de Artículos del Blog')
                     .setDesc('Establece la ruta de la carpeta donde se guardarán los artículos del blog.')
-                    .addText(text => text
+                    .addText((text: { setValue: (arg0: any) => { (): any; new(): any; onChange: { (arg0: (value: any) => Promise<void>): any; new(): any; }; }; }) => text
                         .setValue(this.plugin.settings.folder_ABlog)
-                        .onChange(async (value) => {
+                        .onChange(async (value: any) => {
                             this.plugin.settings.folder_ABlog = value;
                             await this.plugin.saveSettings();
                         }));
@@ -140,9 +140,9 @@ export class PluginMainSettingsTab extends PluginSettingTab {
                 new Setting(blogContent) // Usamos `blogContent` en lugar de `tabContent`
                     .setName('Indice de Artículos del Blog')
                     .setDesc('Establece la ruta del índice de los artículos del blog.')
-                    .addText(text => text
+                    .addText((text: { setValue: (arg0: any) => { (): any; new(): any; onChange: { (arg0: (value: any) => Promise<void>): any; new(): any; }; }; }) => text
                         .setValue(this.plugin.settings.indice_ABlog)
-                        .onChange(async (value) => {
+                        .onChange(async (value: any) => {
                             this.plugin.settings.indice_ABlog = value;
                             await this.plugin.saveSettings();
                         }));
@@ -159,9 +159,9 @@ export class PluginMainSettingsTab extends PluginSettingTab {
                 new Setting(desarrollosContent) // Usamos `desarrollosContent` en lugar de `tabContent`
                     .setName('Carpeta de Desarrollos y Códigos')
                     .setDesc('Establece la ruta de la carpeta donde se guardarán los desarrollos y códigos.')
-                    .addText(text => text
+                    .addText((text: { setValue: (arg0: any) => { (): any; new(): any; onChange: { (arg0: (value: any) => Promise<void>): any; new(): any; }; }; }) => text
                         .setValue(this.plugin.settings.folder_Desarrollos)
-                        .onChange(async (value) => {
+                        .onChange(async (value: any) => {
                             this.plugin.settings.folder_Desarrollos = value;
                             await this.plugin.saveSettings();
                         }));
@@ -170,9 +170,9 @@ export class PluginMainSettingsTab extends PluginSettingTab {
                 new Setting(desarrollosContent) // Usamos `desarrollosContent` en lugar de `tabContent`
                     .setName('Índice de Desarrollos y Códigos')
                     .setDesc('Establece la ruta del índice de los desarrollos y códigos.')
-                    .addText(text => text
+                    .addText((text: { setValue: (arg0: any) => { (): any; new(): any; onChange: { (arg0: (value: any) => Promise<void>): any; new(): any; }; }; }) => text
                         .setValue(this.plugin.settings.indice_Desarrollos)
-                        .onChange(async (value) => {
+                        .onChange(async (value: any) => {
                             this.plugin.settings.indice_Desarrollos = value;
                             await this.plugin.saveSettings();
                         }));
@@ -188,9 +188,9 @@ export class PluginMainSettingsTab extends PluginSettingTab {
                 new Setting(estudioContent)
                     .setName('Carpeta de Temas de Estudio')
                     .setDesc('Establece la ruta de la carpeta donde se guardarán los temas de estudio.')
-                    .addText(text => text
+                    .addText((text: { setValue: (arg0: any) => { (): any; new(): any; onChange: { (arg0: (value: any) => Promise<void>): any; new(): any; }; }; }) => text
                         .setValue(this.plugin.settings.folder_Estudio)
-                        .onChange(async (value) => {
+                        .onChange(async (value: any) => {
                             this.plugin.settings.folder_Estudio = value;
                             await this.plugin.saveSettings();
                         }));
@@ -198,9 +198,9 @@ export class PluginMainSettingsTab extends PluginSettingTab {
                 new Setting(estudioContent)
                     .setName('Índice de Estudio')
                     .setDesc('Establece la ruta del índice de los temas de estudio.')
-                    .addText(text => text
+                    .addText((text: { setValue: (arg0: any) => { (): any; new(): any; onChange: { (arg0: (value: any) => Promise<void>): any; new(): any; }; }; }) => text
                         .setValue(this.plugin.settings.indice_Estudio)
-                        .onChange(async (value) => {
+                        .onChange(async (value: any) => {
                             this.plugin.settings.indice_Estudio = value;
                             await this.plugin.saveSettings();
                         }));
@@ -217,9 +217,9 @@ export class PluginMainSettingsTab extends PluginSettingTab {
                 new Setting(gtdContent)
                     .setName('Carpeta de Proyectos GTD')
                     .setDesc('Establece la ruta de la carpeta para proyectos GTD.')
-                    .addText(text => text
+                    .addText((text: { setValue: (arg0: any) => { (): any; new(): any; onChange: { (arg0: (value: any) => Promise<void>): any; new(): any; }; }; }) => text
                         .setValue(this.plugin.settings.folder_ProyectosGTD)
-                        .onChange(async (value) => {
+                        .onChange(async (value: any) => {
                             this.plugin.settings.folder_ProyectosGTD = value;
                             await this.plugin.saveSettings();
                         }));
@@ -227,9 +227,9 @@ export class PluginMainSettingsTab extends PluginSettingTab {
                 new Setting(gtdContent)
                     .setName('Índice de Proyectos GTD')
                     .setDesc('Establece la ruta del índice para proyectos GTD.')
-                    .addText(text => text
+                    .addText((text: { setValue: (arg0: any) => { (): any; new(): any; onChange: { (arg0: (value: any) => Promise<void>): any; new(): any; }; }; }) => text
                         .setValue(this.plugin.settings.indice_ProyectosGTD)
-                        .onChange(async (value) => {
+                        .onChange(async (value: any) => {
                             this.plugin.settings.indice_ProyectosGTD = value;
                             await this.plugin.saveSettings();
                         }));
@@ -238,9 +238,9 @@ export class PluginMainSettingsTab extends PluginSettingTab {
                 new Setting(gtdContent)
                     .setName('Carpeta de Revisiones Semanales GTD')
                     .setDesc('Establece la ruta de la carpeta para las revisiones semanales GTD.')
-                    .addText(text => text
+                    .addText((text: { setValue: (arg0: any) => { (): any; new(): any; onChange: { (arg0: (value: any) => Promise<void>): any; new(): any; }; }; }) => text
                         .setValue(this.plugin.settings.folder_RSGTD)
-                        .onChange(async (value) => {
+                        .onChange(async (value: any) => {
                             this.plugin.settings.folder_RSGTD = value;
                             await this.plugin.saveSettings();
                         }));
@@ -248,9 +248,9 @@ export class PluginMainSettingsTab extends PluginSettingTab {
                 new Setting(gtdContent)
                     .setName('Índice de Revisiones Semanales GTD')
                     .setDesc('Establece la ruta del índice para las revisiones semanales GTD.')
-                    .addText(text => text
+                    .addText((text: { setValue: (arg0: any) => { (): any; new(): any; onChange: { (arg0: (value: any) => Promise<void>): any; new(): any; }; }; }) => text
                         .setValue(this.plugin.settings.indice_RSGTD)
-                        .onChange(async (value) => {
+                        .onChange(async (value: any) => {
                             this.plugin.settings.indice_RSGTD = value;
                             await this.plugin.saveSettings();
                         }));
@@ -267,9 +267,9 @@ export class PluginMainSettingsTab extends PluginSettingTab {
                 new Setting(lecturaContent)
                     .setName('Carpeta de Sesiones de Lectura')
                     .setDesc('Establece la ruta de la carpeta para las sesiones de lectura.')
-                    .addText(text => text
+                    .addText((text: { setValue: (arg0: any) => { (): any; new(): any; onChange: { (arg0: (value: any) => Promise<void>): any; new(): any; }; }; }) => text
                         .setValue(this.plugin.settings.folder_LecturaSesiones)
-                        .onChange(async (value) => {
+                        .onChange(async (value: any) => {
                             this.plugin.settings.folder_LecturaSesiones = value;
                             await this.plugin.saveSettings();
                         }));
@@ -277,9 +277,9 @@ export class PluginMainSettingsTab extends PluginSettingTab {
                 new Setting(lecturaContent)
                     .setName('Índice de Sesiones de Lectura')
                     .setDesc('Establece la ruta del índice para las sesiones de lectura.')
-                    .addText(text => text
+                    .addText((text: { setValue: (arg0: any) => { (): any; new(): any; onChange: { (arg0: (value: any) => Promise<void>): any; new(): any; }; }; }) => text
                         .setValue(this.plugin.settings.indice_LecturaSesiones)
-                        .onChange(async (value) => {
+                        .onChange(async (value: any) => {
                             this.plugin.settings.indice_LecturaSesiones = value;
                             await this.plugin.saveSettings();
                         }));
@@ -288,9 +288,9 @@ export class PluginMainSettingsTab extends PluginSettingTab {
                 new Setting(lecturaContent)
                     .setName('Carpeta de Resúmenes de Libros')
                     .setDesc('Establece la ruta de la carpeta para los resúmenes de libros.')
-                    .addText(text => text
+                    .addText((text: { setValue: (arg0: any) => { (): any; new(): any; onChange: { (arg0: (value: any) => Promise<void>): any; new(): any; }; }; }) => text
                         .setValue(this.plugin.settings.folder_LecturaResumenes)
-                        .onChange(async (value) => {
+                        .onChange(async (value: any) => {
                             this.plugin.settings.folder_LecturaResumenes = value;
                             await this.plugin.saveSettings();
                         }));
@@ -298,9 +298,9 @@ export class PluginMainSettingsTab extends PluginSettingTab {
                 new Setting(lecturaContent)
                     .setName('Índice de Resúmenes de Libros')
                     .setDesc('Establece la ruta del índice para los resúmenes de libros.')
-                    .addText(text => text
+                    .addText((text: { setValue: (arg0: any) => { (): any; new(): any; onChange: { (arg0: (value: any) => Promise<void>): any; new(): any; }; }; }) => text
                         .setValue(this.plugin.settings.indice_LecturaResumenes)
-                        .onChange(async (value) => {
+                        .onChange(async (value: any) => {
                             this.plugin.settings.indice_LecturaResumenes = value;
                             await this.plugin.saveSettings();
                         }));
@@ -318,9 +318,9 @@ export class PluginMainSettingsTab extends PluginSettingTab {
                 new Setting(mentoriasContent)
                     .setName('Carpeta de Sesiones de Mentoría')
                     .setDesc('Establece la ruta de la carpeta donde se guardarán las sesiones de mentoría.')
-                    .addText(text => text
+                    .addText((text: { setValue: (arg0: any) => { (): any; new(): any; onChange: { (arg0: (value: any) => Promise<void>): any; new(): any; }; }; }) => text
                         .setValue(this.plugin.settings.folder_Mentorias)
-                        .onChange(async (value) => {
+                        .onChange(async (value: any) => {
                             this.plugin.settings.folder_Mentorias = value;
                             await this.plugin.saveSettings();
                         }));
@@ -328,9 +328,9 @@ export class PluginMainSettingsTab extends PluginSettingTab {
                 new Setting(mentoriasContent)
                     .setName('Índice de Mentorías')
                     .setDesc('Establece la ruta del índice de las sesiones de mentoría.')
-                    .addText(text => text
+                    .addText((text: { setValue: (arg0: any) => { (): any; new(): any; onChange: { (arg0: (value: any) => Promise<void>): any; new(): any; }; }; }) => text
                         .setValue(this.plugin.settings.indice_Mentorias)
-                        .onChange(async (value) => {
+                        .onChange(async (value: any) => {
                             this.plugin.settings.indice_Mentorias = value;
                             await this.plugin.saveSettings();
                         }));
@@ -349,9 +349,9 @@ export class PluginMainSettingsTab extends PluginSettingTab {
                 new Setting(mercadoContent)
                     .setName('Carpeta de Listados de Mercado')
                     .setDesc('Establece la ruta de la carpeta donde se guardarán las listas de mercado.')
-                    .addText(text => text
+                    .addText((text: { setValue: (arg0: any) => { (): any; new(): any; onChange: { (arg0: (value: any) => Promise<void>): any; new(): any; }; }; }) => text
                         .setValue(this.plugin.settings.folder_Mercado)
-                        .onChange(async (value) => {
+                        .onChange(async (value: any) => {
                             this.plugin.settings.folder_Mercado = value;
                             await this.plugin.saveSettings();
                         }));
@@ -359,9 +359,9 @@ export class PluginMainSettingsTab extends PluginSettingTab {
                 new Setting(mercadoContent)
                     .setName('Índice de listados de mercado')
                     .setDesc('Establece la ruta del índice de los listados de mercado.')
-                    .addText(text => text
+                    .addText((text: { setValue: (arg0: any) => { (): any; new(): any; onChange: { (arg0: (value: any) => Promise<void>): any; new(): any; }; }; }) => text
                         .setValue(this.plugin.settings.indice_Mercado)
-                        .onChange(async (value) => {
+                        .onChange(async (value: any) => {
                             this.plugin.settings.indice_Mercado = value;
                             await this.plugin.saveSettings();
                         }));
@@ -379,9 +379,9 @@ export class PluginMainSettingsTab extends PluginSettingTab {
                 new Setting(modulosContent)
                     .setName('Carpeta de Modulos del Sistema de Gestion')
                     .setDesc('Establece la ruta de la carpeta donde se guardarán los módulos del Sistema de Gestión.')
-                    .addText(text => text
+                    .addText((text: { setValue: (arg0: any) => { (): any; new(): any; onChange: { (arg0: (value: any) => Promise<void>): any; new(): any; }; }; }) => text
                         .setValue(this.plugin.settings.folder_ModulosSistema)
-                        .onChange(async (value) => {
+                        .onChange(async (value: any) => {
                             this.plugin.settings.folder_ModulosSistema = value;
                             await this.plugin.saveSettings();
                         }));
@@ -389,9 +389,9 @@ export class PluginMainSettingsTab extends PluginSettingTab {
                 new Setting(modulosContent)
                     .setName('Índice de los Modulos del sistema de Gestion')
                     .setDesc('Establece la ruta del índice de los Módulos del sistema de Gestión.')
-                    .addText(text => text
+                    .addText((text: { setValue: (arg0: any) => { (): any; new(): any; onChange: { (arg0: (value: any) => Promise<void>): any; new(): any; }; }; }) => text
                         .setValue(this.plugin.settings.indice_ModulosSistema)
-                        .onChange(async (value) => {
+                        .onChange(async (value: any) => {
                             this.plugin.settings.indice_ModulosSistema = value;
                             await this.plugin.saveSettings();
                         }));
@@ -407,9 +407,9 @@ export class PluginMainSettingsTab extends PluginSettingTab {
                 new Setting(pagosContent)
                     .setName('Carpeta de Modulos del Sistema de Pagos')
                     .setDesc('Establece la ruta de la carpeta donde se guardarán los comprobantes de pagos.')
-                    .addText(text => text
+                    .addText((text: { setValue: (arg0: any) => { (): any; new(): any; onChange: { (arg0: (value: any) => Promise<void>): any; new(): any; }; }; }) => text
                         .setValue(this.plugin.settings.folder_Pagos)
-                        .onChange(async (value) => {
+                        .onChange(async (value: any) => {
                             this.plugin.settings.folder_Pagos = value;
                             await this.plugin.saveSettings();
                         }));
@@ -417,9 +417,9 @@ export class PluginMainSettingsTab extends PluginSettingTab {
                 new Setting(pagosContent)
                     .setName('Índice de Pagos')
                     .setDesc('Establece la ruta del índice de Pagos.')
-                    .addText(text => text
+                    .addText((text: { setValue: (arg0: any) => { (): any; new(): any; onChange: { (arg0: (value: any) => Promise<void>): any; new(): any; }; }; }) => text
                         .setValue(this.plugin.settings.indice_Pagos)
-                        .onChange(async (value) => {
+                        .onChange(async (value: any) => {
                             this.plugin.settings.indice_Pagos = value;
                             await this.plugin.saveSettings();
                         }));
@@ -436,9 +436,9 @@ export class PluginMainSettingsTab extends PluginSettingTab {
                 new Setting(presentacionesContent)
                     .setName('Carpeta de Notas de Presentaciones')
                     .setDesc('Establece la ruta de la carpeta donde se guardarán las notas de presentaciones.')
-                    .addText(text => text
+                    .addText((text: { setValue: (arg0: any) => { (): any; new(): any; onChange: { (arg0: (value: any) => Promise<void>): any; new(): any; }; }; }) => text
                         .setValue(this.plugin.settings.folder_Presentaciones)
-                        .onChange(async (value) => {
+                        .onChange(async (value: any) => {
                             this.plugin.settings.folder_Presentaciones = value;
                             await this.plugin.saveSettings();
                         }));
@@ -446,9 +446,9 @@ export class PluginMainSettingsTab extends PluginSettingTab {
                 new Setting(presentacionesContent)
                     .setName('Índice de Presentaciones')
                     .setDesc('Establece la ruta del índice de presentaciones.')
-                    .addText(text => text
+                    .addText((text: { setValue: (arg0: any) => { (): any; new(): any; onChange: { (arg0: (value: any) => Promise<void>): any; new(): any; }; }; }) => text
                         .setValue(this.plugin.settings.indice_Presentaciones)
-                        .onChange(async (value) => {
+                        .onChange(async (value: any) => {
                             this.plugin.settings.indice_Presentaciones = value;
                             await this.plugin.saveSettings();
                         }));
@@ -464,9 +464,9 @@ export class PluginMainSettingsTab extends PluginSettingTab {
                 new Setting(proyectosQContent)
                     .setName('Carpeta de Proyectos de Q')
                     .setDesc('Establece la ruta de la carpeta donde se guardarán los proyectos de Q.')
-                    .addText(text => text
+                    .addText((text: { setValue: (arg0: any) => { (): any; new(): any; onChange: { (arg0: (value: any) => Promise<void>): any; new(): any; }; }; }) => text
                         .setValue(this.plugin.settings.folder_ProyectosQ)
-                        .onChange(async (value) => {
+                        .onChange(async (value: any) => {
                             this.plugin.settings.folder_ProyectosQ = value;
                             await this.plugin.saveSettings();
                         }));
@@ -474,9 +474,9 @@ export class PluginMainSettingsTab extends PluginSettingTab {
                 new Setting(proyectosQContent)
                     .setName('Índice de Proyectos de Q')
                     .setDesc('Establece la ruta del índice de proyectos de Q.')
-                    .addText(text => text
+                    .addText((text: { setValue: (arg0: any) => { (): any; new(): any; onChange: { (arg0: (value: any) => Promise<void>): any; new(): any; }; }; }) => text
                         .setValue(this.plugin.settings.indice_ProyectosQ)
-                        .onChange(async (value) => {
+                        .onChange(async (value: any) => {
                             this.plugin.settings.indice_ProyectosQ = value;
                             await this.plugin.saveSettings();
                         }));
@@ -494,9 +494,9 @@ export class PluginMainSettingsTab extends PluginSettingTab {
                 new Setting(publicacionesContent)
                     .setName('Carpeta de Piezas de Publicaciones')
                     .setDesc('Establece la ruta de la carpeta donde se guardarán las piezas de publicaciones.')
-                    .addText(text => text
+                    .addText((text: { setValue: (arg0: any) => { (): any; new(): any; onChange: { (arg0: (value: any) => Promise<void>): any; new(): any; }; }; }) => text
                         .setValue(this.plugin.settings.folder_Publicaciones)
-                        .onChange(async (value) => {
+                        .onChange(async (value: any) => {
                             this.plugin.settings.folder_Publicaciones = value;
                             await this.plugin.saveSettings();
                         }));
@@ -504,9 +504,9 @@ export class PluginMainSettingsTab extends PluginSettingTab {
                 new Setting(publicacionesContent)
                     .setName('Índice de Publicaciones')
                     .setDesc('Establece la ruta del índice de publicaciones.')
-                    .addText(text => text
+                    .addText((text: { setValue: (arg0: any) => { (): any; new(): any; onChange: { (arg0: (value: any) => Promise<void>): any; new(): any; }; }; }) => text
                         .setValue(this.plugin.settings.indice_Publicaciones)
-                        .onChange(async (value) => {
+                        .onChange(async (value: any) => {
                             this.plugin.settings.indice_Publicaciones = value;
                             await this.plugin.saveSettings();
                         }));
@@ -522,9 +522,9 @@ export class PluginMainSettingsTab extends PluginSettingTab {
                 new Setting(recetasContent)
                     .setName('Carpeta de Recetas')
                     .setDesc('Establece la ruta de la carpeta donde se guardarán las recetas.')
-                    .addText(text => text
+                    .addText((text: { setValue: (arg0: any) => { (): any; new(): any; onChange: { (arg0: (value: any) => Promise<void>): any; new(): any; }; }; }) => text
                         .setValue(this.plugin.settings.folder_Recetas)
-                        .onChange(async (value) => {
+                        .onChange(async (value: any) => {
                             this.plugin.settings.folder_Recetas = value;
                             await this.plugin.saveSettings();
                         }));
@@ -532,9 +532,9 @@ export class PluginMainSettingsTab extends PluginSettingTab {
                 new Setting(recetasContent)
                     .setName('Índice de Recetas')
                     .setDesc('Establece la ruta del índice de recetas.')
-                    .addText(text => text
+                    .addText((text: { setValue: (arg0: any) => { (): any; new(): any; onChange: { (arg0: (value: any) => Promise<void>): any; new(): any; }; }; }) => text
                         .setValue(this.plugin.settings.indice_Recetas)
-                        .onChange(async (value) => {
+                        .onChange(async (value: any) => {
                             this.plugin.settings.indice_Recetas = value;
                             await this.plugin.saveSettings();
                         }));
@@ -550,9 +550,9 @@ export class PluginMainSettingsTab extends PluginSettingTab {
                 new Setting(recursosRecurrentesContent)
                     .setName('Carpeta de Recursos Recurrentes')
                     .setDesc('Establece la ruta de la carpeta donde se guardarán los recursos recurrentes.')
-                    .addText(text => text
+                    .addText((text: { setValue: (arg0: any) => { (): any; new(): any; onChange: { (arg0: (value: any) => Promise<void>): any; new(): any; }; }; }) => text
                         .setValue(this.plugin.settings.folder_RecursosRecurrentes)
-                        .onChange(async (value) => {
+                        .onChange(async (value: any) => {
                             this.plugin.settings.folder_RecursosRecurrentes = value;
                             await this.plugin.saveSettings();
                         }));
@@ -560,9 +560,9 @@ export class PluginMainSettingsTab extends PluginSettingTab {
                 new Setting(recursosRecurrentesContent)
                     .setName('Índice de Recursos Recurrentes')
                     .setDesc('Establece la ruta del índice de recursos recurrentes.')
-                    .addText(text => text
+                    .addText((text: { setValue: (arg0: any) => { (): any; new(): any; onChange: { (arg0: (value: any) => Promise<void>): any; new(): any; }; }; }) => text
                         .setValue(this.plugin.settings.indice_RecursosRecurrentes)
-                        .onChange(async (value) => {
+                        .onChange(async (value: any) => {
                             this.plugin.settings.indice_RecursosRecurrentes = value;
                             await this.plugin.saveSettings();
                         }));
@@ -578,9 +578,9 @@ export class PluginMainSettingsTab extends PluginSettingTab {
                 new Setting(registroTiempoContent)
                     .setName('Carpeta de Registros de Tiempo')
                     .setDesc('Establece la ruta de la carpeta donde se guardarán los registros de tiempo.')
-                    .addText(text => text
+                    .addText((text: { setValue: (arg0: any) => { (): any; new(): any; onChange: { (arg0: (value: any) => Promise<void>): any; new(): any; }; }; }) => text
                         .setValue(this.plugin.settings.folder_RegistroTiempo)
-                        .onChange(async (value) => {
+                        .onChange(async (value: any) => {
                             this.plugin.settings.folder_RegistroTiempo = value;
                             await this.plugin.saveSettings();
                         }));
@@ -588,9 +588,9 @@ export class PluginMainSettingsTab extends PluginSettingTab {
                 new Setting(registroTiempoContent)
                     .setName('Índice de Registro de Tiempo')
                     .setDesc('Establece la ruta del índice de registros de tiempo.')
-                    .addText(text => text
+                    .addText((text: { setValue: (arg0: any) => { (): any; new(): any; onChange: { (arg0: (value: any) => Promise<void>): any; new(): any; }; }; }) => text
                         .setValue(this.plugin.settings.indice_RegistroTiempo)
-                        .onChange(async (value) => {
+                        .onChange(async (value: any) => {
                             this.plugin.settings.indice_RegistroTiempo = value;
                             await this.plugin.saveSettings();
                         }));
@@ -642,5 +642,8 @@ export class PluginMainSettingsTab extends PluginSettingTab {
 
         // Abrir la primera pestaña por defecto
         this.openTab('tab0');
+    }
+    openTab(arg0: string): any {
+        throw new Error('Method not implemented.');
     }
 }

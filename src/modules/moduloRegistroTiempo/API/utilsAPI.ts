@@ -4,8 +4,9 @@ import {menuOtro} from './menuOtro'
 
 export class utilsAPI {
     private menuOtro: menuOtro;
+    plugin: Plugin;
 
-    constructor(plugin) {
+    constructor(plugin: Plugin) {
       this.plugin = plugin;
       this.menuOtro = new menuOtro(plugin);
     }
@@ -31,7 +32,7 @@ export class utilsAPI {
     }
 
  // Suponemos que esta función se ubicará en algún lugar donde pueda acceder a `app` de Obsidian.
-    async crearObjetoRegistro(plugin) {
+    async crearObjetoRegistro(plugin: Plugin) {
         
         const activo = plugin.app.workspace.getActiveFile();
         if (!activo) {
@@ -48,10 +49,10 @@ export class utilsAPI {
         const files = app.vault.getMarkdownFiles();
 
         // Filtra por los archivos en la carpeta deseada
-        const registrosExistentes = files.filter(file => file.path.startsWith(folder));
+        const registrosExistentes = files.filter((file: { path: string; }) => file.path.startsWith(folder));
         
         // Usa metadataCache para buscar los IDs en el frontmatter
-        registrosExistentes.forEach(file => {
+        registrosExistentes.forEach((file: any) => {
             const metadata = app.metadataCache.getFileCache(file)?.frontmatter;
             if (metadata && metadata.id && !isNaN(metadata.id)) {
                 const id = parseInt(metadata.id);
@@ -86,46 +87,46 @@ export class utilsAPI {
         return `${fechaFormato} ${diaSemana} ${horaFormato}`;
     }
 
-    async verificarTareasActivas(registro: any, app: App): Promise<void> {
-        
-        const files = app.vault.getMarkdownFiles();
-        const tareasActivas = [];
+async verificarTareasActivas(registro: any, app: App): Promise<void> {
+    
+    const files = app.vault.getMarkdownFiles();
+    const tareasActivas = [];
 
-        for (let file of files) {
-            if (file.path.startsWith(registro.folder)) {
-                const metadata = app.metadataCache.getFileCache(file)?.frontmatter;
-                if (metadata?.estado === "🟢") {
-                    tareasActivas.push({ file, aliases: metadata.aliases || file.basename });
-                }
+    for (let file of files) {
+        if (file.path.startsWith(registro.folder)) {
+            const metadata = app.metadataCache.getFileCache(file)?.frontmatter;
+            if (metadata?.estado === "🟢") {
+                tareasActivas.push({ file, titulo: metadata.titulo, aliases: metadata.aliases || file.basename });
             }
-        }
-
-        if (tareasActivas.length === 1) {
-            const tareaActiva = tareasActivas[0];
-            const deseaDetener = await this.mostrarSugerencia(`La tarea ${tareaActiva.aliases} está corriendo. ¿Desea detenerla?`);
-            debugger
-            if (deseaDetener === undefined) {
-                new Notice(`Creación de registro cancelado por el usuario.`);
-                registro.detener = true;
-                return;
-            }
-            
-            if (deseaDetener) {
-                await this.detenerTarea(tareaActiva, app);
-                registro.detener = false;
-            } else {
-                new Notice(`La tarea ${tareaActiva.aliases} seguirá registrándose.`);
-                registro.detener = true;
-                return;
-            }
-        } else if (tareasActivas.length > 1) {
-            new Notice("Hay un error con la cantidad de tareas corriendo en este momento.");
-            registro.detener = true;
-        } else {
-            console.log("No hay más tareas corriendo.");
-            registro.detener = false;
         }
     }
+
+    if (tareasActivas.length === 1) {
+        const tareaActiva = tareasActivas[0];
+        const deseaDetener = await this.mostrarSugerencia(`La tarea ${tareaActiva.aliases} está corriendo. ¿Desea detenerla?`);
+        debugger
+        if (deseaDetener === undefined) {
+            new Notice(`Creación de registro cancelado por el usuario.`);
+            registro.detener = true;
+            return;
+        }
+        
+        if (deseaDetener) {
+            await this.detenerTarea(tareaActiva, app);
+            registro.detener = false;
+        } else {
+            new Notice(`La tarea ${tareaActiva.aliases} seguirá registrándose.`);
+            registro.detener = true;
+            return;
+        }
+    } else if (tareasActivas.length > 1) {
+        new Notice("Hay un error con la cantidad de tareas corriendo en este momento.");
+        registro.detener = true;
+    } else {
+        console.log("No hay más tareas corriendo.");
+        registro.detener = false;
+    }
+}
 
     mostrarSugerencia(mensaje: string): Promise<boolean> {
         return new Promise((resolve, reject) => {
@@ -164,7 +165,7 @@ export class utilsAPI {
             };
     
             // Agregar escuchas de eventos de teclado para permitir la navegación con el teclado
-            modal.contentEl.addEventListener('keydown', (e) => {
+            modal.contentEl.addEventListener('keydown', (e: { key: any; }) => {
                 switch (e.key) {
                     case 'ArrowLeft':
                         yesButton.focus();
@@ -237,14 +238,14 @@ export class utilsAPI {
     async encontrarTareasPendientes(app: App): Promise<{ tarea: string; archivo: TFile }[]> {
         let tareasPendientes: { tarea: string; archivo: TFile }[] = [];
         const archivos = app.vault.getMarkdownFiles();
-        const archivosRelevantes = archivos.filter(archivo => !archivo.path.includes("Plantillas"));
+        const archivosRelevantes = archivos.filter((archivo: { path: string; }) => !archivo.path.includes("Plantillas"));
     
         for (const archivo of archivosRelevantes) {
             const contenido = await app.vault.read(archivo);
             const coincidencias = contenido.match(/^ *- \[\/\] .*/gm) || [];
     
             // Para cada tarea encontrada, crea un objeto con la tarea limpia y el archivo actual, y lo agrega al arreglo
-            const tareasConArchivo = coincidencias.map(tarea => {      
+            const tareasConArchivo = coincidencias.map((tarea: string) => {      
                 return { tarea: tarea.trim(), archivo: archivo };
             });
             tareasPendientes = tareasPendientes.concat(tareasConArchivo);
@@ -257,14 +258,14 @@ export class utilsAPI {
         const placeholder = "Elige la tarea que vas a registrar.";
     
         // Map para extraer y limpiar solo las tareas
-        let promesasLimpias = tareasPendientes.map(tareaObj => this.limpiarTextoTarea(tareaObj.tarea));
+        let promesasLimpias = tareasPendientes.map((tareaObj: { tarea: string; }) => this.limpiarTextoTarea(tareaObj.tarea));
     
         try {
             // Espera a que todas las promesas en promesasLimpias se resuelvan
             const tareasLimpias = await Promise.all(promesasLimpias);
     
             // Reconstruir los objetos con las tareas limpias manteniendo la referencia al archivo
-            const tareasLimpiasConArchivo = tareasPendientes.map((tareaObj, index) => {
+            const tareasLimpiasConArchivo = tareasPendientes.map((tareaObj: { archivo: any; }, index: string | number) => {
                 return {
                     tarea: tareasLimpias[index], // Tarea limpia
                     archivo: tareaObj.archivo // Referencia al archivo original
@@ -275,7 +276,7 @@ export class utilsAPI {
             const longitud = tareasLimpiasConArchivo.length;
             const arregloDeIndices = Array.from({ length: longitud }, (_, indice) => indice);
 
-            const modalMenu = new SeleccionModal(app, tareasLimpiasConArchivo.map(b => b.tarea), arregloDeIndices, placeholder);
+            const modalMenu = new SeleccionModal(app, tareasLimpiasConArchivo.map((b: { tarea: any; }) => b.tarea), arregloDeIndices, placeholder);
             try {
                 // Espera a que el usuario haga una selección en el modal
                 const selectedIndex = await modalMenu.openAndAwaitSelection();
