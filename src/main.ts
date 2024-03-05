@@ -7,7 +7,8 @@
   import type { PluginMainSettings } from './interfaces/pluginMainSettings';
   import { DEFAULT_SETTINGS } from './defaults/defaultSettings';
   import {registroTiempoAPI} from './modules/moduloRegistroTiempo/API/registroTiempoAPI'
-  import { starterAPI } from './modules/inicializacionSubsistemas/API/starterAPI';
+  import { starterAPI} from './modules/noteLifecycleManager/API/starterAPI';
+  import { YAMLUpdaterAPI } from './modules/noteLifecycleManager/API/YAMLUpdaterAPI';
 
 
 
@@ -30,10 +31,10 @@ export default class ManagementPlugin extends Plugin {
         
         await this.loadSettings();
         // cargar API registro Tiempo
-        this.app.plugins.plugins['Total-Personal-Management'] = this;
         this.registroTiempoAPI = new registroTiempoAPI(this);
         this.starterAPI = new starterAPI(this);
-        // Añade la pestaña de configuración
+        this.YAMLUpdaterAPI = new YAMLUpdaterAPI(this);
+        // Añade la pestaña de configuración - 
         this.addSettingTab(new PluginMainSettingsTab(this));
         // Inicializa las instancias de los módulos
         this.statusBarExtension = new StatusBarExtension(this);
@@ -44,9 +45,6 @@ export default class ManagementPlugin extends Plugin {
         console.log('Iniciando carga de plugin de Gestión Personal');
       
       }
-  addSettingTab(arg0: PluginMainSettingsTab) {
-    throw new Error('Method not implemented.');
-  }
 
       applyConfiguration() {
         // Modulo Base es el módulo sobre el que estoy haciendo pruebas de desarrollo.

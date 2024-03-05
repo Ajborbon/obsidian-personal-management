@@ -1,33 +1,31 @@
 //import {utilsAPI} from './utilsAPI'
 
-export class starterAPI {
+import { Notice } from "obsidian";
+
+export class YAMLUpdaterAPI {
     //private utilsApi: utilsAPI;
     private plugin: Plugin;
     private infoSubsistema: object; // Asumiendo que es un string
     private tp: object;
     private nota: object;
     private pathCampos: string; 
+    infoNota: {};
 
     constructor(plugin: Plugin) {
         this.plugin = plugin;
         // Inicializa folder e indice con valores predeterminados o lógica específica.
-        this.infoSubsistema = {};
+        this.infoNota = {};
         this.nota = {};
         this.tp = this.getTp();
         this.pathCampos = this.plugin.settings.file_camposCentral + ".md";
     }
     
 
-    async crearNota(infoSubsistema: { folder: string | number; indice: string | number; }, campos: any) {
+    async actualizarNota(infoNota: any, campos: any) {
         
         let nota = {}; // Inicializa el objeto nota.
-        Object.assign(this.infoSubsistema, infoSubsistema); 
-        if (this.infoSubsistema.defined){
-        this.infoSubsistema.folder = this.plugin.settings[infoSubsistema.folder]
-        this.infoSubsistema.indice = this.plugin.settings[infoSubsistema.indice]
-        }
-        // Crear un tp para acceder a funcionalidades de templater.
-       
+        Object.assign(this.infoNota, infoNota); 
+        
             try {
                 for (let campo of campos) {
                     // Usa el nombre del campo para construir el nombre de la función (p. ej., "getId")
@@ -43,6 +41,15 @@ export class starterAPI {
                     }
                 }
                 
+                // Actualizar la nota
+                if (Object.keys(nota).length > 0) {
+                    // Ejecuta tu código aquí si el objeto `nota` tiene más de una propiedad
+                
+                    await this.updateYAMLFields(nota, infoNota.file.path)
+                }else{
+                    //No se encontraron campos para modificar
+                }
+                
                 // Aquí iría el código para procesar el objeto nota, como guardar en un archivo dentro de 'folder'.
                 
             } catch (error) {
@@ -54,48 +61,55 @@ export class starterAPI {
     }
     
 
+    async updateYAMLFields(nota, ruta) {
+        
+        try {
+            const file = app.vault.getAbstractFileByPath(ruta);
+            await app.fileManager.processFrontMatter(file, frontmatter => {
+                // Iterar sobre cada propiedad del objeto 'nota'
+                for (const campo in nota) {
+                    
+                    if (frontmatter.hasOwnProperty(campo)) {
+                        // Actualizar el campo en el frontmatter con el valor correspondiente
+                        
+                        frontmatter[campo] = nota[campo];
+                    }
+                }
+            });
+            console.log("Frontmatter actualizado con éxito");
+        } catch (err) {
+            console.error("Error al actualizar el frontmatter", err);
+        }
+    }
+    
+
     getTp(){
+        
         if (!this.plugin || !this.plugin.app.plugins.enabledPlugins.has('templater-obsidian')) {
             console.error('El plugin Templater no está habilitado.');
             return;
         }
-        // Forma de acceder al objeto tp normal que he usado desde DVJS
-        const templaterPlugin = this.plugin.app.plugins.plugins['templater-obsidian'];
-        const tp = templaterPlugin.templater.current_functions_object;
+        //  Forma de acceder al objeto tp normal que he usado desde DVJS cuando current Functions esta cargado.
+        //const templaterPlugin = this.app.plugins.plugins['templater-obsidian'];
+        //const tp = templaterPlugin.templater.current_functions_object;
+        // -> version que falla si no esta arriba el plugin porque hace get del plugin directo. const templaterPlugin = this.app.plugins.getPlugin('templater-obsidian');
         
-        if (!tp) {
+        let tpGen = this.plugin.app.plugins.plugins["templater-obsidian"].templater;
+        tpGen = tpGen.functions_generator.internal_functions.modules_array;
+        let tp = {}
+        // get an instance of the date module
+        tp.system = tpGen.find(m => m.name == "system");
+
+        if (!tp.system) {
         console.error("No se pudo acceder al objeto de funciones actuales de Templater.");
         return;
     }
+    console.log('tp en YAMLUpdaterAPI se ha cargado satisfactoriamente');
     return tp;
     }
 
-    // Ejemplo de función getCampo simulada. Debes definir funciones similares para 'id', 'fecha', etc.
-    async getId() {
-        
-        let maxId = 0;
-
-        // Obtén todos los archivos Markdown
-        const files = app.vault.getMarkdownFiles();
-        // Filtra por los archivos en la carpeta deseada
-        const registrosExistentes = files.filter((file: { path: string; }) => file.path.startsWith(this.infoSubsistema.folder));
-        // Usa metadataCache para buscar los IDs en el frontmatter
-        registrosExistentes.forEach((file: any) => {
-            const metadata = app.metadataCache.getFileCache(file)?.frontmatter;
-            if (metadata && metadata.id && !isNaN(metadata.id)) {
-                const id = parseInt(metadata.id);
-                if (id > maxId) maxId = id;
-            }
-        });
-
-        // El próximo ID disponible
-        const nextId = maxId + 1;
-        this.nota.id = nextId;
-        return nextId;
-    }
-    
     async getFecha() {
-        // Simulación de obtener un ID de manera asíncrona.
+        
         return this.formatearFecha(new Date());
     }
 
@@ -108,6 +122,30 @@ export class starterAPI {
         const horaFormato = fecha.toTimeString().split(' ')[0].substring(0, 5);
         return `${fechaFormato} ${diaSemana} ${horaFormato}`;
     }
+
+
+    async getHoraFinal(){
+        return this.formatearFecha(new Date());
+    }
+
+    async getTiempoTrabajado(){
+        debugger
+        let horaInicioStr = this.infoNota.horaInicio;
+            // Suponiendo que el formato es "YYYY-MM-DD dddd HH:mm" y quieres convertirlo a un formato reconocido por Date
+        // Primero, elimina la parte del día de la semana, ya que Date() no la necesita
+        let [fecha, , hora] = horaInicioStr.split(' ');
+        let fechaHoraISO = `${fecha}T${hora}`;
+        
+        // Crear objetos Date
+        let horaInicio = new Date(fechaHoraISO);
+        let ahora = new Date();
+        
+        // Calcular la diferencia en milisegundos
+        let diferenciaEnMilisegundos = ahora - horaInicio;
+        
+        return diferenciaEnMilisegundos;
+    }
+
 
     async getSecId(){
 
@@ -171,7 +209,7 @@ export class starterAPI {
 
 
     async getClasificacion(){
-        let clasificacion: string | null, tagClasificacion: string | null, clasificacionAX: { [x: string]: any; }, tagsClasificacionAX: string | any[];
+        let clasificacion, tagClasificacion, clasificacionAX, tagsClasificacionAX;
         let nuevaClasificacion = false;
         const file = app.vault.getAbstractFileByPath(this.pathCampos);
         
@@ -209,7 +247,7 @@ export class starterAPI {
 
         if (nuevaClasificacion) {
             try {
-                await app.fileManager.processFrontMatter(file, (frontmatter: { tituloClasificacionAX: any[]; tagsClasificacionAX: any[]; }) => {
+                await app.fileManager.processFrontMatter(file, frontmatter => {
                     // Asumiendo que 'actsTemas' es el campo a modificar
                 let newClasificacion = [...clasificacionAX, clasificacion]
                 let newTagClasificacion = [...tagsClasificacionAX, tagClasificacion]
@@ -232,10 +270,11 @@ export class starterAPI {
     // ->
 
     async getEstado(){
-        let campo = await this.tp.system.suggester(["🔵 -> Completado - Información", "🟢 -> Finalizado","🟡 -> En ejecución", "🔴 -> Detenido"],["🔵", "🟢","🟡", "🔴"], false, "Seleccione el estado de la nota:")
-	    // Verificar si el usuario presionó Esc.
+        let suggester = this.tp.system.static_functions.get("suggester");
+	    let campo = await suggester(["🔵 -> Completado - Información", "🟢 -> Finalizado","🟡 -> En ejecución", "🔴 -> Detenido"],["🔵", "🟢","🟡", "🔴"], false, "Seleccione el nuevo estado:");
+        // Verificar si el usuario presionó Esc.
         if (campo === null) {
-        new Notice("Creación de nota cancelada por el usuario.");
+        new Notice("Modificación de nota cancelada por el usuario.");
         return; // Termina la ejecución de la función aquí.
 	    }
         this.nota.estado = campo;
@@ -254,6 +293,8 @@ export class starterAPI {
             }
             return this.nota.fileName;
     }
+
+   
 
   }
   

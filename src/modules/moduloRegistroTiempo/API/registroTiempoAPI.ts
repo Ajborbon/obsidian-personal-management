@@ -12,6 +12,7 @@ export class registroTiempoAPI {
 
     async iniciarRegistro(){
         try {
+          debugger
         const registro = await this.utilsApi.crearObjetoRegistro(this.plugin);
         await this.utilsApi.verificarTareasActivas(registro, this.plugin.app);
         if (registro.detener) {
