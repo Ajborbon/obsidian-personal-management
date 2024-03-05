@@ -7,19 +7,20 @@
   import { PluginMainSettings } from './interfaces/pluginMainSettings';
   import { DEFAULT_SETTINGS } from './defaults/defaultSettings';
   import {registroTiempoAPI} from './modules/moduloRegistroTiempo/API/registroTiempoAPI'
-  import { starterAPI } from './modules/inicializacionSubsistemas/API/starterAPI';
+  import { starterAPI} from './modules/noteLifecycleManager/API/starterAPI';
+  import { YAMLUpdaterAPI } from './modules/noteLifecycleManager/API/YAMLUpdaterAPI';
 
 
 
 export default class ManagementPlugin extends Plugin {
   settings: PluginMainSettings;
   // Declara una propiedad `settings` para almacenar la configuración del plugin.
-  statusBarExtension: StatusBarExtension | null = null;
-  moduloRegistroTiempo: ModuloRegistroTiempo | null = null;
-  moduloBase: ModuloBase | null = null;
-  registeredCommandIdsRT: string[] = [];
-  registeredCommandIdsMB: string[] = [];
-  ribbonButtonRT: ReturnType<Plugin['addRibbonIcon']> | null = null;
+  //statusBarExtension: StatusBarExtension | null = null;
+  //moduloRegistroTiempo: ModuloRegistroTiempo | null = null;
+  //moduloBase: ModuloBase | null = null;
+  //registeredCommandIdsRT: string[] = [];
+  //registeredCommandIdsMB: string[] = [];
+  //ribbonButtonRT: ReturnType<Plugin['addRibbonIcon']> | null = null;
   // Declara una propiedad para mantener una instancia de `StatusBarExtension`.
   
 
@@ -27,16 +28,17 @@ export default class ManagementPlugin extends Plugin {
         
         await this.loadSettings();
         // cargar API registro Tiempo
-        this.app.plugins.plugins['Total-Personal-Management'] = this;
-        this.registroTiempoAPI = new registroTiempoAPI(this);
-        this.starterAPI = new starterAPI(this);
+        //this.app.plugins.plugins['Total-Personal-Management'] = this;
+        //this.registroTiempoAPI = new registroTiempoAPI(this);
+        //this.starterAPI = new starterAPI(this);
+        //this.YAMLUpdaterAPI = new YAMLUpdaterAPI(this);
         // Añade la pestaña de configuración
-        this.addSettingTab(new PluginMainSettingsTab(this));
+        //this.addSettingTab(new PluginMainSettingsTab(this));
         // Inicializa las instancias de los módulos
-        this.statusBarExtension = new StatusBarExtension(this);
-        this.moduloRegistroTiempo = new ModuloRegistroTiempo(this);
-        this.moduloBase = new ModuloBase(this);
-        this.applyConfiguration();
+        //this.statusBarExtension = new StatusBarExtension(this);
+        //this.moduloRegistroTiempo = new ModuloRegistroTiempo(this);
+        //this.moduloBase = new ModuloBase(this);
+        //this.applyConfiguration();
         // Aplica la configuración inicial basada en los ajustes cargados o predeterminados.
         console.log('Iniciando carga de plugin de Gestión Personal');
       
