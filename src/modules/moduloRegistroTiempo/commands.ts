@@ -64,6 +64,30 @@ export function registerCommands(plugin: Plugin): void {
     // Almacenar el ID del comando en registeredCommandIds.
     plugin.registeredCommandIdsRT.push(id3.id);
 
+    
+const id4 = plugin.addCommand({
+    id: "vista-registro-tiempo-activa",
+    name: "Mostrar RT Activo",
+    callback: async () => {
+        // Asegura que no haya duplicados de la vista.
+        app.workspace.detachLeavesOfType("vista-registro-activo");
+
+        // Abre la vista en una nueva hoja.
+        await app.workspace.getRightLeaf(true).setViewState({
+            type: "vista-registro-activo",
+        });
+ 
+        // Activa la nueva hoja para el usuario.
+        app.workspace.revealLeaf(
+            app.workspace.getLeavesOfType("vista-registro-activo")[0]
+        );
+         
+        
+    },
+});
+// Almacenar el ID del comando en registeredCommandIds.
+plugin.registeredCommandIdsRT.push(id4.id);
+
 }
 
 

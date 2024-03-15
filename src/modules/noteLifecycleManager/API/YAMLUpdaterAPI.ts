@@ -28,23 +28,42 @@ export class YAMLUpdaterAPI {
         
             try {
                 for (let campo of campos) {
-                    // Usa el nombre del campo para construir el nombre de la función (p. ej., "getId")
-                    const functionName = `get${campo.charAt(0).toUpperCase() + campo.slice(1)}`;
+                    // Divide el campo en función del símbolo "_"
+                    const partes = campo.split('_');
+                    let campoName, functionName;
+                    let parametro = null; 
+                    // Si hay un símbolo "_", usa la parte antes de "_" para el nombre de la función,
+                    // y la parte después de "_" como parámetro.
+                    if (partes.length > 1) {
+                        functionName = `get${partes[0].charAt(0).toUpperCase() + partes[0].slice(1)}`;
+                        campoName = partes[0];
+                        parametro = partes[1];
+                    } else {
+                        campoName = partes[0];
+                        functionName = `get${campo.charAt(0).toUpperCase() + campo.slice(1)}`;
+                    }
+
+                    let metadata =  app.metadataCache.getFileCache(this.infoNota.file)?.frontmatter;
+                    debugger;
+                    let valorActualCampo = metadata[campoName] || "Sin definir";
                     // Verifica si existe una función con ese nombre.
                     if (typeof this[functionName] === 'function') {
-                        // Llama a la función de manera dinámica y asigna el resultado al campo correspondiente de la nota.
-                        nota[campo] = await this[functionName]();
+                        // Llama a la función de manera dinámica. Si existe un parámetro, pásalo a la función.
+                        if (parametro !== null) {
+                            nota[campoName] = await this[functionName](parametro,valorActualCampo);
+                        } else {
+                            nota[campoName] = await this[functionName]();
+                        }
                     } else {
                         console.error(`La función ${functionName} no está definida.`);
                         // Maneja el caso en que la función no esté definida.
-                        // Por ejemplo, podrías asignar un valor por defecto a nota[campo] o simplemente continuar.
                     }
                 }
                 
+                debugger;
                 // Actualizar la nota
                 if (Object.keys(nota).length > 0) {
                     // Ejecuta tu código aquí si el objeto `nota` tiene más de una propiedad
-                
                     await this.updateYAMLFields(nota, infoNota.file.path)
                 }else{
                     //No se encontraron campos para modificar
@@ -60,6 +79,45 @@ export class YAMLUpdaterAPI {
         return nota; // Retorna el objeto nota con todas las propiedades agregadas.
     }
     
+    async archivarNota(infoNota: any, campos: any) {
+        debugger
+        let nota = {}; // Inicializa el objeto nota.
+        Object.assign(this.infoNota, infoNota); 
+            try {
+                for (let campo of campos) {
+                    // Usa el nombre del campo para construir el nombre de la función (p. ej., "getId")
+                    const functionName = `get${campo.charAt(0).toUpperCase() + campo.slice(1)}`;
+                    // Verifica si existe una función con ese nombre.
+                    if (typeof this[functionName] === 'function') {
+                        // Llama a la función de manera dinámica y asigna el resultado al campo correspondiente de la nota.
+                        nota[campo] = await this[functionName]();
+                    } else {
+                        console.error(`La función ${functionName} no está definida.`);
+                        // Maneja el caso en que la función no esté definida.
+                        // Por ejemplo, podrías asignar un valor por defecto a nota[campo] o simplemente continuar.
+                    }
+                }
+                
+                // Actualizar la nota
+                debugger
+                nota.estado = "🔵";
+                if (Object.keys(nota).length > 0) {
+                    // Ejecuta tu código aquí si el objeto `nota` tiene más de una propiedad
+                    await this.updateYAMLFields(nota, infoNota.file.path)
+                }else{
+                    //No se encontraron campos para modificar
+                }
+                
+                // Aquí iría el código para procesar el objeto nota, como guardar en un archivo dentro de 'folder'.
+                
+            } catch (error) {
+                console.error("No se pudo crear el objeto de registro.", error);
+                new Notice("No se pudo crear el objeto de registro.");
+                return null;
+            }
+        return nota; // Retorna el objeto nota con todas las propiedades agregadas.
+    }
+
 
     async updateYAMLFields(nota, ruta) {
         
@@ -108,7 +166,7 @@ export class YAMLUpdaterAPI {
     return tp;
     }
 
-    async getFecha() {
+    async getFecha(flag, actual) {
         
         return this.formatearFecha(new Date());
     }
@@ -124,11 +182,11 @@ export class YAMLUpdaterAPI {
     }
 
 
-    async getHoraFinal(){
+    async getHoraFinal(flag, actual){
         return this.formatearFecha(new Date());
     }
 
-    async getTiempoTrabajado(){
+    async getTiempoTrabajado(flag, actual){
         debugger
         let horaInicioStr = this.infoNota.horaInicio;
             // Suponiendo que el formato es "YYYY-MM-DD dddd HH:mm" y quieres convertirlo a un formato reconocido por Date
@@ -147,11 +205,11 @@ export class YAMLUpdaterAPI {
     }
 
 
-    async getSecId(){
+    async getSecId(flag, actual){
 
     }
     
-    async getTitulo(){
+    async getTitulo(flag, actual){
         let titulo = await this.tp.system.prompt(`Titulo de este(a) ${this.infoSubsistema.name}`, `${this.infoSubsistema.name} - ${this.nota.id}`, true)
 	    // Verificar si el usuario presionó Esc.
         if (titulo === null) {
@@ -162,8 +220,17 @@ export class YAMLUpdaterAPI {
         return titulo;
     }
 
-    async getDescripcion(){
-        let descripcion = await this.tp.system.prompt("¿Quieres agregar una descripción?", " " + `Esta nota es sobre ${this.nota.titulo}`, false, true )
+    async getDescripcion(flag, actual){
+        let prompt = this.tp.system.static_functions.get("prompt");
+        let descripcion;
+        switch (flag) {
+            case "RegistroTiempo":
+                 descripcion = await prompt("¿Detalle del Registro Tiempo:", actual, false, true )   
+              break;
+            default:
+                descripcion = await prompt("¿Quieres agregar una descripción?", " " + `Esta nota es sobre ${this.nota.titulo}`, false, true )
+              break;
+          } 
 	    // Verificar si el usuario presionó Esc.
         if (descripcion === null) {
         new Notice("Creación de nota cancelada por el usuario.");
@@ -173,7 +240,7 @@ export class YAMLUpdaterAPI {
         return descripcion;
     }
 
-    async getAliases(){
+    async getAliases(flag, actual){
         this.nota.aliases = [];      
         switch(this.infoSubsistema.type) {
             case "Ax":
@@ -189,7 +256,7 @@ export class YAMLUpdaterAPI {
        
     }
 
-    async getAsunto(){
+    async getAsunto(flag, actual){
         let siAsunto, nombre; 
         let activo = app.workspace.getActiveFile();
         if (activo != null){ 
@@ -208,7 +275,7 @@ export class YAMLUpdaterAPI {
     }
 
 
-    async getClasificacion(){
+    async getClasificacion(flag, actual){
         let clasificacion, tagClasificacion, clasificacionAX, tagsClasificacionAX;
         let nuevaClasificacion = false;
         const file = app.vault.getAbstractFileByPath(this.pathCampos);
@@ -269,7 +336,7 @@ export class YAMLUpdaterAPI {
     }
     // ->
 
-    async getEstado(){
+    async getEstado(flag, actual){
         let suggester = this.tp.system.static_functions.get("suggester");
 	    let campo = await suggester(["🔵 -> Completado - Información", "🟢 -> Finalizado","🟡 -> En ejecución", "🔴 -> Detenido"],["🔵", "🟢","🟡", "🔴"], false, "Seleccione el nuevo estado:");
         // Verificar si el usuario presionó Esc.
@@ -281,7 +348,7 @@ export class YAMLUpdaterAPI {
         return campo;
     }
 
-    async getFilename(){
+    async getFilename(flag, actual){
         switch(this.infoSubsistema.type) {
             case "AV":
             case "AI":

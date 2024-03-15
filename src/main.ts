@@ -9,7 +9,8 @@
   import {registroTiempoAPI} from './modules/moduloRegistroTiempo/API/registroTiempoAPI'
   import { starterAPI} from './modules/noteLifecycleManager/API/starterAPI';
   import { YAMLUpdaterAPI } from './modules/noteLifecycleManager/API/YAMLUpdaterAPI';
-
+  import { menuHoyAPI} from './modules/noteLifecycleManager/API/menuDiarioAPI'
+  import { VistaRegistroActivo } from './modules/moduloRegistroTiempo/views/vistaRTActivo';
 
 
 export default class ManagementPlugin extends Plugin {
@@ -24,16 +25,24 @@ export default class ManagementPlugin extends Plugin {
   app: any;
   registroTiempoAPI: registroTiempoAPI | undefined;
   starterAPI: starterAPI | undefined;
+  menuHoyAPI: menuHoyAPI | undefined;
   // Declara una propiedad para mantener una instancia de `StatusBarExtension`.
   
 
     async onload() { 
         
         await this.loadSettings();
+        
+        this.registerView(
+          "vista-registro-activo", 
+          (leaf) => new VistaRegistroActivo(leaf, this)
+        );
+
         // cargar API registro Tiempo
         this.registroTiempoAPI = new registroTiempoAPI(this);
         this.starterAPI = new starterAPI(this);
         this.YAMLUpdaterAPI = new YAMLUpdaterAPI(this);
+        this.menuHoyAPI = new menuHoyAPI(this);
         // Añade la pestaña de configuración - 
         this.addSettingTab(new PluginMainSettingsTab(this));
         // Inicializa las instancias de los módulos

@@ -1,4 +1,7 @@
 //import {utilsAPI} from './utilsAPI'
+import {TFile, Plugin} from 'obsidian'
+import { DateTime } from 'luxon';
+
 
 export class starterAPI {
     //private utilsApi: utilsAPI;
@@ -17,8 +20,48 @@ export class starterAPI {
         this.pathCampos = this.plugin.settings.file_camposCentral + ".md";
     }
     
+    // Crear Nota desde template
+    async createNote(subsistema: string) {
+        try {
+            debugger
+            const templatePath = `Plantillas/${this.plugin.settings[`folder_${subsistema}`]}/Plt - ${subsistema}.md`;
+            
+              // Intentar obtener el archivo por path
+            const templateFile = app.vault.getAbstractFileByPath(templatePath);
 
-    async crearNota(infoSubsistema: { folder: string | number; indice: string | number; }, campos: any) {
+            // Verificar si el archivo es un TFile
+            if (!(templateFile instanceof TFile)) {
+                // Si no es un TFile, manejar el error
+                throw new Error(`El template para "${subsistema}" no se encontró o no es un archivo válido.`);
+            }
+            const dtConseq = DateTime.now().toFormat('yyyy-MM-dd HHmmss');
+            const filename = `${subsistema} ${dtConseq}`;
+            const folder = app.vault.getAbstractFileByPath("Inbox");
+            if (!folder) {
+                throw new Error(`La carpeta "Inbox" no se encontró.`);
+            }
+    
+            const tp = this.getTp();
+            let crearNota = tp.file.static_functions.get("create_new");
+            if (typeof crearNota !== "function") {
+                throw new Error("La función para crear notas no está disponible.");
+            }
+            debugger
+            await crearNota(templateFile, filename, true, folder).basename;
+            
+       
+        } catch (error) {
+            console.error(error);
+            // Aquí puedes manejar el error, por ejemplo, mostrando un mensaje al usuario
+            // Puedes reemplazar este mensaje de error por cualquier acción que consideres adecuada
+            alert(`Error al crear la nota: ${error.message}`);
+        }
+    }
+    
+
+
+    // crearNota -> Llenar los campos YAML del template.
+    async fillNote(infoSubsistema: { folder: string | number; indice: string | number; }, campos: any) {
         
         let nota = {}; // Inicializa el objeto nota.
         Object.assign(this.infoSubsistema, infoSubsistema); 
@@ -69,7 +112,8 @@ export class starterAPI {
         let tpGen = this.plugin.app.plugins.plugins["templater-obsidian"].templater;
         tpGen = tpGen.functions_generator.internal_functions.modules_array;
         let tp = {}
-        // get an instance of the date module
+        // get an instance of modules
+        tp.file = tpGen.find(m => m.name == "file");
         tp.system = tpGen.find(m => m.name == "system");
 
         if (!tp.system) {
@@ -125,7 +169,7 @@ export class starterAPI {
     
     async getTitulo(){
         let prompt = this.tp.system.static_functions.get("prompt");
-        let titulo = await prompt(`Titulo de este(a) ${this.infoSubsistema.name}`, `${this.infoSubsistema.name} - ${this.nota.id}`, true)
+        let titulo = await prompt(`Titulo de este(a) ${this.infoSubsistema.typeName}`, `${this.infoSubsistema.typeName} - ${this.nota.id}`, true)
 	    // Verificar si el usuario presionó Esc.
         if (titulo === null) {
         new Notice("Creación de nota cancelada por el usuario.");
@@ -151,6 +195,7 @@ export class starterAPI {
         this.nota.aliases = [];      
         switch(this.infoSubsistema.type) {
             case "Ax":
+            case "ProyectosGTD":
                 this.nota.aliases.push(`${this.nota.titulo}`)
                 this.nota.aliases.push(`${this.infoSubsistema.type} - ${this.nota.titulo}`)
                 break;
@@ -164,23 +209,147 @@ export class starterAPI {
     }
 
     async getAsunto(){
-        let siAsunto, nombre; 
-        let activo = app.workspace.getActiveFile();
-        if (activo != null){ 
-            nombre = activo.basename;
-            const nota = app.metadataCache.getFileCache(activo); 
-            let suggester = this.tp.system.static_functions.get("suggester");
-            siAsunto = await suggester(["Si","No"],[true, false], true, nombre + " es origen de " + this.nota.titulo + "?")
-            }else{
-                siAsunto = false;
-                nombre = "";
+
+        let suggester = this.tp.system.static_functions.get("suggester");
+        let tipoSistema = this.infoSubsistema.type;
+        let nombreSistema = this.infoSubsistema.typeName;
+        let subsistemas, padres = [];
+        let campo
+        debugger;
+        switch(tipoSistema) {
+            case "Ax":
+                //campo = await suggester(["🔵 -> Para Archivo - Información", "🟢 -> Finalizado","🟡 -> En desarrollo", "🔴 -> No realizado"],["🔵", "🟢","🟡", "🔴"], false, `Estado actual ${nombreSistema}:`);
+                break;
+            case "ProyectosGTD":
+                // Lógica para permitir al usuario elegir una tarea específica.
+                subsistemas = ["ProyectosGTD","ProyectosQ","TemasInteres","AreasInteres","AreasVida"]
+                padres = await this.getOtrosAsuntos(subsistemas);
+                
+                break;
+            default:
+                // Si el usuario elige "Otro" o cualquier otra opción.
+                
+            break;
             }
-            
-            this.nota.asunto = {};
-            this.nota.asunto.siAsunto = siAsunto;
-            this.nota.asunto.nombre = nombre;    
-        return {siAsunto, nombre}
+
+        let activo = app.workspace.getActiveFile();
+        let siAsunto;
+        let nombre = "";
+        if (activo != null) {
+            nombre = activo.basename;
+            const nota = app.metadataCache.getFileCache(activo);
+            siAsunto = await suggester(["Si", "No"], [true, false], true, nombre + " es origen de " + this.nota.titulo + "?");
+        
+            if (siAsunto) {
+                // En caso de que siAsunto sea true, desplaza los elementos del arreglo padre y añade activo.basename en la posición 0
+                padres.unshift(nombre); // Añade el nombre al inicio del arreglo, desplazando los demás elementos
+            }
+        } else {
+            siAsunto = false;
+        }
+        
+        // Al final, ajusta siAsunto basado en la longitud de padre
+        siAsunto = padres.length > 0;
+
+        this.nota.asunto = {};
+        this.nota.asunto.siAsunto = siAsunto;
+        this.nota.asunto.nombre = padres;    
+        return {siAsunto, nombre: padres}
     }
+
+    async getOtrosAsuntos(subsistemas) {
+        let suggester = this.tp.system.static_functions.get("suggester");
+        let campo = [];
+    
+        for (let subsistema of subsistemas) {
+            // Pregunta inicial para incluir algún subsistema como origen
+            let incluye = await suggester(["Si", "No"], [true, false], true, `Desea agregar algun ${subsistema} activo como origen?`);
+            if (!incluye) continue; // Si la respuesta es 'No', continúa con el siguiente subsistema
+            debugger
+            let recursosActivos = await this.activeStructureResources(subsistema);
+            let primerAlias = recursosActivos.map(file => {
+                const metadata = app.metadataCache.getFileCache(file)?.frontmatter;
+                return metadata && metadata.aliases && metadata.aliases.length > 0 ? metadata.aliases[0] : null;
+            }).filter(alias => alias !== null);
+    
+            while (recursosActivos.length > 0) { // Continúa mientras haya recursos activos para elegir
+                let indiceSeleccionado
+                if (subsistema === "AreasVida" || subsistema === "AreasInteres"){
+                    let seleccion = await suggester(primerAlias, recursosActivos.map(b => b.path), false, `${subsistema} activos:`);
+                    if (!seleccion) break; // Si no hay selección, sale del ciclo
+                    // Encuentra y elimina la selección de los arreglos para no volver a mostrarla
+                    // Encuentra el índice del archivo seleccionado en recursosActivos basándonos en el basename
+                    indiceSeleccionado = recursosActivos.findIndex(b => b.path === seleccion);
+                }else{
+                let seleccion = await suggester(primerAlias, recursosActivos.map(b => b.basename), false, `${subsistema} activos:`);
+                if (!seleccion) break; // Si no hay selección, sale del ciclo
+                // Encuentra y elimina la selección de los arreglos para no volver a mostrarla
+                // Encuentra el índice del archivo seleccionado en recursosActivos basándonos en el basename
+                indiceSeleccionado = recursosActivos.findIndex(b => b.basename === seleccion);
+                }
+                if (indiceSeleccionado !== -1) {
+                    if (subsistema === "AreasVida" || subsistema === "AreasInteres"){
+                        
+                    campo.push(recursosActivos[indiceSeleccionado].path); // Agrega el basename del archivo seleccionado al campo    
+                    }else{
+                    campo.push(recursosActivos[indiceSeleccionado].basename); // Agrega el basename del archivo seleccionado al campo
+                    }
+                    // Elimina el elemento seleccionado de ambos arreglos para no volver a mostrarlo
+                    recursosActivos.splice(indiceSeleccionado, 1);
+                    primerAlias.splice(indiceSeleccionado, 1);
+                }
+    
+                // Si no quedan más recursos activos, no pregunta si desea agregar otro
+                if (recursosActivos.length === 0) break;
+    
+                // Pregunta si desea agregar otro registro del mismo subsistema
+                let deseaAgregarOtro = await suggester(["Si", "No"], [true, false], true, `Desea agregar otro ${subsistema} como origen?`);
+                debugger
+                if (!deseaAgregarOtro) break; // Si la respuesta es 'No', sale del ciclo
+                
+            }
+        }
+    
+        return campo; // Retorna el arreglo campo con todas las selecciones realizadas
+    }
+    
+    
+
+    async activeStructureResources(type) {
+        try {
+            // Obtén todos los archivos Markdown
+            const files = app.vault.getMarkdownFiles();
+            
+            // Determina el nombre de la carpeta de recursos basado en el tipo
+            let resourceFolderName = "folder_" + type;
+            let resourceFolder = this.plugin.settings[resourceFolderName];
+            
+            // Verifica si la carpeta de recursos existe para evitar errores
+            if (!resourceFolder) {
+                console.error(`La carpeta "${resourceFolderName}" no existe en la configuración del plugin.`);
+                return []; // Retorna un arreglo vacío si la carpeta no existe
+            }
+    
+            let activeResources = [];
+            
+            // Filtra los archivos que están dentro del directorio deseado y tienen estado 🟢
+            const registrosExistentes = files.filter(file => file.path.startsWith(resourceFolder));
+            
+            // Usa metadataCache para buscar los estados en el frontmatter
+            registrosExistentes.forEach(file => {
+                const metadata = app.metadataCache.getFileCache(file)?.frontmatter;
+                if (metadata && metadata.estado === "🟢") {
+                    activeResources.push(file);
+                }
+            });
+    
+            return activeResources;
+        } catch (error) {
+            console.error("Error al buscar recursos activos:", error);
+            return []; // Retorna un arreglo vacío en caso de error
+        }
+    }
+    
 
 
     async getClasificacion(){
@@ -249,8 +418,24 @@ export class starterAPI {
 
     async getEstado(){
         let suggester = this.tp.system.static_functions.get("suggester");
-	    let campo = await suggester(["🔵 -> Completado - Información", "🟢 -> Finalizado","🟡 -> En ejecución", "🔴 -> Detenido"],["🔵", "🟢","🟡", "🔴"], false, "Seleccione el nuevo estado:");
-        // Verificar si el usuario presionó Esc.
+        let tipoSistema = this.infoSubsistema.type;
+        let nombreSistema = this.infoSubsistema.typeName;
+        let campo;
+        switch(tipoSistema) {
+            case "Anotaciones":
+                campo = await suggester(["🔵 -> Para Archivo - Información", "🟢 -> Finalizado","🟡 -> En desarrollo", "🔴 -> No realizado"],["🔵", "🟢","🟡", "🔴"], false, `Estado actual ${nombreSistema}:`);
+                break;
+            case "ProyectosGTD":
+                // Lógica para permitir al usuario elegir una tarea específica.
+                campo = await suggester(["🔵 -> Completado - Archivo", "🟢 -> Activo","🟡 -> En Pausa", "🔴 -> Detenido"],["🔵", "🟢","🟡", "🔴"], false, `Estado actual ${nombreSistema}:`);
+                break;
+            default:
+                // Si el usuario elige "Otro" o cualquier otra opción.
+                campo = await suggester(["🔵 -> Completado - Información", "🟢 -> Finalizado","🟡 -> En desarrollo", "🔴 -> Detenido"],["🔵", "🟢","🟡", "🔴"], false, "Seleccione el estado de la nota:");
+                }
+
+
+	    // Verificar si el usuario presionó Esc.
         if (campo === null) {
         new Notice("Modificación de nota cancelada por el usuario.");
         return; // Termina la ejecución de la función aquí.
@@ -260,12 +445,14 @@ export class starterAPI {
     }
 
     async getFilename(){
+        debugger
         switch(this.infoSubsistema.type) {
             case "AV":
             case "AI":
                 this.nota.fileName = (`${this.infoSubsistema.folder}/${this.nota.titulo}/index${this.infoSubsistema.type}`)
                 break;
             case "Ax":
+            case "ProyectosGTD":    
                 this.nota.fileName = (`${this.infoSubsistema.folder}/${this.infoSubsistema.type} - ${this.nota.id}`)
                 break;     
             }

@@ -1,0 +1,37 @@
+.vista-RT {
+    padding-top: 2px; 
+    padding: 2px 10px 1px; 
+    /* Cualquier otro estilo que quieras aplicar */
+}
+
+.vista-RT p {
+    font-size: 0.9em; /* Hace el texto de los párrafos más pequeño */
+    /* Puedes ajustar el 0.8em al tamaño que prefieras */
+}
+
+.vista-RT span {
+    font-size: 0.8em; /* Hace el texto de los párrafos más pequeño */
+    /* Puedes ajustar el 0.8em al tamaño que prefieras */
+}
+.vista-RT h5 {
+    padding: 0px 8px 0px; 
+    text-align: center; /* Centra los encabezados h1 */
+    margin-top: 5px;
+    /* Cualquier otro estilo que quieras aplicar a h1 */
+}
+.vista-RT button {
+    padding: 0px 8px 0px; 
+    text-align: center; /* Centra los encabezados h1 */
+    margin-top: 5px;
+    /* Cualquier otro estilo que quieras aplicar a h1 */
+}
+
+.vista-RT div {
+    padding: 5px 8px 3px; 
+    /* Cualquier otro estilo que quieras aplicar a h1 */
+}
+
+.table-small {
+    font-size: 0.5em; /* Hace el texto de los párrafos más pequeño */
+    /* Puedes ajustar el 0.8em al tamaño que prefieras */
+}

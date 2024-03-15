@@ -1,5 +1,8 @@
+
+// LÓGICA PARA ACCEDER A LAS FUNCIONES DESDE LOS BOTONES PROPIOS DE LA INTERFAZ DE OBSIDIAN -> RIBBON, ETC
 import { App, TFile, TFolder, Modal, FuzzySuggestModal, FuzzyMatch, Notice } from "obsidian";
 import {SeleccionModal} from "../modales/seleccionModal"
+
 
 export async function cumpleCondicion(app: App): Promise<boolean> {
     const files = app.vault.getMarkdownFiles();
@@ -122,6 +125,7 @@ export async function verificarTareasActivas(registro: any, app: App): Promise<v
         }
         
         if (deseaDetener) {
+            // AQUI VA LA IMPLEMENTACIÓN AL NUEVO CÓDIGO -> ESTA LOGICA MANEJA FUNCIONES!  
             await detenerTarea(tareaActiva, app);
             registro.detener = false;
         } else {

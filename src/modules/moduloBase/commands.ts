@@ -1,5 +1,6 @@
 import {crearCarpeta} from "./utils/crearCarpeta"
 import {crearPlantilla} from "./utils/crearPlantilla"
+import {insertFileLink} from "./utils/fileLinkModal"
 import {plantilla} from "../../plantillas/Anotaciones/Plt - Anotaciones"
 import {TFile, TFolder} from "obsidian"
 import {createNoteFromTemplate} from "./utils/createNoteFromTemplate"
@@ -68,8 +69,43 @@ export function registerCommands(plugin: Plugin): void {
     // Almacenar el ID del comando en registeredCommandIds.
     plugin.registeredCommandIdsMB.push(comando3.id);
 
-}
 
+    const comando4 = plugin.addCommand({
+        id: "crear-link-Archivo",
+        name: "Crear un link a archivo del Disco.",
+        callback: async () => {
+                await insertFileLink(app);
+                
+        },
+    });
+    // Almacenar el ID del comando en registeredCommandIds.
+    plugin.registeredCommandIdsMB.push(comando4.id);
+
+
+    // Creación y registro del comando.
+    const comando5 = plugin.addCommand({
+        id: "abrir-nota-activa",
+        name: "Abrir Nota Activa",
+        callback: async () => {
+           
+       // Asegura que no haya duplicados de la vista.
+       app.workspace.detachLeavesOfType("vista-nota-activa");
+
+       // Abre la vista en una nueva hoja.
+       await app.workspace.getRightLeaf(true).setViewState({
+           type: "vista-nota-activa",
+       });
+
+       // Activa la nueva hoja para el usuario.
+       app.workspace.revealLeaf(
+           app.workspace.getLeavesOfType("vista-nota-activa")[0]
+       );
+        }
+    });
+    plugin.registeredCommandIdsMB.push(comando5.id);
+
+
+}
 
 export function deactivateCommands(plugin: Plugin): void {
     
