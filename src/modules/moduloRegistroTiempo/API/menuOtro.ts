@@ -77,7 +77,6 @@ export class menuOtro {
 
         async  elemSG (app: App, tipo : string): Promise<any>{
             const actividades = await this.resultYaml(app, tipo)
-            debugger
             const activeSG = await this.findMainFilesWithState(app,tipo)
             // Extrae el primer alias de cada nota encontrada y los almacena en un array
             

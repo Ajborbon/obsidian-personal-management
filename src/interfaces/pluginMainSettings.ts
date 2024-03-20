@@ -4,6 +4,7 @@ export interface PluginMainSettings {
     moduloRegistroTiempo: boolean,
     moduloAliasStatusBar: boolean,
     moduloBase: boolean,
+    moduloGTD: boolean,
     // Archivos de campos
     file_camposCentral: string,
 
@@ -20,11 +21,6 @@ export interface PluginMainSettings {
     // Estudio
     folder_Estudio: string,
     indice_Estudio: string,    
-    // GTD Proyectos y Revisiones Semanales
-    folder_ProyectosGTD: string,
-    indice_ProyectosGTD: string,
-    folder_RSGTD: string,
-    indice_RSGTD: string,
     // Lectura
     folder_LecturaSesiones: string,
     indice_LecturaSesiones: string,
@@ -71,6 +67,25 @@ export interface PluginMainSettings {
     folder_TemasInteres: string,
     indice_TemasInteres: string,
 
+     // GTD Proyectos y Revisiones Semanales
+     file_Inbox: string,
+     folder_ProyectosGTD: string,
+     indice_ProyectosGTD: string,
+     folder_RSGTD: string,
+     indice_RSGTD: string,
 
-}
+
+     // JOURNAL
+     folder_Diario: string,
+     indice_Diario: string,
+     folder_Semanal: string,
+     indice_Semanal: string,
+     folder_Mensual: string,
+     indice_Mensual: string,
+     folder_Trimestral: string,
+     indice_Trimestral: string,
+     folder_Anual: string,
+     indice_Anual: string,
+    }
+
 

@@ -5,6 +5,7 @@ export const DEFAULT_SETTINGS: PluginMainSettings = {
   moduloRegistroTiempo: true,
   moduloAliasStatusBar: true,
   moduloBase: true,
+  moduloGTD: true,
   file_camposCentral :"Estructura/Campos Sistema Gestion/Campos Sistema Central", 
   folder_Anotaciones: "Anotaciones/Notas",
   indice_Anotaciones: "Anotaciones/Indice Anotaciones",
@@ -14,10 +15,6 @@ export const DEFAULT_SETTINGS: PluginMainSettings = {
   indice_Desarrollos: "Subsistemas/Desarrollos/Indice Desarrollo",
   folder_Estudio: "Subsistemas/Estudio/Temas",
   indice_Estudio: "Subsistemas/Estudio/Indice Estudio",
-  folder_ProyectosGTD: "Subsistemas/GTD/Proyectos GTD/Proyectos",
-  indice_ProyectosGTD: "Subsistemas/GTD/Proyectos GTD/Indice Proyectos GTD",
-  folder_RSGTD: "Subsistemas/GTD/Revision Semanal/Revisiones",
-  indice_RSGTD: "Subsistemas/GTD/Revision Semanal/Indice Revision Semanal",
   folder_LecturaSesiones: "Subsistemas/Lectura/Sesiones de Lectura/Sesiones",
   indice_LecturaSesiones: "Subsistemas/Lectura/Sesiones de Lectura/Indice Sesiones Lectura",
   folder_LecturaResumenes: "Subsistemas/Lectura/Libros/Resumenes",
@@ -51,5 +48,23 @@ export const DEFAULT_SETTINGS: PluginMainSettings = {
   nameFile_AreasInteres: "indexAI",
   folder_TemasInteres: "Estructura/Temas de Interes",
   indice_TemasInteres: "Estructura/Temas de Interes/Indice Temas de Interes",
+
+  file_Inbox: "Subsistemas/GTD/Bandeja de Entrada/Bandeja de Entrada",
+  folder_ProyectosGTD: "Subsistemas/GTD/Proyectos GTD/Proyectos",
+  indice_ProyectosGTD: "Subsistemas/GTD/Proyectos GTD/Indice Proyectos GTD",
+  folder_RSGTD: "Subsistemas/GTD/Revision Semanal/Revisiones",
+  indice_RSGTD: "Subsistemas/GTD/Revision Semanal/Indice Revision Semanal",
+
+  // Journal
+  folder_Diario: "Estructura/Journal/Diario/Notas",
+  indice_Diario: "Estructura/Journal/Diario/Indice Diario",
+  folder_Semanal: "Estructura/Journal/Semanal/Notas",
+  indice_Semanal: "Estructura/Journal/Semanal/Indice Semanal",
+  folder_Mensual: "Estructura/Journal/Mensual/Notas",
+  indice_Mensual: "Estructura/Journal/Mensual/Indice Mensual",
+  folder_Trimestral: "Estructura/Journal/Trimestral/Notas",
+  indice_Trimestral: "Estructura/Journal/Trimestral/Indice Trimestral",
+  folder_Anual: "Estructura/Journal/Anual/Notas",
+  indice_Anual: "Estructura/Journal/Anual/Indice Anual",
 };
 

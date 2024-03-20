@@ -35,3 +35,57 @@
     font-size: 0.5em; /* Hace el texto de los párrafos más pequeño */
     /* Puedes ajustar el 0.8em al tamaño que prefieras */
 }
+
+
+/* Clase general para el modal */
+.modalInbox {
+    /* Estilos generales para el modal, si es necesario */
+    background-color: #f9f9f9; /* Solo un ejemplo */
+    padding: 20px;
+    border-radius: 8px;
+    text-align: center;
+  }
+  
+  /* Estilos para el textarea dentro del modal */
+  .modalInbox textarea {
+    width: 98%; /* Ajusta al 98% del ancho del modal */
+    margin: 10px auto; /* Mantiene el margen arriba y abajo para separación */
+    display: block;
+    resize: none; /* Impide que el usuario cambie el tamaño */
+    height: calc(1.5em * 3); /* Calcula el alto para 3 líneas de texto */
+    overflow-y: auto; /* Permite desplazamiento vertical si el texto excede el espacio */
+    padding: 4px; /* Añade un poco de padding dentro del textarea */
+    box-sizing: border-box; /* Asegura que el padding no afecte el ancho establecido */
+}
+  
+  /* Estilos para el contenedor del checkbox para centrar */
+  .modalInbox checkbox-container {
+    text-align: center;
+    margin: 20px 0; /* Añade margen arriba y abajo para separación */
+  }
+  
+  /* Estilos opcionales para el checkbox */
+  .modalInbox checkbox {
+    margin-right: 5px;
+  }
+  
+  /* Estilos para el contenedor del botón para centrar */
+  .modalInbox button-container {
+    text-align: center;
+    margin: 20px 0; /* Añade margen arriba y abajo para separación */
+  }
+  
+  /* Estilos para el botón */
+  .modalInbox button {
+    
+    border: none;
+    padding: 20px 15px;
+    border-radius: 5px;
+    cursor: pointer;
+    margin-left: 20px; 
+  }
+  
+  .modalInbox button:hover {
+
+  }
+  

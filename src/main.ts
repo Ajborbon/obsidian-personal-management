@@ -8,10 +8,13 @@
   import { DEFAULT_SETTINGS } from './defaults/defaultSettings';
   import {registroTiempoAPI} from './modules/moduloRegistroTiempo/API/registroTiempoAPI'
   import { starterAPI} from './modules/noteLifecycleManager/API/starterAPI';
+  import { addOnsAPI } from './modules/noteLifecycleManager/API/addOnsAPI';
   import { YAMLUpdaterAPI } from './modules/noteLifecycleManager/API/YAMLUpdaterAPI';
   import { menuHoyAPI} from './modules/noteLifecycleManager/API/menuDiarioAPI'
   import { VistaRegistroActivo } from './modules/moduloRegistroTiempo/views/vistaRTActivo';
-
+  import { ModuloGTD } from './modules/moduloGTD';
+  import { ingresarBandejaEntrada } from './modules/moduloGTD/inbox';
+  import { subsistemasAPI } from './modules/noteLifecycleManager/API/subsistemasAPI';
 
 export default class ManagementPlugin extends Plugin {
   settings: PluginMainSettings | undefined;
@@ -19,20 +22,26 @@ export default class ManagementPlugin extends Plugin {
   statusBarExtension: StatusBarExtension | null = null;
   moduloRegistroTiempo: ModuloRegistroTiempo | null = null;
   moduloBase: ModuloBase | null = null;
+  moduloGTD : ModuloGTD | null = null;
   registeredCommandIdsRT: string[] = [];
   registeredCommandIdsMB: string[] = [];
+  registeredCommandIdsGTD: string[] = [];
   ribbonButtonRT: ReturnType<Plugin['addRibbonIcon']> | null = null;
   app: any;
   registroTiempoAPI: registroTiempoAPI | undefined;
   starterAPI: starterAPI | undefined;
+  addOnsAPI: addOnsAPI | undefined;
   menuHoyAPI: menuHoyAPI | undefined;
+  subsistemasAPI: subsistemasAPI | undefined;
+  newInbox : any;
+  tp: any;
   // Declara una propiedad para mantener una instancia de `StatusBarExtension`.
   
 
     async onload() { 
         
         await this.loadSettings();
-        
+        this.tp = this.getTp();
         this.registerView(
           "vista-registro-activo", 
           (leaf) => new VistaRegistroActivo(leaf, this)
@@ -41,14 +50,19 @@ export default class ManagementPlugin extends Plugin {
         // cargar API registro Tiempo
         this.registroTiempoAPI = new registroTiempoAPI(this);
         this.starterAPI = new starterAPI(this);
+        this.addOnsAPI = new addOnsAPI(this);
         this.YAMLUpdaterAPI = new YAMLUpdaterAPI(this);
         this.menuHoyAPI = new menuHoyAPI(this);
+        this.subsistemasAPI = new subsistemasAPI(this);
+        this.newInbox = ingresarBandejaEntrada.bind(this);
+
         // Añade la pestaña de configuración - 
         this.addSettingTab(new PluginMainSettingsTab(this));
         // Inicializa las instancias de los módulos
         this.statusBarExtension = new StatusBarExtension(this);
         this.moduloRegistroTiempo = new ModuloRegistroTiempo(this);
         this.moduloBase = new ModuloBase(this);
+        this.moduloGTD = new ModuloGTD(this);
         this.applyConfiguration();
         // Aplica la configuración inicial basada en los ajustes cargados o predeterminados.
         console.log('Iniciando carga de plugin de Gestión Personal');
@@ -74,6 +88,11 @@ export default class ManagementPlugin extends Plugin {
           this.statusBarExtension?.deactivate();
           // Si es falsa, desactiva el módulo.
         }
+        if (this.settings.moduloGTD) {
+          this.moduloGTD?.activate(this);
+      } else {
+          this.moduloGTD?.deactivate(this);
+      }
 
     }
     
@@ -97,4 +116,29 @@ export default class ManagementPlugin extends Plugin {
         this.applyConfiguration();
         // Vuelve a aplicar la configuración para asegurarse de que los cambios recientes se reflejen inmediatamente.
       }
+
+      getTp(){
+          debugger;
+          if (!this.app || !this.app.plugins.enabledPlugins.has('templater-obsidian')) {
+              console.error('El plugin Templater no está habilitado.');
+              return;
+          }
+          //  Forma de acceder al objeto tp normal que he usado desde DVJS cuando current Functions esta cargado.
+          //const templaterPlugin = this.app.plugins.plugins['templater-obsidian'];
+          //const tp = templaterPlugin.templater.current_functions_object;
+          // -> version que falla si no esta arriba el plugin porque hace get del plugin directo. const templaterPlugin = this.app.plugins.getPlugin('templater-obsidian');    
+          let tpGen = this.app.plugins.plugins["templater-obsidian"].templater;
+          tpGen = tpGen.functions_generator.internal_functions.modules_array;
+          let tp = {}
+          // get an instance of modules
+          tp.file = tpGen.find(m => m.name == "file");
+          tp.system = tpGen.find(m => m.name == "system");
+
+          if (!tp.system) {
+            console.error("No se pudo acceder al objeto de funciones actuales de Templater.");
+            return;
+        }
+          console.log('Instancia de tp cargada satisfactoriamente en Plugin');
+          return tp;
+        }
   }

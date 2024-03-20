@@ -1,5 +1,5 @@
 //import {utilsAPI} from './utilsAPI'
-import {TFile, Plugin} from 'obsidian'
+import {TFile, Plugin, Notice} from 'obsidian'
 import { DateTime } from 'luxon';
 
 
@@ -63,13 +63,14 @@ export class starterAPI {
     // crearNota -> Llenar los campos YAML del template.
     async fillNote(infoSubsistema: { folder: string | number; indice: string | number; }, campos: any) {
         
-        let nota = {}; // Inicializa el objeto nota.
+        //let nota = {}; // Inicializa el objeto nota.
         Object.assign(this.infoSubsistema, infoSubsistema); 
         if (this.infoSubsistema.defined){
         this.infoSubsistema.folder = this.plugin.settings[infoSubsistema.folder]
         this.infoSubsistema.indice = this.plugin.settings[infoSubsistema.indice]
+        Object.assign(this.nota, infoSubsistema);
         }
-        debugger
+       
         // Crear un tp para acceder a funcionalidades de templater.
        
             try {
@@ -79,7 +80,7 @@ export class starterAPI {
                     // Verifica si existe una función con ese nombre.
                     if (typeof this[functionName] === 'function') {
                         // Llama a la función de manera dinámica y asigna el resultado al campo correspondiente de la nota.
-                        nota[campo] = await this[functionName]();
+                        this.nota[campo] = await this[functionName]();
                     } else {
                         console.error(`La función ${functionName} no está definida.`);
                         // Maneja el caso en que la función no esté definida.
@@ -94,7 +95,7 @@ export class starterAPI {
                 new Notice("No se pudo crear el objeto de registro.");
                 return null;
             }
-        return nota; // Retorna el objeto nota con todas las propiedades agregadas.
+        return this.nota; // Retorna el objeto nota con todas las propiedades agregadas.
     }
     
 
@@ -128,23 +129,36 @@ export class starterAPI {
     async getId() {
         
         let maxId = 0;
-
         // Obtén todos los archivos Markdown
         const files = app.vault.getMarkdownFiles();
+        let registrosExistentes = files.filter((file: { path: string; }) => file.path.startsWith(this.infoSubsistema.folder));
         // Filtra por los archivos en la carpeta deseada
-        const registrosExistentes = files.filter((file: { path: string; }) => file.path.startsWith(this.infoSubsistema.folder));
-        // Usa metadataCache para buscar los IDs en el frontmatter
-        registrosExistentes.forEach((file: any) => {
-            const metadata = app.metadataCache.getFileCache(file)?.frontmatter;
-            if (metadata && metadata.id && !isNaN(metadata.id)) {
-                const id = parseInt(metadata.id);
-                if (id > maxId) maxId = id;
-            }
-        });
+        switch(this.infoSubsistema.type) {
+            case "nAV":
+            case "AV":    
+                registrosExistentes.forEach((file: any) => {
+                    const metadata = app.metadataCache.getFileCache(file)?.frontmatter;
+                    if (metadata && metadata.id && !isNaN(metadata.id) && metadata.type && metadata.type === this.infoSubsistema.type) {
+                        const id = parseInt(metadata.id);
+                        if (id > maxId) maxId = id;
+                    }
+                });
+            break;
+            default:
+                registrosExistentes.forEach((file: any) => {
+                    const metadata = app.metadataCache.getFileCache(file)?.frontmatter;
+                    if (metadata && metadata.id && !isNaN(metadata.id)) {
+                        const id = parseInt(metadata.id);
+                        if (id > maxId) maxId = id;
+                    }
+                });
+            break;
+        }
+        
 
         // El próximo ID disponible
         const nextId = maxId + 1;
-        this.nota.id = nextId;
+        //this.nota.id = nextId;
         return nextId;
     }
     
@@ -175,36 +189,63 @@ export class starterAPI {
         new Notice("Creación de nota cancelada por el usuario.");
         return; // Termina la ejecución de la función aquí.
 	    }
-        this.nota.titulo = titulo;
+        //this.nota.titulo = titulo;
         return titulo;
     }
 
     async getDescripcion(){
         let prompt = this.tp.system.static_functions.get("prompt");
-        let descripcion = await prompt("¿Quieres agregar una descripción?", " " + `Esta nota es sobre ${this.nota.titulo}`, false, true )
+        let descripcion;
+        switch(this.infoSubsistema.type) {
+            case "Ax":
+                 descripcion = await prompt("¿Quieres agregar una descripción?", " " + `Esta anotación es sobre ${this.nota.titulo}`, false, true )
+            break;
+            case "AV":
+                 descripcion = await prompt("¿Quieres agregar una descripción sobre esta area de vida?", " " + `${this.nota.titulo}`, false, true )
+            break;
+            case "PGTD":
+                 descripcion = await prompt("¿Sobre que es este proyecto GTD?", " " + `Proyecto sobre `, false, true )
+            break;
+            default:
+                descripcion = await prompt("¿Quieres agregar una descripción?", " " + `Esta nota es sobre ${this.nota.titulo}`, false, true )
+            break;
+        }
+
+        
 	    // Verificar si el usuario presionó Esc.
         if (descripcion === null) {
         new Notice("Creación de nota cancelada por el usuario.");
         return; // Termina la ejecución de la función aquí.
 	    }
-        this.nota.descripcion = descripcion;
+        //this.nota.descripcion = descripcion;
         return descripcion;
     }
 
     async getAliases(){
-        this.nota.aliases = [];      
+        let nota = {aliases: []}       
         switch(this.infoSubsistema.type) {
             case "Ax":
-            case "ProyectosGTD":
-                this.nota.aliases.push(`${this.nota.titulo}`)
-                this.nota.aliases.push(`${this.infoSubsistema.type} - ${this.nota.titulo}`)
+            case "PGTD":
+                nota.aliases.push(`${this.nota.titulo}`)
+                nota.aliases.push(`${this.infoSubsistema.type} - ${this.nota.titulo}`)
                 break;
-            case "AV":
             case "AI":
+                nota.aliases.push(`${this.nota.titulo}`)
+                nota.aliases.push(`${this.infoSubsistema.type}/${this.nota.titulo}`)
+                nota.aliases.push(`${this.infoSubsistema.type}/${this.nota.grupo}/${this.nota.titulo}`)
                 // 0 -> Nombre, 1 -> type + Nombre
-                break;     
+                break;
+            case "nAV":
+                debugger;
+                nota.aliases.push(`AV/${this.nota.areaVida}`)
+                nota.aliases.push(`AV/${this.nota.grupo}/${this.nota.areaVida}`)
+                break;   
+            case "AV":
+                nota.aliases.push(`${this.infoSubsistema.type}/${this.nota.trimestre}/${this.nota.titulo}`)
+                nota.aliases.push(`${this.infoSubsistema.type}/${this.nota.grupo}/${this.nota.trimestre}/${this.nota.titulo}`)
+                break;
             }
-            return this.nota.aliases;
+            return nota.aliases;
        
     }
 
@@ -215,12 +256,12 @@ export class starterAPI {
         let nombreSistema = this.infoSubsistema.typeName;
         let subsistemas, padres = [];
         let campo
-        debugger;
+       
         switch(tipoSistema) {
             case "Ax":
                 //campo = await suggester(["🔵 -> Para Archivo - Información", "🟢 -> Finalizado","🟡 -> En desarrollo", "🔴 -> No realizado"],["🔵", "🟢","🟡", "🔴"], false, `Estado actual ${nombreSistema}:`);
                 break;
-            case "ProyectosGTD":
+            case "PGTD":
                 // Lógica para permitir al usuario elegir una tarea específica.
                 subsistemas = ["ProyectosGTD","ProyectosQ","TemasInteres","AreasInteres","AreasVida"]
                 padres = await this.getOtrosAsuntos(subsistemas);
@@ -251,9 +292,9 @@ export class starterAPI {
         // Al final, ajusta siAsunto basado en la longitud de padre
         siAsunto = padres.length > 0;
 
-        this.nota.asunto = {};
-        this.nota.asunto.siAsunto = siAsunto;
-        this.nota.asunto.nombre = padres;    
+        //this.nota.asunto = {};
+        //this.nota.asunto.siAsunto = siAsunto;
+        //this.nota.asunto.nombre = padres;    
         return {siAsunto, nombre: padres}
     }
 
@@ -314,7 +355,7 @@ export class starterAPI {
     }
     
     
-
+    // FUNCION QUE TRAE TODAS LAS NOTAS ACTIVAS DE LOS SISTEMAS.
     async activeStructureResources(type) {
         try {
             // Obtén todos los archivos Markdown
@@ -416,18 +457,96 @@ export class starterAPI {
     }
     // ->
 
+    getDuplasFijas(app: App, area: string): Promise<GrupoActividad[]> {
+        // Encuentra el archivo por su ruta
+        const file = app.vault.getAbstractFileByPath(this.pathCampos);
+        try {
+            if (file instanceof TFile) {
+                // Usa metadataCache para obtener los metadatos del archivo
+                const metadata = app.metadataCache.getFileCache(file);
+                // Accede al front matter (YAML) del archivo y obtiene el arreglo basado en el tema
+                const arregloResult = metadata?.frontmatter?.[area] || [];
+                // Construye el arreglo de objetos resultado basado en la estructura de GrupoActividad
+                const resultado = [];
+
+                // Rellena el arreglo con los datos del arregloResult
+                if (Array.isArray(arregloResult)) {
+                    arregloResult.forEach(item => {
+                        if (Array.isArray(item) && item.length >= 2) {
+                            resultado.push({ grupo: item[0], area: item[1], texto: item[0]+"/"+item[1]});
+                        }
+                    });
+                }
+                
+                return resultado;
+            }
+        } catch (error) {
+            console.error("Error obteniendo el archivo de campos:", error);
+            // Aquí manejarías el error como sea apropiado para tu aplicación
+            throw error; // O devolver un arreglo vacío como resultado de error
+        }
+
+        // Devuelve un arreglo vacío si no se encuentra el archivo o si ocurre cualquier otro problema
+        return [];
+    }
+
+
+    async getArea(){
+        let area: string | null, grupo: string | null;
+        
+        let tipoArea = this.infoSubsistema.typeName;
+        let nuevaArea = false;
+        let areasGrupos =  this.getDuplasFijas(app, tipoArea)
+        let suggester = this.tp.system.static_functions.get("suggester");
+        let areaGrupo = await suggester(areasGrupos.map(b=> b.texto), areasGrupos.map(b=> b.texto), false, `¿Cuál ${tipoArea} deseas crear?`)
+            // Verificar si el usuario presionó Esc. 
+            if (areaGrupo === null) {
+                new Notice("Creación de nota cancelada por el usuario.");
+                return; // Termina la ejecución de la función aquí.
+            } else if (areaGrupo=="Nuevo"){
+                let prompt = this.tp.system.static_functions.get("prompt");
+                clasificacion = await prompt("¿Cual es el nombre de la nueva clasificación que vas a ingresar?", "MiClasificación", true)
+                // Verificar si el usuario presionó Esc.
+                    if (clasificacion === null) {
+                        new Notice("Creación de nota cancelada por el usuario.");
+                        return; // Termina la ejecución de la función aquí.
+                    }
+
+                tagClasificacion = await prompt("¿Cual es el tag que utilizaras para " + clasificacion + "?. No utilices espacios en la definición del tag.", "nuevoTag", true)
+                // Verificar si el usuario presionó Esc.
+                if (tagClasificacion === null) {
+                    new Notice("Creación de nota cancelada por el usuario.");
+                    return; // Termina la ejecución de la función aquí.
+                }
+                nuevaClasificacion = true;
+            
+            }else {
+                
+                let indice = areasGrupos.findIndex(objeto => objeto.texto === areaGrupo);
+                grupo = areasGrupos[indice].grupo;
+                area = areasGrupos[indice].area;
+                this.nota.grupo = grupo;
+                this.nota.titulo = area;
+            return {grupo: grupo, titulo: area};
+            }
+        }
+
     async getEstado(){
         let suggester = this.tp.system.static_functions.get("suggester");
         let tipoSistema = this.infoSubsistema.type;
         let nombreSistema = this.infoSubsistema.typeName;
         let campo;
         switch(tipoSistema) {
-            case "Anotaciones":
+            case "Ax":
                 campo = await suggester(["🔵 -> Para Archivo - Información", "🟢 -> Finalizado","🟡 -> En desarrollo", "🔴 -> No realizado"],["🔵", "🟢","🟡", "🔴"], false, `Estado actual ${nombreSistema}:`);
                 break;
-            case "ProyectosGTD":
+            case "PGTD":
                 // Lógica para permitir al usuario elegir una tarea específica.
                 campo = await suggester(["🔵 -> Completado - Archivo", "🟢 -> Activo","🟡 -> En Pausa", "🔴 -> Detenido"],["🔵", "🟢","🟡", "🔴"], false, `Estado actual ${nombreSistema}:`);
+                break;
+            case "AV":
+                // Lógica para permitir al usuario elegir una tarea específica.
+                campo = await suggester(["🔵 -> Archivado", "🟢 -> Activo","🟡 -> En Pausa", "🔴 -> Detenido"],["🔵", "🟢","🟡", "🔴"], false, `Estado actual ${nombreSistema}:`);
                 break;
             default:
                 // Si el usuario elige "Otro" o cualquier otra opción.
@@ -440,24 +559,83 @@ export class starterAPI {
         new Notice("Modificación de nota cancelada por el usuario.");
         return; // Termina la ejecución de la función aquí.
 	    }
-        this.nota.estado = campo;
+        //this.nota.estado = campo;
         return campo;
     }
 
     async getFilename(){
-        debugger
-        switch(this.infoSubsistema.type) {
-            case "AV":
+        let fileName;
+        switch(this.infoSubsistema.type) {  
             case "AI":
-                this.nota.fileName = (`${this.infoSubsistema.folder}/${this.nota.titulo}/index${this.infoSubsistema.type}`)
+                fileName = (`${this.infoSubsistema.folder}/${this.nota.titulo}/${this.nota.trimestre} - ${this.nota.titulo}`)
+                break;
+            case "AV":
+                debugger;
+                if (this.infoSubsistema.hasOwnProperty("fileName")){
+                    const partes = this.infoSubsistema.fileName.split(' -- ');
+                    this.nota.trimestre = partes[0];
+                    this.nota.titulo = partes[1];
+                    this.nota.areaVida = partes[1];
+                    this.nota.grupo = partes[2];
+                }
+                fileName = `${this.nota.trimestre} - ${this.nota.titulo}`    
+                
+                break;
+            case "nAV":
+                const partes = this.nota.fileName.split(' - ');
+                this.nota.grupo = partes[0];
+                this.nota.areaVida = partes[1];
+                fileName = `${partes[1]}`;    
                 break;
             case "Ax":
-            case "ProyectosGTD":    
-                this.nota.fileName = (`${this.infoSubsistema.folder}/${this.infoSubsistema.type} - ${this.nota.id}`)
+            case "PGTD":    
+                fileName = (`${this.infoSubsistema.folder}/${this.infoSubsistema.type} - ${this.nota.id}`)
                 break;     
             }
-            return this.nota.fileName;
+            return fileName;
     }
 
+    async getTrimestre(){
+ 
+        let suggester = this.tp.system.static_functions.get("suggester");
+        let tipoSistema = this.infoSubsistema.type;
+        let nombreSistema = this.infoSubsistema.typeName;
+        let trimestre;
+        let trimestres = await this.activeStructureResources("Trimestral");
+        debugger;
+        switch(tipoSistema) {
+            case "AV":
+                // Lógica para permitir al usuario elegir una tarea específica.
+                trimestre = await suggester(trimestres.map(b => b.basename),trimestres.map(b => b.basename), false, `Trimestre del ${nombreSistema}:`);
+                break;
+            default:
+                // Si el usuario elige "Otro" o cualquier otra opción.
+                trimestre = await suggester(trimestres.map(b => b.basename),trimestres.map(b => b.path), false, `Trimestre del ${nombreSistema}:`);
+                }
+	    // Verificar si el usuario presionó Esc.
+        if (trimestre === null) {
+        new Notice("Modificación de nota cancelada por el usuario.");
+        return; // Termina la ejecución de la función aquí.
+	    }
+        this.nota.trimestre = trimestre;
+        return trimestre;
+    }
+
+    async getRename(){
+        debugger;
+        let newName = `${this.infoSubsistema.folder}/${this.nota.areaVida}/${this.nota.filename}.md`
+        let name = `${this.infoSubsistema.folder}/${this.nota.areaVida}/${this.nota.fileName}.md`
+        const file = app.vault.getAbstractFileByPath(name);
+        try{
+        if (file instanceof TFile){
+            await app.vault.rename(file, newName);
+            console.log("Archivo renombrado con éxito.");
+            return true;
+        }
+    }catch (error){
+        console.error("Error al cambiar el nombre", error)
+        return false;
+    }
+    }
   }
   
