@@ -1,4 +1,4 @@
-import { ItemView, WorkspaceLeaf, Plugin } from "obsidian";
+import { ItemView, WorkspaceLeaf, Plugin, TFile } from "obsidian";
 import { DateTime, Duration } from "luxon"; // Asegúrate de tener Luxon disponible para manipular fechas y horas
 import { registroTiempoAPI } from "../API/registroTiempoAPI";
 import { starterAPI } from "../../noteLifecycleManager/API/starterAPI";
@@ -88,8 +88,31 @@ export class VistaRegistroActivo extends ItemView {
                 ["Alias", "Descripción", "Retomar"].forEach(text => header.createEl('th', {text: text}));
                 
                 top5RegistrosActivos.forEach(registro => {
+                    
                     const row = table.createEl('tr');
+                    /* Sin Link
                     row.createEl('td', {text: registro.aliases[0]});
+                    */
+                   // Con link
+                   // Crea una celda para el alias
+                          // Crea una celda para el alias
+                    const aliasCell = row.createEl('td');
+                    // Crea un elemento span para contener el alias como texto
+                    const aliasLink = aliasCell.createEl('span', {
+                        text: registro.aliases[0],
+                        cls: 'clickable-alias' // Una clase para estilizar, si es necesario
+                    });
+                    
+                    // Establece el comportamiento al hacer clic en el alias
+                    aliasLink.addEventListener('click', async () => {
+                        debugger;
+                        // Obtiene el archivo por su ruta
+                        let file = app.vault.getAbstractFileByPath(registro.file.path);
+                        if (file instanceof TFile) {
+                            // Abre el archivo
+                            await app.workspace.getLeaf(true).openFile(file);
+                        }
+                    });
                     row.createEl('td', {text: registro.descripcion || "No Definida"});
                    // Crea una nueva celda para el botón
                    const buttonCell = row.createEl('td');

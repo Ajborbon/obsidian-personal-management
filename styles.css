@@ -88,4 +88,16 @@
   .modalInbox button:hover {
 
   }
+
+
+  .clickable-alias {
+    /*color: blue; /* Establece el color del texto a azul */
+    text-decoration: underline; /* Añade un subrayado para imitar el aspecto de un enlace */
+    cursor: pointer; /* Cambia el cursor a un puntero al pasar sobre el elemento */
+}
+
+.clickable-alias:hover {
+    /*color: darkblue; /* Opcional: Cambia el color al pasar el cursor por encima para mayor interactividad */
+}
+
   

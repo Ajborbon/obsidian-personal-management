@@ -39,7 +39,7 @@ export class subsistemasAPI {
         for (let file of filesQ) {
             let metadata = app.metadataCache.getFileCache(file)?.frontmatter;
 
-            if (metadata?.type === "Q" && metadata?.trimestre) {
+            if (metadata?.type === "TQ" && metadata?.trimestre) {
                 let qActivo = {file}; // Asumiendo que quieres guardar el path del archivo
                 Object.assign(qActivo, metadata); // Agrega el metadata al objeto qActivo
                 qCreados.push(qActivo); // Añade el registro activo al array              

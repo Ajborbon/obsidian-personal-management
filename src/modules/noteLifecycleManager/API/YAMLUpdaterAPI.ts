@@ -1,6 +1,7 @@
 //import {utilsAPI} from './utilsAPI'
 
 import { Notice } from "obsidian";
+import { modal_cambioHF } from "../../moduloRegistroTiempo/modals/cambioHF";
 
 export class YAMLUpdaterAPI {
     //private utilsApi: utilsAPI;
@@ -44,7 +45,7 @@ export class YAMLUpdaterAPI {
                     }
 
                     let metadata =  app.metadataCache.getFileCache(this.infoNota.file)?.frontmatter;
-                    debugger;
+                    
                     let valorActualCampo = metadata[campoName] || "Sin definir";
                     // Verifica si existe una función con ese nombre.
                     if (typeof this[functionName] === 'function') {
@@ -60,7 +61,7 @@ export class YAMLUpdaterAPI {
                     }
                 }
                 
-                debugger;
+                
                 // Actualizar la nota
                 if (Object.keys(nota).length > 0) {
                     // Ejecuta tu código aquí si el objeto `nota` tiene más de una propiedad
@@ -80,7 +81,7 @@ export class YAMLUpdaterAPI {
     }
     
     async archivarNota(infoNota: any, campos: any) {
-        debugger
+        
         let nota = {}; // Inicializa el objeto nota.
         Object.assign(this.infoNota, infoNota); 
             try {
@@ -182,25 +183,38 @@ export class YAMLUpdaterAPI {
     }
 
 
-    async getHoraFinal(flag, actual){
-        return this.formatearFecha(new Date());
+    async getHoraFinal(parametro, actual){
+        // Esta función solo recibe en el parámetro la hora final nueva, para actualizar el valor.
+        debugger;
+        if (parametro === undefined){
+
+            return this.formatearFecha(new Date());
+        }else{ 
+            return parametro;
+        }
     }
 
-    async getTiempoTrabajado(flag, actual){
+    async getTiempoTrabajado(parametro, actual){
         debugger
+        
         let horaInicioStr = this.infoNota.horaInicio;
-            // Suponiendo que el formato es "YYYY-MM-DD dddd HH:mm" y quieres convertirlo a un formato reconocido por Date
+        let cierre;
+        // Suponiendo que el formato es "YYYY-MM-DD dddd HH:mm" y quieres convertirlo a un formato reconocido por Date
         // Primero, elimina la parte del día de la semana, ya que Date() no la necesita
         let [fecha, , hora] = horaInicioStr.split(' ');
         let fechaHoraISO = `${fecha}T${hora}`;
-        
         // Crear objetos Date
         let horaInicio = new Date(fechaHoraISO);
-        let ahora = new Date();
-        
+        if (parametro == undefined){    
+        cierre = new Date();
+
+        }else{
+            let [fechaCierre, ,horaCierre] = parametro.split(' ');   
+            let fechaHoraCierreISO = `${fechaCierre}T${horaCierre}`;
+            cierre = new Date(fechaHoraCierreISO);
+        }        
         // Calcular la diferencia en milisegundos
-        let diferenciaEnMilisegundos = ahora - horaInicio;
-        
+        let diferenciaEnMilisegundos = cierre - horaInicio;
         return diferenciaEnMilisegundos;
     }
 
@@ -336,14 +350,21 @@ export class YAMLUpdaterAPI {
     }
     // ->
 
-    async getEstado(flag, actual){
+    async getEstado(parametro, actual){
+        debugger;
+        let campo;
+        if (parametro == undefined){
         let suggester = this.tp.system.static_functions.get("suggester");
-	    let campo = await suggester(["🔵 -> Completado - Información", "🟢 -> Finalizado","🟡 -> En ejecución", "🔴 -> Detenido"],["🔵", "🟢","🟡", "🔴"], false, "Seleccione el nuevo estado:");
+	    campo = await suggester(["🔵 -> Completado - Información", "🟢 -> Finalizado","🟡 -> En ejecución", "🔴 -> Detenido"],["🔵", "🟢","🟡", "🔴"], false, "Seleccione el nuevo estado:");
         // Verificar si el usuario presionó Esc.
         if (campo === null) {
         new Notice("Modificación de nota cancelada por el usuario.");
         return; // Termina la ejecución de la función aquí.
 	    }
+        }else{
+            campo = parametro;
+        }
+
         this.nota.estado = campo;
         return campo;
     }
@@ -361,6 +382,11 @@ export class YAMLUpdaterAPI {
             return this.nota.fileName;
     }
 
+    async modalCambioHF(nota){
+        debugger;
+        let modal = new modal_cambioHF(this.plugin, nota);
+        modal.open();
+    }
    
 
   }

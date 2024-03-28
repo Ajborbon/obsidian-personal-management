@@ -1,6 +1,7 @@
 import { App, TFile, TFolder, Modal, FuzzySuggestModal, FuzzyMatch, Notice } from "obsidian";
 import {SeleccionModal} from "../../modales/seleccionModal";
 import {fuzzySelectOrCreate} from "../../modales/fuzzySelectOrCreate";
+import {DateTime} from 'luxon'
 
 interface GrupoActividad {
     grupo: string;
@@ -51,7 +52,8 @@ export class menuOtro {
             registro.detener = true;
             return error;
             }
-            return {titulo: temaOtro.actividad + " / " + temaOtro.grupo, siAsunto ,nombre: temaOtro.nombre}
+            debugger
+            return {titulo: temaOtro.actividad + " / " + temaOtro.grupo, siAsunto ,nombre: temaOtro.grupo}
         }
 
         async habitual (app: App){
@@ -79,8 +81,17 @@ export class menuOtro {
             const actividades = await this.resultYaml(app, tipo)
             const activeSG = await this.findMainFilesWithState(app,tipo)
             // Extrae el primer alias de cada nota encontrada y los almacena en un array
+            let groups;
+            debugger;
+            switch (tipo){
+            case "actsAV":
+                groups = activeSG.map(page => page.frontmatter.areaVida);
+                break;
+            default:
+                groups = activeSG.map(page => page.frontmatter.aliases ? page.frontmatter.aliases[0] : null).filter(alias => alias !== null);
+                break;
+            }
             
-            const groups = activeSG.map(page => page.frontmatter.aliases ? page.frontmatter.aliases[0] : null).filter(alias => alias !== null);
             // Filtrar y preparar las actividades existentes para la búsqueda
             let itemsForSearch = actividades
             .filter((item) => groups.includes(item.grupo)) // Usa la propiedad 'grupo' en lugar de item[0]
@@ -177,7 +188,7 @@ export class menuOtro {
             const propertiesTipo = {
                 actsAV: {
                   folder: this.plugin.settings.folder_AreasVida,
-                  sameName: true, 
+                  sameName: false, 
                   nameFile: this.plugin.settings.nameFile_AreasVida
                 },
                 actsAI: {
@@ -209,24 +220,44 @@ export class menuOtro {
               };
             
              // Asegúrate de que tipo es una propiedad válida antes de desestructurar
-             if (propertiesTipo.hasOwnProperty(tipo)) {
-                const { folder, sameName, nameFile } = propertiesTipo[tipo];
-                const filesInFolder = app.vault.getFiles().filter(file => file.path.startsWith(folder));
-                const filesWithFrontmatter = [];
-        
-                for (const file of filesInFolder) {
-                    if ((sameName && file.basename === nameFile) || !sameName) {
-                        const metadata = app.metadataCache.getFileCache(file);
-                        if (metadata.frontmatter && metadata.frontmatter.estado === "🟢") {
-                            filesWithFrontmatter.push({ file: file, frontmatter: metadata.frontmatter });
+             debugger
+             const activeFilesWithFrontmatter = [];
+             switch (tipo){
+                case "actsAV":
+                    const { folder, sameName, nameFile } = propertiesTipo[tipo];
+                    let ahora = DateTime.now().toFormat("yyyy-Qq");
+                    const files = app.vault.getMarkdownFiles().filter(file => 
+                        file.path.includes(folder) && !file.path.includes("Plantillas") && file.name.startsWith(ahora));
+                    
+                    for (let file of files) {
+                        let metadata = app.metadataCache.getFileCache(file)?.frontmatter;
+
+                        if (metadata?.estado === "🟢") {
+                            activeFilesWithFrontmatter.push({ file: file, frontmatter: metadata });            
                         }
                     }
-                }
-                return filesWithFrontmatter;
-            } else {
-                console.log("Selección no reconocida:", tipo);
-                return []; // Manejar según tu lógica de aplicación
-            }
+                break;
+                default: 
+                    if (propertiesTipo.hasOwnProperty(tipo)) {
+                        const { folder, sameName, nameFile } = propertiesTipo[tipo];
+                        const filesInFolder = app.vault.getFiles().filter(file => file.path.startsWith(folder));
+                        
+                
+                        for (const file of filesInFolder) {
+                            if ((sameName && file.basename === nameFile) || !sameName) {
+                                const metadata = app.metadataCache.getFileCache(file);
+                                if (metadata.frontmatter && metadata.frontmatter.estado === "🟢") {
+                                    activeFilesWithFrontmatter.push({ file: file, frontmatter: metadata.frontmatter });
+                                }
+                            }
+                        }
+                     } else {
+                        console.log("Selección no reconocida:", tipo);
+                        return []; // Manejar según tu lógica de aplicación
+                        }
+                        break;
+                    }
+                return activeFilesWithFrontmatter;
          }
 
 }

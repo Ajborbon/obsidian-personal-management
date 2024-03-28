@@ -1,5 +1,5 @@
 //import {utilsAPI} from './utilsAPI'
-import {TFile, Plugin, Notice} from 'obsidian'
+import {TFile, TFolder, Plugin, Notice} from 'obsidian'
 import { DateTime } from 'luxon';
 
 
@@ -46,7 +46,6 @@ export class starterAPI {
             if (typeof crearNota !== "function") {
                 throw new Error("La función para crear notas no está disponible.");
             }
-            debugger
             await crearNota(templateFile, filename, true, folder).basename;
             
        
@@ -62,34 +61,28 @@ export class starterAPI {
 
     // crearNota -> Llenar los campos YAML del template.
     async fillNote(infoSubsistema: { folder: string | number; indice: string | number; }, campos: any) {
-        
-        //let nota = {}; // Inicializa el objeto nota.
+        this.nota = {};
         Object.assign(this.infoSubsistema, infoSubsistema); 
         if (this.infoSubsistema.defined){
-        this.infoSubsistema.folder = this.plugin.settings[infoSubsistema.folder]
-        this.infoSubsistema.indice = this.plugin.settings[infoSubsistema.indice]
-        Object.assign(this.nota, infoSubsistema);
-        }
-       
-        // Crear un tp para acceder a funcionalidades de templater.
-       
-            try {
-                for (let campo of campos) {
-                    // Usa el nombre del campo para construir el nombre de la función (p. ej., "getId")
-                    const functionName = `get${campo.charAt(0).toUpperCase() + campo.slice(1)}`;
-                    // Verifica si existe una función con ese nombre.
-                    if (typeof this[functionName] === 'function') {
-                        // Llama a la función de manera dinámica y asigna el resultado al campo correspondiente de la nota.
-                        this.nota[campo] = await this[functionName]();
-                    } else {
-                        console.error(`La función ${functionName} no está definida.`);
-                        // Maneja el caso en que la función no esté definida.
-                        // Por ejemplo, podrías asignar un valor por defecto a nota[campo] o simplemente continuar.
-                    }
-                }
-                
-                // Aquí iría el código para procesar el objeto nota, como guardar en un archivo dentro de 'folder'.
-                
+        // infoSubsistema.folder e indice contienen la información de las carpetas
+	        this.infoSubsistema.folder = this.plugin.settings[infoSubsistema.folder]
+	        this.infoSubsistema.indice = this.plugin.settings[infoSubsistema.indice]
+	        // nota ahora tiene toda la información de la plantilla
+	        Object.assign(this.nota, infoSubsistema); // Nota es el objeto que se devolverá.
+		}
+		try {
+			for (let campo of campos) {       
+			// Usa el nombre del campo para construir el nombre de la función (p. ej., "getId")
+				debugger;
+                const functionName = `get${campo.charAt(0).toUpperCase() + campo.slice(1)}`;
+				// Verifica si existe una función con ese nombre.
+				if (typeof this[functionName] === 'function') {
+				// Llama a la función de manera dinámica y asigna el resultado al campo correspondiente de la nota.
+					this.nota[campo] = await this[functionName]();
+				} else {
+					console.error(`La función ${functionName} no está definida.`);
+				}
+                } // Fin For 
             } catch (error) {
                 console.error("No se pudo crear el objeto de registro.", error);
                 new Notice("No se pudo crear el objeto de registro.");
@@ -155,6 +148,7 @@ export class starterAPI {
             break;
         }
         
+         
 
         // El próximo ID disponible
         const nextId = maxId + 1;
@@ -201,7 +195,10 @@ export class starterAPI {
                  descripcion = await prompt("¿Quieres agregar una descripción?", " " + `Esta anotación es sobre ${this.nota.titulo}`, false, true )
             break;
             case "AV":
-                 descripcion = await prompt("¿Quieres agregar una descripción sobre esta area de vida?", " " + `${this.nota.titulo}`, false, true )
+                 descripcion = await prompt(`¿Quieres agregar una descripción sobre ${this.nota.titulo}?`, " ", false, true )
+            break;
+            case "AI":
+                 descripcion = await prompt(`¿Quieres agregar una descripción sobre ${this.nota.titulo}?`, " ", false, true )
             break;
             case "PGTD":
                  descripcion = await prompt("¿Sobre que es este proyecto GTD?", " " + `Proyecto sobre `, false, true )
@@ -230,13 +227,13 @@ export class starterAPI {
                 nota.aliases.push(`${this.infoSubsistema.type} - ${this.nota.titulo}`)
                 break;
             case "AI":
-                nota.aliases.push(`${this.nota.titulo}`)
                 nota.aliases.push(`${this.infoSubsistema.type}/${this.nota.titulo}`)
-                nota.aliases.push(`${this.infoSubsistema.type}/${this.nota.grupo}/${this.nota.titulo}`)
+                if (this.nota.areaVida != "No es de ningún Area de Vida"){
+                nota.aliases.push(`${this.infoSubsistema.type}/${this.nota.areaVida}/${this.nota.titulo}`)
+                }
                 // 0 -> Nombre, 1 -> type + Nombre
                 break;
             case "nAV":
-                debugger;
                 nota.aliases.push(`AV/${this.nota.areaVida}`)
                 nota.aliases.push(`AV/${this.nota.grupo}/${this.nota.areaVida}`)
                 break;   
@@ -244,57 +241,151 @@ export class starterAPI {
                 nota.aliases.push(`${this.infoSubsistema.type}/${this.nota.trimestre}/${this.nota.titulo}`)
                 nota.aliases.push(`${this.infoSubsistema.type}/${this.nota.grupo}/${this.nota.trimestre}/${this.nota.titulo}`)
                 break;
+            case "RR":
+                nota.aliases.push(`${this.infoSubsistema.type}/${this.nota.titulo}`)
+                break;
+            case "PQ":
+                nota.aliases.push(`${this.infoSubsistema.type}/${this.nota.trimestre}/${this.nota.titulo}`)
+                nota.aliases.push(`${this.infoSubsistema.type}/${this.nota.areaVida}/${this.nota.trimestre}/${this.nota.titulo}`)
+                nota.aliases.push(`${this.infoSubsistema.type}/${this.nota.trimestre}/${this.nota.areaVida}/${this.nota.titulo}`)
+            break;    
             }
+
             return nota.aliases;
        
     }
 
-    async getAsunto(){
+    async getAsunto(){ // Funciona con frontmatter
 
         let suggester = this.tp.system.static_functions.get("suggester");
         let tipoSistema = this.infoSubsistema.type;
         let nombreSistema = this.infoSubsistema.typeName;
         let subsistemas, padres = [];
-        let campo
-       
-        switch(tipoSistema) {
-            case "Ax":
-                //campo = await suggester(["🔵 -> Para Archivo - Información", "🟢 -> Finalizado","🟡 -> En desarrollo", "🔴 -> No realizado"],["🔵", "🟢","🟡", "🔴"], false, `Estado actual ${nombreSistema}:`);
-                break;
-            case "PGTD":
-                // Lógica para permitir al usuario elegir una tarea específica.
-                subsistemas = ["ProyectosGTD","ProyectosQ","TemasInteres","AreasInteres","AreasVida"]
-                padres = await this.getOtrosAsuntos(subsistemas);
-                
-                break;
-            default:
-                // Si el usuario elige "Otro" o cualquier otra opción.
-                
-            break;
-            }
-
         let activo = app.workspace.getActiveFile();
         let siAsunto;
         let nombre = "";
+        let nota;
         if (activo != null) {
             nombre = activo.basename;
-            const nota = app.metadataCache.getFileCache(activo);
+            nota = app.metadataCache.getFileCache(activo);
             siAsunto = await suggester(["Si", "No"], [true, false], true, nombre + " es origen de " + this.nota.titulo + "?");
         
             if (siAsunto) {
                 // En caso de que siAsunto sea true, desplaza los elementos del arreglo padre y añade activo.basename en la posición 0
                 padres.unshift(nombre); // Añade el nombre al inicio del arreglo, desplazando los demás elementos
+            
+                switch(tipoSistema) {
+
+                    case "RR":
+                            //debugger;
+                            switch (nota?.frontmatter?.type){
+                                case "AV":
+                                    
+                                     // VERIFICACION DE AREA DE VIDA
+                                     this.nota.areaVida = nota?.frontmatter?.areaVida
+                                     ? nota.frontmatter.areaVida.replace(/\[\[\s*|\s*\]\]/g, '')
+                                     : "No es de ningún Area de Vida";
+                    
+                                    siAsunto = false;
+                                    this.nota.asuntoDefinido = true; // Para que no ejecute la busqueda de Area Vida, Area de Interés, proyecto Q o GTD
+                                break;
+                                case "AI":
+                                    // VERIFICACION DE AREA DE VIDA
+                                    this.nota.areaVida = nota?.frontmatter?.areaVida
+                                    ? nota.frontmatter.areaVida.replace(/\[\[\s*|\s*\]\]/g, '')
+                                    : "No es de ningún Area de Vida";
+                                    // VERIFICACION DE AREA DE INTERES
+                                   // Inicializamos this.nota.areaInteres con nota.titulo como el primer elemento
+                                    
+                                    this.nota.areaInteres = [nota.frontmatter.titulo];
+                                    // Verificamos si nota.areaInteres es un arreglo
+                                    if (Array.isArray(nota.frontmatter.areaInteres)) {
+                                        // Si es un arreglo, iteramos sobre cada elemento (excluyendo el primer elemento ya agregado que es nota.titulo)
+                                        // y aplicamos el regex a cada elemento. Luego concatenamos con el array existente.
+                                        this.nota.areaInteres = this.nota.areaInteres.concat(nota.frontmatter.areaInteres.map(elemento => 
+                                            elemento.replace(/\[\[\s*|\s*\]\]/g, '')));
+                                    } else {
+                                        // Si no es un arreglo, revisamos si nota.frontmatter.areaInteres existe
+                                        if (nota?.frontmatter.areaInteres) {
+                                            // Si existe, aplicamos el regex y lo añadimos como segundo elemento
+                                            this.nota.areaInteres.push(nota.frontmatter.areaInteres.replace(/\[\[\s*|\s*\]\]/g, ''));
+                                        }
+                                        // Si nota.frontmatter.areaInteres no existe, this.nota.areaInteres ya tendrá nota.titulo como su único elemento
+                                    }
+
+                                    siAsunto = false;
+                                    this.nota.asuntoDefinido = true; // Para que no ejecute la busqueda de Area Vida, Area de Interés, proyecto Q o GTD
+                                break;
+                                case "PGTD":
+                                case "PQ":
+                                    siAsunto = false;
+                                default:
+                                    // VERIFICACION DE AREA DE VIDA
+                                    if (nota?.frontmatter?.areaVida) {
+                                        if (Array.isArray(nota.frontmatter.areaVida)) {
+                                            // Es un arreglo, usa el primer elemento
+                                            this.nota.areaVida = nota.frontmatter.areaVida[0].replace(/\[\[\s*|\s*\]\]/g, '');
+                                        } else if (typeof nota.frontmatter.areaVida === 'string') {
+                                            // Es un string
+                                            this.nota.areaVida = nota.frontmatter.areaVida.replace(/\[\[\s*|\s*\]\]/g, '');
+                                        }
+                                    } else {
+                                        // No está definido o está vacío
+                                        this.nota.areaVida = "No es de ningún Área de Vida";
+                                    }
+                                    
+                                    
+                                    // VERIFICACION DE AREA DE INTERES
+                                    this.nota.areaInteres = "";
+                                    // Verificamos si nota.areaInteres es un arreglo
+                                    if (Array.isArray(nota?.frontmatter.areaInteres)) {
+                                        // Si es un arreglo, iteramos sobre cada elemento
+                                        this.nota.areaInteres = nota.frontmatter.areaInteres.map(elemento => 
+                                        elemento.replace(/\[\[\s*|\s*\]\]/g, ''));
+                                    } else if (nota?.frontmatter.areaInteres){
+                                        // Si no es un arreglo, simplemente aplicamos el regex como antes
+                                        this.nota.areaInteres = nota.frontmatter.areaInteres.replace(/\[\[\s*|\s*\]\]/g, '');
+                                    }
+                                    // VERIFICACION DE PROYECTOS DE Q Y PROYECTO GTD
+                                    if (nota.frontmatter.type === "PQ"){ 
+                                        // CUANDO LA NOTA ACTIVA ES UN PQ.
+                                    debugger;
+                                    this.nota.proyectoQ = nombre;
+                                    
+                                    // VERIFICACION DE PROYECTOSGTD
+                                    // Inicializamos this.nota.proyectoGTD con un valor predeterminado de cadena vacía
+                                    this.nota.proyectoGTD = "";
+                                    // Verificamos si nota.proyectoGTD existe y es un arreglo
+                                    if (Array.isArray(nota.frontmatter.proyectoGTD)) {
+                                        // Si es un arreglo, iteramos sobre cada elemento
+                                        this.nota.proyectoGTD = nota.frontmatter.proyectoGTD.map(elemento => 
+                                            elemento.replace(/\[\[\s*|\s*\]\]/g, ''));
+                                    } else if (nota.frontmatter.proyectoGTD) {
+                                        // Si existe pero no es un arreglo, aplicamos el regex directamente
+                                        this.nota.proyectoGTD = nota.frontmatter.proyectoGTD.replace(/\[\[\s*|\s*\]\]/g, '');
+                                    }
+                                    // Si nota.proyectoGTD no existe, this.nota.proyectoGTD ya está establecido en "" por defecto
+
+                                    }
+                                    // Obtener ProyectoQ y Proyecto GTD cuando la nota es ProyectoGTD.
+                                    else{
+
+                                    }
+                                    
+                                    this.nota.asuntoDefinido = true; // Para que no ejecute la busqueda de Area Vida, Area de Interés, proyecto Q o GTD
+                                break;
+                            } 
+                        break;
+                    default:
+                        // Si el usuario elige "Otro" o cualquier otra opción.
+                        
+                    break;
+                    }
+            
             }
         } else {
             siAsunto = false;
-        }
-        
-        // Al final, ajusta siAsunto basado en la longitud de padre
-        siAsunto = padres.length > 0;
-
-        //this.nota.asunto = {};
-        //this.nota.asunto.siAsunto = siAsunto;
-        //this.nota.asunto.nombre = padres;    
+        } 
         return {siAsunto, nombre: padres}
     }
 
@@ -355,35 +446,43 @@ export class starterAPI {
     }
     
     
-    // FUNCION QUE TRAE TODAS LAS NOTAS ACTIVAS DE LOS SISTEMAS.
-    async activeStructureResources(type) {
+    // FUNCION QUE TRAE TODAS LAS NOTAS ACTIVAS DE LOS SISTEMAS. - Revisar en que la uso...
+    async activeStructureResources(typeName) {
         try {
             // Obtén todos los archivos Markdown
             const files = app.vault.getMarkdownFiles();
             
-            // Determina el nombre de la carpeta de recursos basado en el tipo
-            let resourceFolderName = "folder_" + type;
-            let resourceFolder = this.plugin.settings[resourceFolderName];
-            
-            // Verifica si la carpeta de recursos existe para evitar errores
-            if (!resourceFolder) {
-                console.error(`La carpeta "${resourceFolderName}" no existe en la configuración del plugin.`);
-                return []; // Retorna un arreglo vacío si la carpeta no existe
-            }
-    
-            let activeResources = [];
-            
-            // Filtra los archivos que están dentro del directorio deseado y tienen estado 🟢
-            const registrosExistentes = files.filter(file => file.path.startsWith(resourceFolder));
-            
-            // Usa metadataCache para buscar los estados en el frontmatter
-            registrosExistentes.forEach(file => {
-                const metadata = app.metadataCache.getFileCache(file)?.frontmatter;
-                if (metadata && metadata.estado === "🟢") {
-                    activeResources.push(file);
+            switch (type){
+
+                case "AreasInteres":
+                    debugger;
+
+                break;
+                default: 
+                // Determina el nombre de la carpeta de recursos basado en el tipo
+                let resourceFolderName = "folder_" + typeName;
+                let resourceFolder = this.plugin.settings[resourceFolderName];
+                
+                // Verifica si la carpeta de recursos existe para evitar errores
+                if (!resourceFolder) {
+                    console.error(`La carpeta "${resourceFolderName}" no existe en la configuración del plugin.`);
+                    return []; // Retorna un arreglo vacío si la carpeta no existe
                 }
-            });
-    
+                
+                let activeResources = [];
+                
+                // Filtra los archivos que están dentro del directorio deseado y tienen estado 🟢
+                const registrosExistentes = files.filter(file => file.path.startsWith(resourceFolder));
+                
+                // Usa metadataCache para buscar los estados en el frontmatter
+                registrosExistentes.forEach(file => {
+                    const metadata = app.metadataCache.getFileCache(file)?.frontmatter;
+                    if (metadata && metadata.estado === "🟢") {
+                        activeResources.push(file);
+                        }
+                    });
+                break;
+            } // Fin Switch
             return activeResources;
         } catch (error) {
             console.error("Error al buscar recursos activos:", error);
@@ -490,7 +589,7 @@ export class starterAPI {
         return [];
     }
 
-
+    // Función creda para las Areas de Vida y para las Anotaciones, para traer las que estan en plt Campos
     async getArea(){
         let area: string | null, grupo: string | null;
         
@@ -541,12 +640,16 @@ export class starterAPI {
                 campo = await suggester(["🔵 -> Para Archivo - Información", "🟢 -> Finalizado","🟡 -> En desarrollo", "🔴 -> No realizado"],["🔵", "🟢","🟡", "🔴"], false, `Estado actual ${nombreSistema}:`);
                 break;
             case "PGTD":
-                // Lógica para permitir al usuario elegir una tarea específica.
                 campo = await suggester(["🔵 -> Completado - Archivo", "🟢 -> Activo","🟡 -> En Pausa", "🔴 -> Detenido"],["🔵", "🟢","🟡", "🔴"], false, `Estado actual ${nombreSistema}:`);
                 break;
+            case "PQ":
+                campo = await suggester(["🔵 -> Completado - Archivo", "🟢 -> Activo","🟡 -> Por Iniciar, En Pausa", "🔴 -> Cancelado"],["🔵", "🟢","🟡", "🔴"], false, `Estado actual ${this.nota.titulo}:`);
+                break;
+            case "AI":
             case "AV":
+            case "RR":
                 // Lógica para permitir al usuario elegir una tarea específica.
-                campo = await suggester(["🔵 -> Archivado", "🟢 -> Activo","🟡 -> En Pausa", "🔴 -> Detenido"],["🔵", "🟢","🟡", "🔴"], false, `Estado actual ${nombreSistema}:`);
+                campo = await suggester(["🔵 -> Archivado", "🟢 -> Activo","🟡 -> En Pausa", "🔴 -> Detenido"],["🔵", "🟢","🟡", "🔴"], false, `Estado actual ${this.nota.titulo}:`);
                 break;
             default:
                 // Si el usuario elige "Otro" o cualquier otra opción.
@@ -567,7 +670,11 @@ export class starterAPI {
         let fileName;
         switch(this.infoSubsistema.type) {  
             case "AI":
-                fileName = (`${this.infoSubsistema.folder}/${this.nota.titulo}/${this.nota.trimestre} - ${this.nota.titulo}`)
+                if (this.nota.areaVida==="No es de ningún Area de Vida"){
+                    fileName = (`${this.infoSubsistema.folder}/Otras/${this.nota.titulo}`)
+                }else{
+                    fileName = (`${this.infoSubsistema.folder}/${this.nota.areaVida}/${this.nota.titulo}`)
+                }
                 break;
             case "AV":
                 debugger;
@@ -596,21 +703,24 @@ export class starterAPI {
     }
 
     async getTrimestre(){
- 
+        
         let suggester = this.tp.system.static_functions.get("suggester");
         let tipoSistema = this.infoSubsistema.type;
         let nombreSistema = this.infoSubsistema.typeName;
         let trimestre;
-        let trimestres = await this.activeStructureResources("Trimestral");
-        debugger;
+        //let trimestres = await this.activeStructureResources("Trimestral"); // Funciona en la versión 1.0 de Areas de Vida.
+        let trimestres = await this.findMainFilesWithState("TQ");
+        
         switch(tipoSistema) {
             case "AV":
+            case "PQ":
                 // Lógica para permitir al usuario elegir una tarea específica.
-                trimestre = await suggester(trimestres.map(b => b.basename),trimestres.map(b => b.basename), false, `Trimestre del ${nombreSistema}:`);
+                
+                trimestre = await suggester(trimestres.map(b => b.file.basename),trimestres.map(b => b.file.basename), false, `Trimestre del ${nombreSistema}:`);
                 break;
             default:
                 // Si el usuario elige "Otro" o cualquier otra opción.
-                trimestre = await suggester(trimestres.map(b => b.basename),trimestres.map(b => b.path), false, `Trimestre del ${nombreSistema}:`);
+                trimestre = await suggester(trimestres.map(b => b.file.basename),trimestres.map(b => b.file.path), false, `Trimestre del ${nombreSistema}:`);
                 }
 	    // Verificar si el usuario presionó Esc.
         if (trimestre === null) {
@@ -622,9 +732,41 @@ export class starterAPI {
     }
 
     async getRename(){
+        let newName, name, folder;
         debugger;
-        let newName = `${this.infoSubsistema.folder}/${this.nota.areaVida}/${this.nota.filename}.md`
-        let name = `${this.infoSubsistema.folder}/${this.nota.areaVida}/${this.nota.fileName}.md`
+        switch(this.infoSubsistema.type) { 
+        case "AI":
+            if (this.nota.areaVida==="No es de ningún Area de Vida"){
+                newName = `${this.infoSubsistema.folder}/Otras/${this.nota.titulo}.md`
+                folder = `${this.infoSubsistema.folder}/Otras`
+            }else{
+                newName = `${this.infoSubsistema.folder}/${this.nota.areaVida}/${this.nota.titulo}.md`
+                folder = `${this.infoSubsistema.folder}/${this.nota.areaVida}`
+            }
+            await this.crearCarpeta(folder);
+            name = `${this.nota.fileName}`
+            break;
+        case "AV":        
+            newName = `${this.infoSubsistema.folder}/${this.nota.areaVida}/${this.nota.filename}.md`
+            name = `${this.infoSubsistema.folder}/${this.nota.areaVida}/${this.nota.fileName}.md`
+            break;
+        case "RR":        
+            newName = `${this.infoSubsistema.folder}/${this.infoSubsistema.type} - ${this.nota.id}.md`
+            folder = `${this.infoSubsistema.folder}`
+            await this.crearCarpeta(folder);
+            name = `${this.nota.fileName}`
+            break;
+        case "PQ": 
+            let folderAV = Array.isArray(this.nota.areaVida)? this.nota.areaVida[0] : this.nota.areaVida; 
+            newName = `${this.infoSubsistema.folder}/${this.nota.trimestre}/${folderAV}/${this.infoSubsistema.type} - ${this.nota.id}.md`
+            folder = `${this.infoSubsistema.folder}/${this.nota.trimestre}/${folderAV}`
+            debugger;
+            await this.crearCarpeta(folder);
+            name = `${this.nota.fileName}`
+        break;
+        default:
+            break;
+        }
         const file = app.vault.getAbstractFileByPath(name);
         try{
         if (file instanceof TFile){
@@ -632,10 +774,439 @@ export class starterAPI {
             console.log("Archivo renombrado con éxito.");
             return true;
         }
-    }catch (error){
-        console.error("Error al cambiar el nombre", error)
-        return false;
+        }catch (error){
+            console.error("Error al cambiar el nombre", error)
+            return false;
+        }
     }
+
+    async getAreaVida(){
+        let suggester = this.tp.system.static_functions.get("suggester");
+        let tipo = this.infoSubsistema.type;
+        let nombreTipo = this.infoSubsistema.typeName;
+        let areasVida = {};
+        let areaVida;
+        let noAV = {} ;
+        noAV.file = {} ;
+        noAV.areaVida = "No es de ningún Area de Vida";
+        noAV.file.basename = false;
+        debugger;
+        
+
+        if (!this.nota.asuntoDefinido) {
+        switch(tipo) {
+            case "AI":
+                
+                if (this.nota.areaInteres.titulo == ""){
+                // Lógica para permitir al usuario elegir una tarea específica.
+                areasVida = await this.findMainFilesWithState("AV")
+                areasVida.push(noAV);
+                areaVida = await suggester(areasVida.map(b => b.areaVida),areasVida.map(b => b.areaVida), false, `A que Area de Vida pertenece esta ${nombreTipo}:`);
+                
+                }else{
+                    areaVida = this.nota.areaVida;
+                }
+                break;
+    
+
+            case "PQ":
+                areasVida = await this.findMainFilesWithState("AV", this.nota.trimestre)
+               debugger;
+                areaVida = await suggester(areasVida.map(b => b.file.basename),areasVida.map(b => [b.areaVida, b.file.basename]), false, `A que Area de Vida pertenece esta(e) ${nombreTipo}:`);
+                
+            break;
+            default:
+                areasVida = await this.findMainFilesWithState("AV")
+                areasVida.push(noAV);
+                areaVida = await suggester(areasVida.map(b => b.file.basename),areasVida.map(b => b.file.basename), false, `A que Area de Vida pertenece esta(e) ${nombreTipo}:`);
+                break;
+                }
+	    // Verificar si el usuario presionó Esc.
+        return areaVida;
+        } else {
+            return this.nota.areaVida;
+        }
+    }
+
+    async getAreaInteres(){
+        let suggester = this.tp.system.static_functions.get("suggester");
+        let tipo = this.infoSubsistema.type;
+        let nombreTipo = this.infoSubsistema.typeName;
+        let areasInteres = await this.findMainFilesWithState("AI")
+        let areaInteres, nivel, titulo, padreAI, arrayAI;
+        if (!this.nota.asuntoDefinido) {
+        switch(tipo) {
+            case "AI":
+                padreAI = await suggester(["Si", "No"], [true,false], false, ` ${this.nota.titulo} es hijo de otra ${nombreTipo}:`);
+                // Lógica para permitir al usuario elegir una tarea específica.
+                if (padreAI){
+                    areaInteres = await suggester(areasInteres.map(b => b.titulo) ,areasInteres.map(b => b), false, `Que Area de Interés es padre de ${this.nota.titulo}?:`);
+                    if (areaInteres === null) {
+                        new Notice("Sin Area de Interes");
+                        titulo = "";
+                        nivel = 0;
+                        return; // Termina la ejecución de la función aquí.
+                    }
+                    else{
+                        debugger;
+                        if (areaInteres.areaVida === null) {
+                            this.nota.areaVida = "No es de ningún Area de Vida";
+                        } else {
+                            this.nota.areaVida = areaInteres.areaVida.replace(/\[\[\s*|\s*\]\]/g, '');
+                        }
+                        titulo = areaInteres.titulo;
+                        nivel = parseInt(areaInteres.nivelAI) + 1;
+                    }
+                }else{
+                    titulo = "";
+                    nivel = 0;
+                }
+            break;
+            case "RR":
+            padreAI = await suggester(["Si", "No"], [true,false], false, ` ${this.nota.titulo} es hijo de un Area de Interés:`);
+            // Lógica para permitir al usuario elegir una tarea específica.
+            if (padreAI){
+                areaInteres = await suggester(areasInteres.map(b => b.titulo) ,areasInteres.map(b => b), false, `Que Area de Interés es padre de ${this.nota.titulo}?:`);
+                if (areaInteres === null) {
+                    new Notice("Sin Area de Interes");
+                    titulo = "";
+                    nivel = 0;
+                    return; // Termina la ejecución de la función aquí.
+                }
+                else{
+                    debugger;
+                    if (areaInteres.areaVida === null) {
+                        this.nota.areaVida = "No es de ningún Area de Vida";
+                    } else {
+                            // VERIFICACION DE AREA DE VIDA
+                        this.nota.areaVida = areaInteres?.areaVida
+                        ? areaInteres.areaVida.replace(/\[\[\s*|\s*\]\]/g, '')
+                        : "No es de ningún Area de Vida";
+                    }
+                    this.nota.asuntoDefinido = true; // Para que no ejecute la busqueda de proyecto Q o GTD...
+                    titulo = areaInteres.titulo;
+                    nivel = parseInt(areaInteres.nivelAI);
+                }
+            }else{
+                titulo = "";
+                nivel = 0;
+            }
+            break;
+            case "PQ":
+                debugger;
+            padreAI = await suggester(["Si", "No"], [true,false], false, ` ${this.nota.titulo} es hijo de un Area de Interés:`);
+            // Lógica para permitir al usuario elegir una tarea específica.
+            if (padreAI){
+                areaInteres = await suggester(areasInteres.map(b => b.titulo) ,areasInteres.map(b => b), false, `Que Area de Interés es padre de ${this.nota.titulo}?:`);
+                if (areaInteres === null) {
+                    new Notice("Sin Area de Interes");
+                    titulo = "";
+                    nivel = 0;
+                    return; // Termina la ejecución de la función aquí.
+                }
+                else{
+                    debugger;
+                    if (areaInteres.areaVida === null) {
+                        this.nota.areaVida = "No es de ningún Area de Vida";
+                    } else {
+                            // VERIFICACION DE AREA DE VIDA
+                        this.nota.areaVida = [];   
+                        this.nota.areaVida[0] = areaInteres?.areaVida
+                        ? areaInteres.areaVida.replace(/\[\[\s*|\s*\]\]/g, '')
+                        : "No es de ningún Area de Vida";
+                        this.nota.areaVida[1] = `${this.nota.trimestre} - ${this.nota.areaVida[0]}`
+                    }
+                    this.nota.asuntoDefinido = true; // Para que no ejecute la busqueda de proyecto Q o GTD...
+                    arrayAI = [areaInteres.titulo];
+                    // Verificamos si nota.areaInteres es un arreglo
+                    if (Array.isArray(areaInteres.areaInteres)) {
+                        // Si es un arreglo, iteramos sobre cada elemento (excluyendo el primer elemento ya agregado que es nota.titulo)
+                        // y aplicamos el regex a cada elemento. Luego concatenamos con el array existente.
+                        this.nota.areaInteres = arrayAI.concat(areaInteres.areaInteres.map(elemento => 
+                            elemento.replace(/\[\[\s*|\s*\]\]/g, '')));
+                    } else {
+                        // Si no es un arreglo, revisamos si nota.frontmatter.areaInteres existe
+                        if (areaInteres?.areaInteres) {
+                            // Si existe, aplicamos el regex y lo añadimos como segundo elemento
+                            arrayAI.push(areaInteres.areaInteres.replace(/\[\[\s*|\s*\]\]/g, ''));
+                        }
+                        // Si areaInteres.areaInteres no existe, this.nota.areaInteres ya tendrá nota.titulo como su único elemento
+                    }
+                }
+            }else{
+                arrayAI = "";
+            }
+            return arrayAI;
+            break;
+            default:
+                // La salida para default no puede ser solo areaInteres.. Validar cuando corresponda.
+                areaInteres = await suggester(areasInteres.map(b => b.file.basename),areasVida.map(b => b.file.basename), false, `A que Area de Vida pertenece esta ${nombreTipo}:`);
+            break;
+                }
+	    
+        return {titulo, nivel}
+     }else{
+       return this.nota.areaInteres; 
+       }
+    }
+
+
+    async getProyectoGTD(){
+        let suggester = this.tp.system.static_functions.get("suggester");
+        let tipo = this.infoSubsistema.type;
+        let nombreTipo = this.infoSubsistema.typeName;
+        let ProyectosGTD = await this.findMainFilesWithState("PGTD")
+        let proyectoGTD, nivel, titulo;
+        if (!this.nota.asuntoDefinido) {
+            // Ejecutar código aquí si asuntoDefinido es falsy (incluye false, null, undefined, 0, "", NaN)
+        switch(tipo) {
+            case "RR":
+                debugger;
+                let padrePGTD = await suggester(["Si", "No"], [true,false], false, ` ${this.nota.titulo} es hijo de un Proyecto GTD?`);
+                // Lógica para permitir al usuario elegir una tarea específica.
+                if (padrePGTD){
+                    proyectoGTD = await suggester(proyectosGTD.map(b => b.titulo) ,proyectosGTD.map(b => b), false, `Que Proyecto GTD es padre de ${this.nota.titulo}?:`);
+                    if (proyectoGTD === null) {
+                        new Notice("Sin proyecto GTD definido.");
+                        titulo = "";
+                        nivel = 0;
+                        return; // Termina la ejecución de la función aquí.
+                    }
+                    else{
+                        
+                        // VERIFICACION DE AREA DE VIDA
+                        this.nota.areaVida = nota?.frontmatter.areaVida
+                        ? nota.frontmatter.areaVida.replace(/\[\[\s*|\s*\]\]/g, '')
+                         : "No es de ningún Area de Vida";
+                        // VERIFICACION DE AREA DE INTERES
+                        // Verificamos si nota.areaInteres es un arreglo
+                        if (Array.isArray(nota.areaInteres)) {
+                            // Si es un arreglo, iteramos sobre cada elemento
+                            this.nota.areaInteres = nota.areaInteres.map(elemento => 
+                            elemento.replace(/\[\[\s*|\s*\]\]/g, ''));
+                        } else {
+                            // Si no es un arreglo, simplemente aplicamos el regex como antes
+                            this.nota.areaInteres = nota?.frontmatter.areaInteres
+                            ? nota.frontmatter.areaInteres.replace(/\[\[\s*|\s*\]\]/g, '')
+                             : "";
+                        }
+                        // VERIFICACION DE PROYECTOS DE Q
+                        this.nota.proyectoQ = nota?.frontmatter.proyectoQ
+                        ? nota.frontmatter.proyectoQ.replace(/\[\[\s*|\s*\]\]/g, '')
+                         : "";
+
+                        // VERIFICACION DE PROYECTOSGTD
+                        // Verificamos si nota.proyectoGTD es un arreglo
+                        if (Array.isArray(nota.proyectoGTD)) {
+                            // Si es un arreglo, iteramos sobre cada elemento
+                            this.nota.proyectoGTD = nota.proyectoGTD.map(elemento => 
+                            elemento.replace(/\[\[\s*|\s*\]\]/g, ''));
+                        } else {
+                            // Si no es un arreglo, simplemente aplicamos el regex como antes
+                            this.nota.proyectoGTD = nota.proyectoGTD.replace(/\[\[\s*|\s*\]\]/g, '');
+                        }
+                        this.nota.asuntoDefinido = true; // Para que no ejecute la busqueda de proyecto Q
+                        this.nota.proyectoPadre = "PGTD";
+                    }
+                }else{
+                    titulo = "";
+                    nivel = 0;
+                }
+                break;
+
+                default:
+                // La salida para default no puede ser solo areaInteres.. Validar cuando corresponda.
+                
+                break;
+                }
+	    
+        return titulo;
+        }else{
+            return this.nota.proyectoGTD//? this.nota.ProyectoGTD;
+        }
+    }
+
+
+    async getProyectoQ(){
+        let suggester = this.tp.system.static_functions.get("suggester");
+        let tipo = this.infoSubsistema.type;
+        let nombreTipo = this.infoSubsistema.typeName;
+        let ProyectosGTD = await this.findMainFilesWithState("PQ")
+        let proyectoGTD, nivel, titulo;
+        
+        if (!this.nota.asuntoDefinido) {
+            // Ejecutar código aquí si asuntoDefinido es falsy (incluye false, null, undefined, 0, "", NaN)
+        switch(tipo) {
+            case "RR":
+                debugger;
+                let padrePGTD = await suggester(["Si", "No"], [true,false], false, ` ${this.nota.titulo} es hijo de un Proyecto de Q?`);
+                // Lógica para permitir al usuario elegir una tarea específica.
+                if (padrePGTD){
+                    proyectoGTD = await suggester(proyectosGTD.map(b => b.titulo) ,proyectosGTD.map(b => b), false, `Que Proyecto Q es padre de ${this.nota.titulo}?:`);
+                    if (proyectoGTD === null) {
+                        new Notice("Sin proyecto Q definido.");
+                        titulo = "";
+                        return; // Termina la ejecución de la función aquí.
+                    }
+                    else{
+                        
+                        // VERIFICACION DE AREA DE VIDA
+                        this.nota.areaVida = nota?.frontmatter.areaVida
+                        ? nota.frontmatter.areaVida.replace(/\[\[\s*|\s*\]\]/g, '')
+                         : "No es de ningún Area de Vida";
+                        // VERIFICACION DE AREA DE INTERES
+                        // Verificamos si nota.areaInteres es un arreglo
+                        if (Array.isArray(nota.areaInteres)) {
+                            // Si es un arreglo, iteramos sobre cada elemento
+                            this.nota.areaInteres = nota.areaInteres.map(elemento => 
+                            elemento.replace(/\[\[\s*|\s*\]\]/g, ''));
+                        } else {
+                            // Si no es un arreglo, simplemente aplicamos el regex como antes
+                            this.nota.areaInteres = nota?.frontmatter.areaInteres
+                            ? nota.frontmatter.areaInteres.replace(/\[\[\s*|\s*\]\]/g, '')
+                             : "";
+                        }
+                        // VERIFICACION DE PROYECTOS DE Q
+                        this.nota.proyectoQ = nota?.frontmatter.proyectoQ
+                        ? nota.frontmatter.proyectoQ.replace(/\[\[\s*|\s*\]\]/g, '')
+                         : "";
+
+                        // VERIFICACION DE PROYECTOSGTD
+                        // Verificamos si nota.proyectoGTD es un arreglo
+                        if (Array.isArray(nota.proyectoGTD)) {
+                            // Si es un arreglo, iteramos sobre cada elemento
+                            this.nota.proyectoGTD = nota.proyectoGTD.map(elemento => 
+                            elemento.replace(/\[\[\s*|\s*\]\]/g, ''));
+                        } else {
+                            // Si no es un arreglo, simplemente aplicamos el regex como antes
+                            this.nota.proyectoGTD = nota.proyectoGTD.replace(/\[\[\s*|\s*\]\]/g, '');
+                        }
+                        this.nota.asuntoDefinido = true; // Para que no ejecute la busqueda de proyecto Q
+                        this.nota.proyectoPadre = "PQ";
+                    }
+                }else{
+                    titulo = "";
+                }
+                break;
+
+                default:
+                //
+                break;
+                }
+	    
+        return titulo
+        }else{
+            return this.nota.proyectoQ;//? this.nota.ProyectoGTD;
+        }
+    }
+
+
+
+    // Esta función encuentra los archivos de subsistemas y cuyo estado es 🟢
+    // Esta función sale de menuOtro, de registro Tiempo. Revisar si debo sincronizarlas.
+    async findMainFilesWithState(tipo, parametro) {
+    
+    const propertiesTipo = {
+        AV: {
+            folder: this.plugin.settings.folder_AreasVida,
+        },
+        AI: {
+            folder: this.plugin.settings.folder_AreasInteres,
+            },
+        PQ: {
+            folder: this.plugin.settings.folder_ProyectosQ,
+        },
+        PGTD: {
+            folder: this.plugin.settings.folder_ProyectosGTD,
+            },
+        TI: {
+                folder: this.plugin.settings.folder_TemasInteres,
+            },
+        RR: {
+            folder: this.plugin.settings.folder_RecursosRecurrentes,
+            },
+        TQ: {
+            folder: this.plugin.settings.folder_Trimestral,
+            },
+        // Puedes continuar añadiendo más casos aquí
+        };
+    
+        // Asegúrate de que tipo es una propiedad válida antes de desestructurar
+
+        const activeFilesWithFrontmatter = [];
+        let files, trimestre :  string;
+        const folder = propertiesTipo[tipo].folder;
+        switch (tipo){
+        case "AV":
+            debugger;
+            if (!parametro){ // parametro en este caso es el trimestre. Sin parametro se busca el nodoAreaVida
+                trimestre = DateTime.now().toFormat("yyyy-Qq");
+             }
+            // Cuando el trimestre si se ingresa en la función, entonces busca las AreasVida del trimestre.
+            else{
+                trimestre = parametro;
+            }
+
+            files = app.vault.getMarkdownFiles().filter(file => 
+                file.path.includes(folder) && !file.path.includes("Plantillas") && !file.path.includes("Archivo") && file.name.startsWith(trimestre));
+            
+            for (let file of files) {
+
+                let metadata = app.metadataCache.getFileCache(file)?.frontmatter;
+
+                if (metadata?.estado === "🟢") {
+                    let activeFile = Object.assign({}, metadata);
+                    activeFile.file = file;
+                    activeFilesWithFrontmatter.push(activeFile);        
+                }
+            }
+
+        break;
+        case "AI":
+        case "TQ":
+            files = app.vault.getMarkdownFiles().filter(file => 
+                file.path.includes(folder) && !file.path.includes("Plantillas") && !file.path.includes("Archivo"));    
+            for (let file of files) {
+                let metadata = app.metadataCache.getFileCache(file)?.frontmatter;
+                if (metadata?.estado === "🟢") {
+                    let activeFile = Object.assign({}, metadata);
+                    activeFile.file = file;
+                    activeFilesWithFrontmatter.push(activeFile);        
+                }
+            }
+        break;
+        default: 
+            files = app.vault.getMarkdownFiles().filter(file => 
+                file.path.includes(folder) && !file.path.includes("Plantillas") && !file.path.includes("Archivo"));    
+            for (let file of files) {
+                let metadata = app.metadataCache.getFileCache(file)?.frontmatter;
+                if (metadata?.estado === "🟢") {
+                    let activeFile = Object.assign({}, metadata);
+                    activeFile.file = file;
+                    activeFilesWithFrontmatter.push(activeFile);        
+                }
+            }
+        break;
+            }
+        return activeFilesWithFrontmatter;
+    }
+
+
+    async crearCarpeta(folderPath: string){
+        try {
+            // Verifica si la carpeta ya existe
+           debugger;
+            const carpetaExistente = app.vault.getAbstractFileByPath(folderPath);
+            if (carpetaExistente instanceof TFolder) {
+                console.log(`La carpeta '${folderPath}' ya existe.`);
+                return;
+            }
+            // Crea la carpeta
+            await app.vault.createFolder(folderPath);
+            console.log(`Carpeta '${folderPath}' creada exitosamente.`);
+            } catch (error) {
+            console.error(`Error al crear la carpeta '${folderPath}':`, error);
+            }
     }
   }
   
