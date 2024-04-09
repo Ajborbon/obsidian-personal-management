@@ -25,8 +25,8 @@ export const DEFAULT_SETTINGS: PluginMainSettings = {
   indice_Mercado: "Subsistemas/Mercado/Indice Mercado",
   folder_ModulosSistema: "Subsistemas/Modulos Sistema Gestion/Modulos",
   indice_ModulosSistema: "Subsistemas/Modulos Sistema Gestion/Indice Modulos",
-  folder_Pagos: "Subsistemas/Pagos/Notas",
-  indice_Pagos: "Subsistemas/Pagos/Indice Pagos",
+  folder_Transacciones: "Subsistemas/Transacciones",
+  indice_Transacciones: "Subsistemas/Transacciones/Indice Transacciones",
   folder_Presentaciones: "Subsistemas/Presentaciones/Notas",
   indice_Presentaciones: "Subsistemas/Presentaciones/Indice Presentaciones",
   folder_Publicaciones: "Subsistemas/Publicaciones/Piezas",
@@ -48,11 +48,11 @@ export const DEFAULT_SETTINGS: PluginMainSettings = {
   indice_ProyectosQ: "Estructura/Proyectos de Q/Indice Proyectos de Q",
 
 
-  file_Inbox: "Subsistemas/GTD/Bandeja de Entrada/Bandeja de Entrada",
-  folder_ProyectosGTD: "Subsistemas/GTD/Proyectos GTD/Proyectos",
-  indice_ProyectosGTD: "Subsistemas/GTD/Proyectos GTD/Indice Proyectos GTD",
-  folder_RSGTD: "Subsistemas/GTD/Revision Semanal/Revisiones",
-  indice_RSGTD: "Subsistemas/GTD/Revision Semanal/Indice Revision Semanal",
+  file_Inbox: "Estructura/GTD/Bandeja de Entrada/Bandeja de Entrada",
+  folder_ProyectosGTD: "Estructura/GTD/Proyectos GTD/Proyectos",
+  indice_ProyectosGTD: "Estructura/GTD/Proyectos GTD/Indice Proyectos GTD",
+  folder_RSGTD: "Estructura/GTD/Revision Semanal/Revisiones",
+  indice_RSGTD: "Estructura/GTD/Revision Semanal/Indice Revision Semanal",
 
   // Journal
   folder_Diario: "Estructura/Journal/Diario/Notas",
@@ -65,5 +65,11 @@ export const DEFAULT_SETTINGS: PluginMainSettings = {
   indice_Trimestral: "Estructura/Journal/Trimestral/Indice Trimestral",
   folder_Anual: "Estructura/Journal/Anual/Notas",
   indice_Anual: "Estructura/Journal/Anual/Indice Anual",
+
+  // COMPASS
+  folder_CompassAnual: "Estructura/Compass/Anual",
+  indice_CompassAnual: "Estructura/Compass/Indice Compass Anual",
+  folder_CompassTrimestral: "Estructura/Compass/Trimestral",
+  indice_CompassTrimestral: "Estructura/Compass/Indice Compass trimestral",
 };
 

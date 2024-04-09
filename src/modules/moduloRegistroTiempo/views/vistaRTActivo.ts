@@ -61,7 +61,7 @@ export class VistaRegistroActivo extends ItemView {
                 const starterAPInstance = new starterAPI(this.plugin)
                 await starterAPInstance.createNote("RegistroTiempo");
             };
-
+            this.containerEl.createEl('div', {cls: 'separador'});
             // Logica para crear tabla sencilla de 5 ultimos RT
             let registrosFinalizados = [];
             for (let file of files) {
@@ -77,11 +77,12 @@ export class VistaRegistroActivo extends ItemView {
             registrosFinalizados.sort((a, b) => b.id - a.id);
             // Selecciona los primeros 5 registros después de ordenar
             
-            let top5RegistrosActivos = registrosFinalizados.slice(0, 5);
+            let top5RegistrosActivos = registrosFinalizados.slice(0, 8);
             // Ahora top5RegistrosActivos contiene los 5 archivos con los ID más altos
 
 
             if (top5RegistrosActivos.length > 0) {
+                this.containerEl.classList.add("table-container");
                 const table = this.containerEl.createEl('table', {cls: 'table-small'});
                 table.style.width = '100%';
                 const header = table.createEl('tr');
@@ -139,9 +140,21 @@ export class VistaRegistroActivo extends ItemView {
             let tiempo = Duration.fromMillis(diferencia.toMillis()).toFormat('h:mm')
             this.containerEl.createEl('h5', { text: 'Tarea Actual'});
 
-            this.containerEl.createEl('p', { text: 'Nombre: ' + alias });
-            this.containerEl.createEl('span', { text: descripcion });
-            this.containerEl.createEl('span', { text: 'Esta tarea lleva: ' + tiempo });
+            this.containerEl.createEl('span', { text: 'Nombre: '});
+            // Modificado para crear un elemento span clickeable para el alias
+            const aliasSpan = this.containerEl.createEl('span', {
+                text: alias,
+                cls: 'clickable-alias' // Asegúrate de tener esta clase para estilizar el span como un link
+            });
+            aliasSpan.addEventListener('click', async () => {
+                let file = app.vault.getAbstractFileByPath(registrosActivos[0].file.path);
+                if (file instanceof TFile) {
+                    await app.workspace.getLeaf(true).openFile(file);
+                }
+            });
+
+            this.containerEl.createEl('span', { text: '\n' + descripcion });
+            this.containerEl.createEl('p', { text: 'Esta tarea lleva: ' + tiempo });
             const botonera = this.containerEl.createEl('div');
             const botonCerrar = botonera.createEl('button');
             botonCerrar.textContent = 'Cerrar Tarea';

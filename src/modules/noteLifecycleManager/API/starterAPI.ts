@@ -157,8 +157,24 @@ export class starterAPI {
     }
     
     async getFecha() {
-        // Simulación de obtener un ID de manera asíncrona.
-        return this.formatearFecha(new Date());
+        let fecha;
+        let prompt = this.tp.system.static_functions.get("prompt");
+        switch(this.infoSubsistema.type) {
+            case "Tx":
+                let fechaOriginal = await prompt(`Confirma la fecha de la transacción: `, `${DateTime.now().toFormat('yyyy-MM-dd HH:mm')}`, true)
+                // Parseando la fecha original utilizando moment
+                let fechaMoment = window.moment(fechaOriginal, "YYYY-MM-DD HH:mm");
+                // Formateando la nueva fecha al formato deseado
+                fecha = fechaMoment.format("YYYY-MM-DD dddd HHmmss");
+            default:
+               fecha =  this.formatearFecha(new Date());
+               break;
+        }
+
+        return fecha;
+       
+
+        
     }
 
     formatearFecha(fecha: Date): string {
@@ -177,7 +193,15 @@ export class starterAPI {
     
     async getTitulo(){
         let prompt = this.tp.system.static_functions.get("prompt");
-        let titulo = await prompt(`Titulo de este(a) ${this.infoSubsistema.typeName}`, `${this.infoSubsistema.typeName} - ${this.nota.id}`, true)
+        let titulo;
+        switch(this.infoSubsistema.type) {
+            case "Tx":
+                titulo = await prompt(`Nombre de este(a) ${this.infoSubsistema.typeName}`, `${this.infoSubsistema.typeName} - ${this.nota.id}`, true)
+                break;
+            default:
+                titulo = await prompt(`Titulo de este(a) ${this.infoSubsistema.typeName}`, `${this.infoSubsistema.typeName} - ${this.nota.id}`, true)
+               break;
+        }
 	    // Verificar si el usuario presionó Esc.
         if (titulo === null) {
         new Notice("Creación de nota cancelada por el usuario.");
@@ -193,6 +217,9 @@ export class starterAPI {
         switch(this.infoSubsistema.type) {
             case "Ax":
                  descripcion = await prompt("¿Quieres agregar una descripción?", " " + `Esta anotación es sobre ${this.nota.titulo}`, false, true )
+            break;
+            case "Tx":
+                 descripcion = await prompt(`¿Quieres agregar una descripción de ${this.nota.titulo}?`, " " + `${this.infoSubsistema.typeName} de ${this.nota.titulo}`, false, true )
             break;
             case "AV":
                  descripcion = await prompt(`¿Quieres agregar una descripción sobre ${this.nota.titulo}?`, " ", false, true )
@@ -223,8 +250,9 @@ export class starterAPI {
         switch(this.infoSubsistema.type) {
             case "Ax":
             case "PGTD":
+            case "Tx":
                 nota.aliases.push(`${this.nota.titulo}`)
-                nota.aliases.push(`${this.infoSubsistema.type} - ${this.nota.titulo}`)
+                nota.aliases.push(`${this.infoSubsistema.type}/${this.nota.titulo}`)
                 break;
             case "AI":
                 nota.aliases.push(`${this.infoSubsistema.type}/${this.nota.titulo}`)
@@ -246,8 +274,8 @@ export class starterAPI {
                 break;
             case "PQ":
                 nota.aliases.push(`${this.infoSubsistema.type}/${this.nota.trimestre}/${this.nota.titulo}`)
-                nota.aliases.push(`${this.infoSubsistema.type}/${this.nota.areaVida}/${this.nota.trimestre}/${this.nota.titulo}`)
-                nota.aliases.push(`${this.infoSubsistema.type}/${this.nota.trimestre}/${this.nota.areaVida}/${this.nota.titulo}`)
+                nota.aliases.push(`${this.infoSubsistema.type}/${Array.isArray(this.nota.areaVida) ? this.nota.areaVida[0] : this.nota.areaVida}/${this.nota.trimestre}/${this.nota.titulo}`);
+                nota.aliases.push(`${this.infoSubsistema.type}/${this.nota.trimestre}/${Array.isArray(this.nota.areaVida) ? this.nota.areaVida[0] : this.nota.areaVida}/${this.nota.titulo}`)
             break;    
             }
 
@@ -262,42 +290,304 @@ export class starterAPI {
         let nombreSistema = this.infoSubsistema.typeName;
         let subsistemas, padres = [];
         let activo = app.workspace.getActiveFile();
-        let siAsunto;
+        let siAsunto = false;
         let nombre = "";
         let nota;
         if (activo != null) {
             nombre = activo.basename;
             nota = app.metadataCache.getFileCache(activo);
-            siAsunto = await suggester(["Si", "No"], [true, false], true, nombre + " es origen de " + this.nota.titulo + "?");
-        
-            if (siAsunto) {
-                // En caso de que siAsunto sea true, desplaza los elementos del arreglo padre y añade activo.basename en la posición 0
-                padres.unshift(nombre); // Añade el nombre al inicio del arreglo, desplazando los demás elementos
-            
-                switch(tipoSistema) {
+            //1. siAsunto = await suggester(["Si", "No"], [true, false], true, nombre + " es origen de " + this.nota.titulo + "?");
+            padres.unshift(nombre); // Añade el nombre al inicio del arreglo, desplazando los demás elementos
+            switch(tipoSistema) { // Estoy creando un: 
+                case "RR":
+                case "PGTD":
+                case "Ax":
+                case "Tx":
+                    siAsunto = await suggester(["Si", "No"], [true, false], true, nombre + " es origen de " + this.nota.titulo + "?");
+                    if (siAsunto) {
+                        debugger;
+                        this.nota.asuntoDefinido = true; // Para que no ejecute la busqueda de Area Vida, Area de Interés, proyecto Q o GTD
+                        let nivel;
+                        switch (nota?.frontmatter?.type){ // La nota activs es una: 
+                            default:
+                            case "PGTD":
+                            case "PQ":
+                                    // VERIFICACION DE PROYECTOS DE Q Y PROYECTO GTD
+                                if (nota.frontmatter?.type === "PQ"){ 
+                                // CUANDO LA NOTA ACTIVA ES UN PQ.
+                                this.nota.proyectoQ = nombre;                                
+                                // VERIFICACION DE PROYECTOSGTD
+                                // Inicializamos this.nota.proyectoGTD con un valor predeterminado de cadena vacía
+                                this.nota.proyectoGTD = "";
+                                // Verificamos si nota.proyectoGTD existe y es un arreglo
+                                if (Array.isArray(nota.frontmatter.proyectoGTD)) {
+                                    // Si es un arreglo, iteramos sobre cada elemento
+                                    this.nota.proyectoGTD = nota.frontmatter.proyectoGTD.map(elemento => 
+                                        elemento.replace(/\[\[\s*|\s*\]\]/g, ''));
+                                } else if (nota.frontmatter.proyectoGTD) {
+                                    // Si existe pero no es un arreglo, aplicamos el regex directamente
+                                    this.nota.proyectoGTD = nota.frontmatter.proyectoGTD.replace(/\[\[\s*|\s*\]\]/g, '');
+                                }
+                                // Si nota.proyectoGTD no existe, this.nota.proyectoGTD ya está establecido en "" por defecto
 
-                    case "RR":
-                            //debugger;
-                            switch (nota?.frontmatter?.type){
-                                case "AV":
-                                    
-                                     // VERIFICACION DE AREA DE VIDA
-                                     this.nota.areaVida = nota?.frontmatter?.areaVida
-                                     ? nota.frontmatter.areaVida.replace(/\[\[\s*|\s*\]\]/g, '')
-                                     : "No es de ningún Area de Vida";
-                    
+                                
+                                // Obtener ProyectoQ y Proyecto GTD cuando la nota es ProyectoGTD.
+                                 } else if (nota.frontmatter?.type === "PGTD"){
+                                 
+                                 // CUANDO LA NOTA ACTIVA ES UN GTD.
+                                 // VERIFICACION DE PROYECTOSGTD
+                                 this.nota.proyectoGTD = [nombre];
+
+                                 if (Array.isArray(nota.frontmatter.proyectoGTD)) {
+                                     // Si es un arreglo, utilizamos concat para añadir los elementos ya procesados con el regex al arreglo this.nota.proyectoGTD
+                                     this.nota.proyectoGTD = this.nota.proyectoGTD.concat(nota.frontmatter.proyectoGTD.map(elemento => 
+                                         elemento.replace(/\[\[\s*|\s*\]\]/g, '')));
+                                 } else if (nota.frontmatter.proyectoGTD) {
+                                     // Si existe pero no es un arreglo, aplicamos el regex directamente y usamos push para agregarlo a this.nota.proyectoGTD
+                                     this.nota.proyectoGTD.push(nota.frontmatter.proyectoGTD.replace(/\[\[\s*|\s*\]\]/g, ''));
+                                 }
+                                 
+                                 // Si nota.proyectoGTD no existe, this.nota.proyectoGTD ya está establecido en "" por defecto
+                                 this.nota.proyectoQ = "";
+                                 if (Array.isArray(nota.frontmatter.proyectoQ)) {
+                                    // Si es un arreglo, iteramos sobre cada elemento
+                                    this.nota.proyectoQ = nota.frontmatter.proyectoQ.map(elemento => 
+                                        elemento.replace(/\[\[\s*|\s*\]\]/g, ''));
+                                } else if (nota.frontmatter.proyectoQ) {
+                                    // Si existe pero no es un arreglo, aplicamos el regex directamente
+                                    this.nota.proyectoQ = nota.frontmatter.proyectoQ.replace(/\[\[\s*|\s*\]\]/g, '');
+                                }
+
+
+                                 }
+                                 // Obtener ProyectoQ y Proyecto GTD cuando la nota es otra cosa que no es proyecto
+                                 else{
+
+                                    this.nota.proyectoQ = "";
+                                    if (Array.isArray(nota?.frontmatter?.proyectoQ)) {
+                                        // Si es un arreglo, iteramos sobre cada elemento
+                                        this.nota.proyectoQ = nota.frontmatter.proyectoQ.map(elemento => 
+                                            elemento.replace(/\[\[\s*|\s*\]\]/g, ''));
+                                    } else if (nota?.frontmatter?.proyectoQ) {
+                                        // Si existe pero no es un arreglo, aplicamos el regex directamente
+                                        this.nota.proyectoQ = nota.frontmatter.proyectoQ.replace(/\[\[\s*|\s*\]\]/g, '');
+                                    }
+
+                                    this.nota.proyectoGTD = "";
+                                    // Verificamos si nota.proyectoGTD existe y es un arreglo
+                                    if (Array.isArray(nota?.frontmatter?.proyectoGTD)) {
+                                        // Si es un arreglo, iteramos sobre cada elemento
+                                        this.nota.proyectoGTD = nota.frontmatter.proyectoGTD.map(elemento => 
+                                            elemento.replace(/\[\[\s*|\s*\]\]/g, ''));
+                                    } else if (nota?.frontmatter?.proyectoGTD) {
+                                        // Si existe pero no es un arreglo, aplicamos el regex directamente
+                                        this.nota.proyectoGTD = nota.frontmatter.proyectoGTD.replace(/\[\[\s*|\s*\]\]/g, '');
+                                    }
+
+                                }
+                                // Verificamos areaInteres 
+                                this.nota.areaInteres = [];
+                                if (Array.isArray(nota?.frontmatter?.areaInteres)) {
+                                    // Si es un arreglo, iteramos sobre cada elemento (excluyendo el primer elemento ya agregado que es nota.titulo)
+                                    // y aplicamos el regex a cada elemento. Luego concatenamos con el array existente.
+                                    this.nota.areaInteres = this.nota.areaInteres.concat(nota.frontmatter.areaInteres.map(elemento => 
+                                        elemento.replace(/\[\[\s*|\s*\]\]/g, '')));
+                                } else {
+                                    // Si no es un arreglo, revisamos si nota.frontmatter.areaInteres existe
+                                    if (nota?.frontmatter?.areaInteres) {
+                                        // Si existe, aplicamos el regex y lo añadimos como segundo elemento
+                                        this.nota.areaInteres.push(nota.frontmatter.areaInteres.replace(/\[\[\s*|\s*\]\]/g, ''));
+                                    }
+                                }
+                                // Verificamos AreaVida
+                                this.nota.areaVida = "";
+                                if (nota?.frontmatter?.areaVida) {
+                                    if (Array.isArray(nota.frontmatter.areaVida)) {
+                                        // Es un arreglo, usa el primer elemento
+                                        this.nota.areaVida = nota.frontmatter.areaVida[0].replace(/\[\[\s*|\s*\]\]/g, '');
+                                    } else if (typeof nota.frontmatter.areaVida === 'string') {
+                                        // Es un string
+                                        this.nota.areaVida = nota.frontmatter.areaVida.replace(/\[\[\s*|\s*\]\]/g, '');
+                                    }
+                                } else {
+                                    // No está definido o está vacío
+                                    this.nota.areaVida = "No es de ningún Area de Vida";
+                                }
+
+                                  // DEFINIR NIVELP
+                                // Comprueba si nivelAI existe y no es NaN después de intentar convertirlo a entero
+                                
+                                if (!isNaN(parseInt(nota?.frontmatter?.nivelP))) {
+                                    nivel = parseInt(nota.frontmatter.nivelP) + 1;
+                                } else {
+                                    // Si nivelAI no existe o su conversión a entero resulta en NaN, establece nivel a 0
+                                    nivel = 0;
+                                }
+                                this.nota.nivelP = nivel;
+                                
+                            break; // PGTD y PQ
+                            case "AI":
+                                debugger;
+                                // VERIFICACION DE AREA DE INTERES
+                                if (nota?.frontmatter?.type === "AI"){
+                                    this.nota.areaInteres = [nota.frontmatter.titulo]; 
+                                    // Inicializamos this.nota.areaInteres con nota.titulo como el primer elemento.
+                                    // Este solo aplica para cuando estoy construyendo desde Area de Interes otra Area de Interes.
+                                }
+                                 // Verificamos si nota.areaInteres es un arreglo
+                                 if (Array.isArray(nota.frontmatter?.areaInteres)) {
+                                    // Si es un arreglo, iteramos sobre cada elemento (excluyendo el primer elemento ya agregado que es nota.titulo)
+                                    // y aplicamos el regex a cada elemento. Luego concatenamos con el array existente.
+                                    this.nota.areaInteres = this.nota.areaInteres.concat(nota.frontmatter.areaInteres.map(elemento => 
+                                        elemento.replace(/\[\[\s*|\s*\]\]/g, '')));
+                                } else {
+                                    // Si no es un arreglo, revisamos si nota.frontmatter.areaInteres existe
+                                    if (nota?.frontmatter.areaInteres) {
+                                        // Si existe, aplicamos el regex y lo añadimos como segundo elemento
+                                        this.nota.areaInteres.push(nota.frontmatter.areaInteres.replace(/\[\[\s*|\s*\]\]/g, ''));
+                                    }else {
+                                     // Si no es arreglo ni string, areaInteres es el area interes que está en titulo.   
+                                    }
+                                // Si nota.frontmatter.areaInteres no existe, this.nota.areaInteres ya tendrá nota.titulo como su único elemento
+                                }                             
+                            case "AV":
+                                // VERIFICACION DE AREA DE VIDA
+                                if (nota?.frontmatter?.areaVida) {
+                                    if (Array.isArray(nota.frontmatter.areaVida)) {
+                                        // Es un arreglo, usa el primer elemento
+                                        this.nota.areaVida = nota.frontmatter.areaVida[0].replace(/\[\[\s*|\s*\]\]/g, '');
+                                    } else if (typeof nota.frontmatter.areaVida === 'string') {
+                                        // Es un string
+                                        this.nota.areaVida = nota.frontmatter.areaVida.replace(/\[\[\s*|\s*\]\]/g, '');
+                                    }
+                                } else {
+                                    // No está definido o está vacío
+                                    this.nota.areaVida = "No es de ningún Área de Vida";
+                                }
+                                // poniendo si Asunto en false para las notas estructura AI y AV. 
+                                if (nota?.frontmatter?.type === "AI"||nota?.frontmatter?.type === "AV"){                
                                     siAsunto = false;
-                                    this.nota.asuntoDefinido = true; // Para que no ejecute la busqueda de Area Vida, Area de Interés, proyecto Q o GTD
-                                break;
-                                case "AI":
-                                    // VERIFICACION DE AREA DE VIDA
-                                    this.nota.areaVida = nota?.frontmatter?.areaVida
-                                    ? nota.frontmatter.areaVida.replace(/\[\[\s*|\s*\]\]/g, '')
-                                    : "No es de ningún Area de Vida";
-                                    // VERIFICACION DE AREA DE INTERES
-                                   // Inicializamos this.nota.areaInteres con nota.titulo como el primer elemento
-                                    
-                                    this.nota.areaInteres = [nota.frontmatter.titulo];
+                                }
+
+                                // DEFINIR NIVELP
+                                // Comprueba si nivelAI existe y no es NaN después de intentar convertirlo a entero
+                                
+                                if (!isNaN(parseInt(nota.frontmatter?.nivelP))) {
+                                    nivel = parseInt(nota.frontmatter.nivelP) + 1;
+                                } else {
+                                    // Si nivelAI no existe o su conversión a entero resulta en NaN, establece nivel a 0
+                                    nivel = 0;
+                                }
+                                this.nota.nivelP = nivel;
+                            break;                            
+                        }
+                    }else{ // activa no es origen de Creando RR - PGTD - PQ  if(siAsunto)
+
+                    } 
+                    break; // Creando RR
+               
+                case "PQ":  // Estoy Creando un PQ 
+                    siAsunto = await suggester(["Si", "No"], [true, false], true, nombre + " es origen de " + this.nota.titulo + "?");
+                    if (siAsunto) {
+                        debugger;
+                        // PQ requiere obligatoriamente tener Area de Vida.
+                        if (nota?.frontmatter?.areaVida !== undefined && nota.frontmatter.areaVida !== "") {
+                            // Código a ejecutar si areaVida existe y no es una cadena vacía
+                            if (Array.isArray(nota.frontmatter.areaVida)) {
+                                // Es un arreglo, usa el primer elemento
+                                this.nota.areaVida = nota.frontmatter.areaVida[0].replace(/\[\[\s*|\s*\]\]/g, '');
+                            } else if (typeof nota.frontmatter.areaVida === 'string') {
+                                // Es un string
+                                this.nota.areaVida = nota.frontmatter.areaVida.replace(/\[\[\s*|\s*\]\]/g, '');
+                            }
+                             // poniendo si Asunto en false para las notas estructura AI y AV. 
+                            if (nota?.frontmatter?.type === "AI"||nota?.frontmatter?.type === "AV"){                
+                                siAsunto = false;
+                            }
+                        let nivel;
+                        switch (nota?.frontmatter?.type){ // tipo de nota activa creando un PQ.
+                            case "PGTD":
+               
+                                // VERIFICACION DE PROYECTOSGTD
+                                this.nota.proyectoGTD = [nombre];
+
+                                if (Array.isArray(nota.frontmatter.proyectoGTD)) {
+                                    // Si es un arreglo, utilizamos concat para añadir los elementos ya procesados con el regex al arreglo this.nota.proyectoGTD
+                                    this.nota.proyectoGTD = this.nota.proyectoGTD.concat(nota.frontmatter.proyectoGTD.map(elemento => 
+                                        elemento.replace(/\[\[\s*|\s*\]\]/g, '')));
+                                } else if (nota.frontmatter.proyectoGTD) {
+                                    // Si existe pero no es un arreglo, aplicamos el regex directamente y usamos push para agregarlo a this.nota.proyectoGTD
+                                    this.nota.proyectoGTD.push(nota.frontmatter.proyectoGTD.replace(/\[\[\s*|\s*\]\]/g, ''));
+                                }
+                               
+                            case "AI":
+                                // VERIFICACION DE AREA DE INTERES
+                                if (nota?.frontmatter?.type === "AI"){
+                                    this.nota.areaInteres = [nota.frontmatter.titulo]; 
+                                    // Inicializamos this.nota.areaInteres con nota.titulo como el primer elemento.
+                                    // Este solo aplica para cuando estoy construyendo desde Area de Interes otra Area de Interes.
+                                }else{
+                                    this.nota.areaInteres = [];
+                                }
+                                 // Verificamos si nota.areaInteres es un arreglo
+                                 if (Array.isArray(nota.frontmatter?.areaInteres)) {
+                                    // Si es un arreglo, iteramos sobre cada elemento (excluyendo el primer elemento ya agregado que es nota.titulo)
+                                    // y aplicamos el regex a cada elemento. Luego concatenamos con el array existente.
+                                    this.nota.areaInteres = this.nota.areaInteres.concat(nota.frontmatter.areaInteres.map(elemento => 
+                                        elemento.replace(/\[\[\s*|\s*\]\]/g, '')));
+                                } else {
+                                    // Si no es un arreglo, revisamos si nota.frontmatter.areaInteres existe
+                                    if (nota?.frontmatter.areaInteres) {
+                                        // Si existe, aplicamos el regex y lo añadimos como segundo elemento
+                                        this.nota.areaInteres.push(nota.frontmatter.areaInteres.replace(/\[\[\s*|\s*\]\]/g, ''));
+                                    }else {
+                                        this.nota.areaInteres = "";
+                                    }
+                                // Si nota.frontmatter.areaInteres no existe, this.nota.areaInteres ya tendrá nota.titulo como su único elemento
+                                }
+                                
+                            case "AV":
+                            case "nAV":
+                                 // DEFINIR NIVELP
+                                // Comprueba si nivelAI existe y no es NaN después de intentar convertirlo a entero
+                                if (!isNaN(parseInt(nota.frontmatter?.nivelP))) {
+                                    nivel = parseInt(nota.frontmatter.nivelP) + 1;
+                                } else {
+                                    // Si nivelAI no existe o su conversión a entero resulta en NaN, establece nivel a 0
+                                    nivel = 0;
+                                }
+                                this.nota.nivelP = nivel;
+                                this.nota.asuntoDefinido = true; // Para que no ejecute la busqueda de Area Vida, Area de Interés, proyecto Q o GTD
+
+                            break;  
+                            default:
+                                new Notice("Un Proyecto de Q solo puede iniciar de un AV, AI o PGTD. Asunto no definido.");   
+                            break;
+                        }
+                    } 
+                    // Area de vida de activa, creando PQ No está definido o está vacío
+                    else {
+                       new Notice("Todos los proyectos de Q requieren Area de Vida. Asunto no definido."); 
+                       siAsunto = false;
+                    }
+                }else{ // activa no es origen de Creando PQ  if(siAsunto)
+
+                }     
+                break; // Creando PQ
+                case "AI": // Creando un AI
+                    let nivel;
+                    switch (nota?.frontmatter?.type){
+                        case "AI":
+                        case "AV":
+                        case "nAV":
+                            siAsunto = await suggester(["Si", "No"], [true, false], true, nombre + " es origen de " + this.nota.titulo + "?");
+                            if (siAsunto) {
+                                this.nota.asuntoDefinido = true; // Para que no ejecute la busqueda de Area Vida, Area de Interés, proyecto Q o GTD
+                                // VERIFICACION DE AREA DE INTERES
+                                // Inicializamos this.nota.areaInteres con nota.titulo como el primer elemento
+                                
+                                if (nota?.frontmatter?.type === "AI"){
+                                    this.nota.areaInteres = [nota.frontmatter.titulo]; 
                                     // Verificamos si nota.areaInteres es un arreglo
                                     if (Array.isArray(nota.frontmatter.areaInteres)) {
                                         // Si es un arreglo, iteramos sobre cada elemento (excluyendo el primer elemento ya agregado que es nota.titulo)
@@ -310,80 +600,51 @@ export class starterAPI {
                                             // Si existe, aplicamos el regex y lo añadimos como segundo elemento
                                             this.nota.areaInteres.push(nota.frontmatter.areaInteres.replace(/\[\[\s*|\s*\]\]/g, ''));
                                         }
-                                        // Si nota.frontmatter.areaInteres no existe, this.nota.areaInteres ya tendrá nota.titulo como su único elemento
+                                    // Si nota.frontmatter.areaInteres no existe, this.nota.areaInteres ya tendrá nota.titulo como su único elemento
                                     }
+                                }                            
 
+                                // VERIFICACION DE AREA DE VIDA
+                                if (nota?.frontmatter?.areaVida) {
+                                    if (Array.isArray(nota.frontmatter.areaVida)) {
+                                        // Es un arreglo, usa el primer elemento
+                                        this.nota.areaVida = nota.frontmatter.areaVida[0].replace(/\[\[\s*|\s*\]\]/g, '');
+                                    } else if (typeof nota.frontmatter.areaVida === 'string') {
+                                        // Es un string
+                                        this.nota.areaVida = nota.frontmatter.areaVida.replace(/\[\[\s*|\s*\]\]/g, '');
+                                    }
+                                } else {
+                                    // No está definido o está vacío
+                                    this.nota.areaVida = "No es de ningún Área de Vida";
+                                }
+                                // poniendo si Asunto en false para las notas estructura AI y AV. 
+                                if (nota?.frontmatter?.type === "AI"||nota?.frontmatter?.type === "AV"){                
                                     siAsunto = false;
-                                    this.nota.asuntoDefinido = true; // Para que no ejecute la busqueda de Area Vida, Area de Interés, proyecto Q o GTD
-                                break;
-                                case "PGTD":
-                                case "PQ":
-                                    siAsunto = false;
-                                default:
-                                    // VERIFICACION DE AREA DE VIDA
-                                    if (nota?.frontmatter?.areaVida) {
-                                        if (Array.isArray(nota.frontmatter.areaVida)) {
-                                            // Es un arreglo, usa el primer elemento
-                                            this.nota.areaVida = nota.frontmatter.areaVida[0].replace(/\[\[\s*|\s*\]\]/g, '');
-                                        } else if (typeof nota.frontmatter.areaVida === 'string') {
-                                            // Es un string
-                                            this.nota.areaVida = nota.frontmatter.areaVida.replace(/\[\[\s*|\s*\]\]/g, '');
-                                        }
-                                    } else {
-                                        // No está definido o está vacío
-                                        this.nota.areaVida = "No es de ningún Área de Vida";
-                                    }
-                                    
-                                    
-                                    // VERIFICACION DE AREA DE INTERES
-                                    this.nota.areaInteres = "";
-                                    // Verificamos si nota.areaInteres es un arreglo
-                                    if (Array.isArray(nota?.frontmatter.areaInteres)) {
-                                        // Si es un arreglo, iteramos sobre cada elemento
-                                        this.nota.areaInteres = nota.frontmatter.areaInteres.map(elemento => 
-                                        elemento.replace(/\[\[\s*|\s*\]\]/g, ''));
-                                    } else if (nota?.frontmatter.areaInteres){
-                                        // Si no es un arreglo, simplemente aplicamos el regex como antes
-                                        this.nota.areaInteres = nota.frontmatter.areaInteres.replace(/\[\[\s*|\s*\]\]/g, '');
-                                    }
-                                    // VERIFICACION DE PROYECTOS DE Q Y PROYECTO GTD
-                                    if (nota.frontmatter.type === "PQ"){ 
-                                        // CUANDO LA NOTA ACTIVA ES UN PQ.
-                                    debugger;
-                                    this.nota.proyectoQ = nombre;
-                                    
-                                    // VERIFICACION DE PROYECTOSGTD
-                                    // Inicializamos this.nota.proyectoGTD con un valor predeterminado de cadena vacía
-                                    this.nota.proyectoGTD = "";
-                                    // Verificamos si nota.proyectoGTD existe y es un arreglo
-                                    if (Array.isArray(nota.frontmatter.proyectoGTD)) {
-                                        // Si es un arreglo, iteramos sobre cada elemento
-                                        this.nota.proyectoGTD = nota.frontmatter.proyectoGTD.map(elemento => 
-                                            elemento.replace(/\[\[\s*|\s*\]\]/g, ''));
-                                    } else if (nota.frontmatter.proyectoGTD) {
-                                        // Si existe pero no es un arreglo, aplicamos el regex directamente
-                                        this.nota.proyectoGTD = nota.frontmatter.proyectoGTD.replace(/\[\[\s*|\s*\]\]/g, '');
-                                    }
-                                    // Si nota.proyectoGTD no existe, this.nota.proyectoGTD ya está establecido en "" por defecto
+                                }
 
-                                    }
-                                    // Obtener ProyectoQ y Proyecto GTD cuando la nota es ProyectoGTD.
-                                    else{
+                                // DEFINIR NIVELAI
+                                // Comprueba si nivelAI existe y no es NaN después de intentar convertirlo a entero
+                                if (!isNaN(parseInt(nota.frontmatter?.nivelAI))) {
+                                    nivel = parseInt(nota.frontmatter.nivelAI) + 1;
+                                } else {
+                                    // Si nivelAI no existe o su conversión a entero resulta en NaN, establece nivel a 0
+                                    nivel = 0;
+                                }
+                                this.nota.nivelAI = nivel;
 
-                                    }
-                                    
-                                    this.nota.asuntoDefinido = true; // Para que no ejecute la busqueda de Area Vida, Area de Interés, proyecto Q o GTD
-                                break;
-                            } 
-                        break;
-                    default:
-                        // Si el usuario elige "Otro" o cualquier otra opción.
-                        
-                    break;
-                    }
-            
-            }
-        } else {
+                        }
+                        break;  // Case AI - AV
+                            
+                    } // switch case sobre el tipo de nota activa.
+                break; // Creando un AI
+                
+                default:  // Asunto De la nota que esté creando cuando es cualqueir cosa
+                    
+                    
+                break;
+                } // switch tipo(sistema) -> Sobre la nota que esté creando.
+
+        } else { // activo == null
             siAsunto = false;
         } 
         return {siAsunto, nombre: padres}
@@ -645,12 +906,19 @@ export class starterAPI {
             case "PQ":
                 campo = await suggester(["🔵 -> Completado - Archivo", "🟢 -> Activo","🟡 -> Por Iniciar, En Pausa", "🔴 -> Cancelado"],["🔵", "🟢","🟡", "🔴"], false, `Estado actual ${this.nota.titulo}:`);
                 break;
+            case "Tx":
+                campo = await suggester(["🔵 -> Archivo", "🟢 -> En Proceso","🟡 -> En Pausa", "🔴 -> Cancelado"],["🔵", "🟢","🟡", "🔴"], false, `Estado de ${this.nota.titulo}:`);
+                break;
             case "AI":
             case "AV":
             case "RR":
                 // Lógica para permitir al usuario elegir una tarea específica.
                 campo = await suggester(["🔵 -> Archivado", "🟢 -> Activo","🟡 -> En Pausa", "🔴 -> Detenido"],["🔵", "🟢","🟡", "🔴"], false, `Estado actual ${this.nota.titulo}:`);
                 break;
+            case "AY":
+                campo = await suggester(["🔵 -> Año Archivado", "🟢 -> Año activo","🟡 -> Año en planeación", "🔴 -> Nota por arreglar"],["🔵", "🟢","🟡", "🔴"], false, `Estado del año elegido:`);
+                break;
+            
             default:
                 // Si el usuario elige "Otro" o cualquier otra opción.
                 campo = await suggester(["🔵 -> Completado - Información", "🟢 -> Finalizado","🟡 -> En desarrollo", "🔴 -> Detenido"],["🔵", "🟢","🟡", "🔴"], false, "Seleccione el estado de la nota:");
@@ -731,11 +999,50 @@ export class starterAPI {
         return trimestre;
     }
 
+
+    async getAño(){
+        
+        let suggester = this.tp.system.static_functions.get("suggester");
+        let tipoSistema = this.infoSubsistema.type;
+        let nombreSistema = this.infoSubsistema.typeName;
+        let año;
+        //let trimestres = await this.activeStructureResources("Trimestral"); // Funciona en la versión 1.0 de Areas de Vida.
+        let años = await this.findMainFilesWithState("AY");
+        
+        switch(tipoSistema) {
+            case "CAC":
+            case "CAI":
+                año = await suggester(años.map(b => b.file.basename),años.map(b => b.file.basename), false, `Selecciona el año que deseas para el ${nombreSistema}:`);
+                break;
+            case "AY":
+                // Obtener el año actual
+                const añoActual = new Date().getFullYear();
+                // Crear el arreglo con los años solicitados
+                const arregloAños = [añoActual - 2, añoActual - 1, añoActual, añoActual + 1, añoActual + 2 ];
+                // Aqui le quito los años que ya estan creados y activos.
+                año = await suggester(arregloAños,arregloAños, false, `Selecciona el año que vamos a crear.`)
+                
+
+            break;
+            default:
+                // Si el usuario elige "Otro" o cualquier otra opción.
+                // trimestre = await suggester(trimestres.map(b => b.file.basename),trimestres.map(b => b.file.path), false, `Trimestre del ${nombreSistema}:`);
+                }
+	    // Verificar si el usuario presionó Esc.
+        if (año === null) {
+        new Notice("Creación cancelada por el usuario.");
+        return; // Termina la ejecución de la función aquí.
+	    }
+        this.nota.año = año;
+        return año;
+    }
+
     async getRename(){
         let newName, name, folder;
         debugger;
         switch(this.infoSubsistema.type) { 
         case "AI":
+        case "PGTD":
             if (this.nota.areaVida==="No es de ningún Area de Vida"){
                 newName = `${this.infoSubsistema.folder}/Otras/${this.nota.titulo}.md`
                 folder = `${this.infoSubsistema.folder}/Otras`
@@ -764,6 +1071,34 @@ export class starterAPI {
             await this.crearCarpeta(folder);
             name = `${this.nota.fileName}`
         break;
+        case "Tx":
+            let fecha = window.moment(this.nota.fecha, "YYYY-MM-DD dddd HH:mm");
+            let fechaY = fecha.format("YYYY");
+            let fechaMes = fecha.format("MM - MMMM");
+            debugger;
+            newName = `${this.infoSubsistema.folder}/${fechaY}/${fechaMes}/${this.infoSubsistema.type} - ${this.nota.id}.md`
+            folder = `${this.infoSubsistema.folder}/${fechaY}/${fechaMes}`
+            await this.crearCarpeta(folder);
+            name = `${this.nota.fileName}`
+            break;
+        case "CAC":     // CompassAnual_Cierre   
+            newName = `${this.infoSubsistema.folder}/${this.nota.año}/${this.infoSubsistema.typeName}_Cierre ${this.nota.año}.md`
+            folder = `${this.infoSubsistema.folder}/${this.nota.año}`
+            await this.crearCarpeta(folder);
+            name = `${this.nota.fileName}`
+        break;
+        case "CAI":     // CompassAnual_Cierre   
+            newName = `${this.infoSubsistema.folder}/${this.nota.año}/${this.infoSubsistema.typeName}_Inicio ${this.nota.año}.md`
+            folder = `${this.infoSubsistema.folder}/${this.nota.año}`
+            await this.crearCarpeta(folder);
+            name = `${this.nota.fileName}`
+        break;
+        case "AY":     // Anual 
+            newName = `${this.infoSubsistema.folder}/${this.nota.año}.md`
+            folder = `${this.infoSubsistema.folder}`
+            await this.crearCarpeta(folder);
+            name = `${this.nota.fileName}`
+        break;
         default:
             break;
         }
@@ -789,7 +1124,7 @@ export class starterAPI {
         let noAV = {} ;
         noAV.file = {} ;
         noAV.areaVida = "No es de ningún Area de Vida";
-        noAV.file.basename = false;
+        noAV.file.basename = "No es de ningún Area de Vida";
         debugger;
         
 
@@ -797,7 +1132,7 @@ export class starterAPI {
         switch(tipo) {
             case "AI":
                 
-                if (this.nota.areaInteres.titulo == ""){
+                if (this.nota.areaInteres == ""){
                 // Lógica para permitir al usuario elegir una tarea específica.
                 areasVida = await this.findMainFilesWithState("AV")
                 areasVida.push(noAV);
@@ -813,10 +1148,11 @@ export class starterAPI {
                 areasVida = await this.findMainFilesWithState("AV", this.nota.trimestre)
                debugger;
                 areaVida = await suggester(areasVida.map(b => b.file.basename),areasVida.map(b => [b.areaVida, b.file.basename]), false, `A que Area de Vida pertenece esta(e) ${nombreTipo}:`);
-                
+                this.nota.nivelP = 0;
             break;
             default:
                 areasVida = await this.findMainFilesWithState("AV")
+                debugger;
                 areasVida.push(noAV);
                 areaVida = await suggester(areasVida.map(b => b.file.basename),areasVida.map(b => b.file.basename), false, `A que Area de Vida pertenece esta(e) ${nombreTipo}:`);
                 break;
@@ -847,7 +1183,7 @@ export class starterAPI {
                         nivel = 0;
                         return; // Termina la ejecución de la función aquí.
                     }
-                    else{
+                    else{ // QUE HACE ESTE ELSE??
                         debugger;
                         if (areaInteres.areaVida === null) {
                             this.nota.areaVida = "No es de ningún Area de Vida";
@@ -863,6 +1199,7 @@ export class starterAPI {
                 }
             break;
             case "RR":
+            case "Ax":
             padreAI = await suggester(["Si", "No"], [true,false], false, ` ${this.nota.titulo} es hijo de un Area de Interés:`);
             // Lógica para permitir al usuario elegir una tarea específica.
             if (padreAI){
@@ -875,18 +1212,39 @@ export class starterAPI {
                 }
                 else{
                     debugger;
-                    if (areaInteres.areaVida === null) {
-                        this.nota.areaVida = "No es de ningún Area de Vida";
+                    titulo = [areaInteres.titulo]; 
+                     
+                    // Verificamos si nota.areaInteres es un arreglo
+                    if (Array.isArray(areaInteres?.areaInteres)) {
+                        titulo = titulo.concat(areaInteres.areaInteres.map(elemento => 
+                            elemento.replace(/\[\[\s*|\s*\]\]/g, '')));
                     } else {
-                            // VERIFICACION DE AREA DE VIDA
-                        this.nota.areaVida = areaInteres?.areaVida
-                        ? areaInteres.areaVida.replace(/\[\[\s*|\s*\]\]/g, '')
-                        : "No es de ningún Area de Vida";
+                    // Si no es un arreglo, revisamos si nota.frontmatter.areaInteres existe
+                    if (areaInteres?.areaInteres) {
+                        // Si existe, aplicamos el regex y lo añadimos como segundo elemento
+                        titulo.push(areaInteres.areaInteres.replace(/\[\[\s*|\s*\]\]/g, ''));
+                        }
                     }
+                    
+                    // VERIFICACION DE AREA DE VIDA
+                    if (areaInteres?.areaVida) {
+                        if (Array.isArray(areaInteres.areaVida)) {
+                            // Es un arreglo, usa el primer elemento
+                            this.nota.areaVida = areaInteres.areaVida[0].replace(/\[\[\s*|\s*\]\]/g, '');
+                        } else if (typeof areaInteres.areaVida === 'string') {
+                            // Es un string
+                            this.nota.areaVida = areaInteres.areaVida.replace(/\[\[\s*|\s*\]\]/g, '');
+                        }
+                    } else {
+                        // No está definido o está vacío
+                        this.nota.areaVida = "No es de ningún Área de Vida";
+                    }
+                    
+
                     this.nota.asuntoDefinido = true; // Para que no ejecute la busqueda de proyecto Q o GTD...
-                    titulo = areaInteres.titulo;
                     nivel = parseInt(areaInteres.nivelAI);
                 }
+            
             }else{
                 titulo = "";
                 nivel = 0;
@@ -894,7 +1252,7 @@ export class starterAPI {
             break;
             case "PQ":
                 debugger;
-            padreAI = await suggester(["Si", "No"], [true,false], false, ` ${this.nota.titulo} es hijo de un Area de Interés:`);
+                padreAI = await suggester(["Si", "No"], [true,false], false, ` ${this.nota.titulo} es hijo de un Area de Interés:`);
             // Lógica para permitir al usuario elegir una tarea específica.
             if (padreAI){
                 areaInteres = await suggester(areasInteres.map(b => b.titulo) ,areasInteres.map(b => b), false, `Que Area de Interés es padre de ${this.nota.titulo}?:`);
@@ -905,7 +1263,7 @@ export class starterAPI {
                     return; // Termina la ejecución de la función aquí.
                 }
                 else{
-                    debugger;
+                    
                     if (areaInteres.areaVida === null) {
                         this.nota.areaVida = "No es de ningún Area de Vida";
                     } else {
@@ -916,6 +1274,7 @@ export class starterAPI {
                         : "No es de ningún Area de Vida";
                         this.nota.areaVida[1] = `${this.nota.trimestre} - ${this.nota.areaVida[0]}`
                     }
+                    this.nota.nivelP = 0;
                     this.nota.asuntoDefinido = true; // Para que no ejecute la busqueda de proyecto Q o GTD...
                     arrayAI = [areaInteres.titulo];
                     // Verificamos si nota.areaInteres es un arreglo
@@ -943,8 +1302,9 @@ export class starterAPI {
                 areaInteres = await suggester(areasInteres.map(b => b.file.basename),areasVida.map(b => b.file.basename), false, `A que Area de Vida pertenece esta ${nombreTipo}:`);
             break;
                 }
-	    
-        return {titulo, nivel}
+        debugger;
+	    this.nota.nivelAI = nivel;
+        return titulo;
      }else{
        return this.nota.areaInteres; 
        }
@@ -955,59 +1315,78 @@ export class starterAPI {
         let suggester = this.tp.system.static_functions.get("suggester");
         let tipo = this.infoSubsistema.type;
         let nombreTipo = this.infoSubsistema.typeName;
-        let ProyectosGTD = await this.findMainFilesWithState("PGTD")
-        let proyectoGTD, nivel, titulo;
+        let notasF = await this.findMainFilesWithState("PGTD")
+        let notaF, nivel, titulo;
         if (!this.nota.asuntoDefinido) {
             // Ejecutar código aquí si asuntoDefinido es falsy (incluye false, null, undefined, 0, "", NaN)
         switch(tipo) {
             case "RR":
-                debugger;
+            case "Ax":
                 let padrePGTD = await suggester(["Si", "No"], [true,false], false, ` ${this.nota.titulo} es hijo de un Proyecto GTD?`);
                 // Lógica para permitir al usuario elegir una tarea específica.
+                
                 if (padrePGTD){
-                    proyectoGTD = await suggester(proyectosGTD.map(b => b.titulo) ,proyectosGTD.map(b => b), false, `Que Proyecto GTD es padre de ${this.nota.titulo}?:`);
-                    if (proyectoGTD === null) {
+                    notaF = await suggester(notasF.map(b => b.titulo) ,notasF.map(b => b), false, `Que Proyecto GTD es padre de ${this.nota.titulo}?:`);
+                    if (notaF === null) {
                         new Notice("Sin proyecto GTD definido.");
                         titulo = "";
-                        nivel = 0;
                         return; // Termina la ejecución de la función aquí.
                     }
                     else{
-                        
-                        // VERIFICACION DE AREA DE VIDA
-                        this.nota.areaVida = nota?.frontmatter.areaVida
-                        ? nota.frontmatter.areaVida.replace(/\[\[\s*|\s*\]\]/g, '')
-                         : "No es de ningún Area de Vida";
-                        // VERIFICACION DE AREA DE INTERES
-                        // Verificamos si nota.areaInteres es un arreglo
-                        if (Array.isArray(nota.areaInteres)) {
-                            // Si es un arreglo, iteramos sobre cada elemento
-                            this.nota.areaInteres = nota.areaInteres.map(elemento => 
-                            elemento.replace(/\[\[\s*|\s*\]\]/g, ''));
+                        debugger;
+                        // Verificamos areaInteres 
+                        this.nota.areaInteres = [];
+                        if (Array.isArray(notaF?.areaInteres)) {
+                            // Si es un arreglo, iteramos sobre cada elemento (excluyendo el primer elemento ya agregado que es nota.titulo)
+                            // y aplicamos el regex a cada elemento. Luego concatenamos con el array existente.
+                            this.nota.areaInteres = this.nota.areaInteres.concat(notaF.areaInteres.map(elemento => 
+                                elemento.replace(/\[\[\s*|\s*\]\]/g, '')));
                         } else {
-                            // Si no es un arreglo, simplemente aplicamos el regex como antes
-                            this.nota.areaInteres = nota?.frontmatter.areaInteres
-                            ? nota.frontmatter.areaInteres.replace(/\[\[\s*|\s*\]\]/g, '')
-                             : "";
+                            // Si no es un arreglo, revisamos si nota.frontmatter.areaInteres existe
+                            if (notaF?.areaInteres) {
+                                // Si existe, aplicamos el regex y lo añadimos como segundo elemento
+                                this.nota.areaInteres.push(notaF.areaInteres.replace(/\[\[\s*|\s*\]\]/g, ''));
+                            }
                         }
-                        // VERIFICACION DE PROYECTOS DE Q
-                        this.nota.proyectoQ = nota?.frontmatter.proyectoQ
-                        ? nota.frontmatter.proyectoQ.replace(/\[\[\s*|\s*\]\]/g, '')
-                         : "";
-
-                        // VERIFICACION DE PROYECTOSGTD
-                        // Verificamos si nota.proyectoGTD es un arreglo
-                        if (Array.isArray(nota.proyectoGTD)) {
-                            // Si es un arreglo, iteramos sobre cada elemento
-                            this.nota.proyectoGTD = nota.proyectoGTD.map(elemento => 
-                            elemento.replace(/\[\[\s*|\s*\]\]/g, ''));
+                        // Verificamos AreaVida
+                        this.nota.areaVida = [];
+                        if (notaF?.areaVida) {
+                            if (Array.isArray(notaF.areaVida)) {
+                                // Es un arreglo, usa el primer elemento
+                                this.nota.areaVida = notaF.areaVida[0].replace(/\[\[\s*|\s*\]\]/g, '');
+                            } else if (typeof notaF.areaVida === 'string') {
+                                // Es un string
+                                this.nota.areaVida = notaF.areaVida.replace(/\[\[\s*|\s*\]\]/g, '');
+                            }
                         } else {
-                            // Si no es un arreglo, simplemente aplicamos el regex como antes
-                            this.nota.proyectoGTD = nota.proyectoGTD.replace(/\[\[\s*|\s*\]\]/g, '');
+                            // No está definido o está vacío
+                            this.nota.areaVida = "No es de ningún Area de Vida";
+                        }
+
+                        this.nota.proyectoQ = "";
+                        if (Array.isArray(notaF?.proyectoQ)) {
+                            // Si es un arreglo, iteramos sobre cada elemento
+                            this.nota.proyectoQ = notaF.proyectoQ.map(elemento => 
+                                elemento.replace(/\[\[\s*|\s*\]\]/g, ''));
+                        } else if (notaF?.proyectoQ) {
+                            // Si existe pero no es un arreglo, aplicamos el regex directamente
+                            this.nota.proyectoQ = notaF.proyectoQ.replace(/\[\[\s*|\s*\]\]/g, '');
+                        }
+
+                        titulo = [notaF.titulo];
+                        // Verificamos si nota.proyectoGTD existe y es un arreglo
+                        if (Array.isArray(notaF?.proyectoGTD)) {
+                            // Si es un arreglo, iteramos sobre cada elemento
+                            titulo = titulo.concat(notaF.proyectoGTD.map(elemento => 
+                                elemento.replace(/\[\[\s*|\s*\]\]/g, '')));
+                        } else if (notaF?.proyectoGTD) {
+                            // Si existe pero no es un arreglo, aplicamos el regex directamente
+                            titulo.push(notaF.proyectoGTD.replace(/\[\[\s*|\s*\]\]/g, ''));
                         }
                         this.nota.asuntoDefinido = true; // Para que no ejecute la busqueda de proyecto Q
-                        this.nota.proyectoPadre = "PGTD";
                     }
+
+
                 }else{
                     titulo = "";
                     nivel = 0;
@@ -1031,72 +1410,84 @@ export class starterAPI {
         let suggester = this.tp.system.static_functions.get("suggester");
         let tipo = this.infoSubsistema.type;
         let nombreTipo = this.infoSubsistema.typeName;
-        let ProyectosGTD = await this.findMainFilesWithState("PQ")
-        let proyectoGTD, nivel, titulo;
-        
+        let notasF = await this.findMainFilesWithState("PQ")
+        let notaF, nivel, titulo;
         if (!this.nota.asuntoDefinido) {
             // Ejecutar código aquí si asuntoDefinido es falsy (incluye false, null, undefined, 0, "", NaN)
         switch(tipo) {
             case "RR":
-                debugger;
-                let padrePGTD = await suggester(["Si", "No"], [true,false], false, ` ${this.nota.titulo} es hijo de un Proyecto de Q?`);
+            case "Ax":
+                let padreQ = await suggester(["Si", "No"], [true,false], false, ` ${this.nota.titulo} es hijo de un Proyecto Q?`);
                 // Lógica para permitir al usuario elegir una tarea específica.
-                if (padrePGTD){
-                    proyectoGTD = await suggester(proyectosGTD.map(b => b.titulo) ,proyectosGTD.map(b => b), false, `Que Proyecto Q es padre de ${this.nota.titulo}?:`);
-                    if (proyectoGTD === null) {
+                
+                if (padreQ){
+                    notaF = await suggester(notasF.map(b => b.titulo) ,notasF.map(b => b), false, `Que Proyecto Q es padre de ${this.nota.titulo}?:`);
+                    if (notaF === null) {
                         new Notice("Sin proyecto Q definido.");
                         titulo = "";
                         return; // Termina la ejecución de la función aquí.
                     }
                     else{
                         
-                        // VERIFICACION DE AREA DE VIDA
-                        this.nota.areaVida = nota?.frontmatter.areaVida
-                        ? nota.frontmatter.areaVida.replace(/\[\[\s*|\s*\]\]/g, '')
-                         : "No es de ningún Area de Vida";
-                        // VERIFICACION DE AREA DE INTERES
-                        // Verificamos si nota.areaInteres es un arreglo
-                        if (Array.isArray(nota.areaInteres)) {
-                            // Si es un arreglo, iteramos sobre cada elemento
-                            this.nota.areaInteres = nota.areaInteres.map(elemento => 
-                            elemento.replace(/\[\[\s*|\s*\]\]/g, ''));
+                        // Verificamos areaInteres 
+                        this.nota.areaInteres = [];
+                        if (Array.isArray(notaF?.areaInteres)) {
+                            // Si es un arreglo, iteramos sobre cada elemento (excluyendo el primer elemento ya agregado que es nota.titulo)
+                            // y aplicamos el regex a cada elemento. Luego concatenamos con el array existente.
+                            this.nota.areaInteres = this.nota.areaInteres.concat(notaF.areaInteres.map(elemento => 
+                                elemento.replace(/\[\[\s*|\s*\]\]/g, '')));
                         } else {
-                            // Si no es un arreglo, simplemente aplicamos el regex como antes
-                            this.nota.areaInteres = nota?.frontmatter.areaInteres
-                            ? nota.frontmatter.areaInteres.replace(/\[\[\s*|\s*\]\]/g, '')
-                             : "";
+                            // Si no es un arreglo, revisamos si nota.frontmatter.areaInteres existe
+                            if (notaF?.areaInteres) {
+                                // Si existe, aplicamos el regex y lo añadimos como segundo elemento
+                                this.nota.areaInteres.push(notaF.areaInteres.replace(/\[\[\s*|\s*\]\]/g, ''));
+                            }
                         }
-                        // VERIFICACION DE PROYECTOS DE Q
-                        this.nota.proyectoQ = nota?.frontmatter.proyectoQ
-                        ? nota.frontmatter.proyectoQ.replace(/\[\[\s*|\s*\]\]/g, '')
-                         : "";
-
-                        // VERIFICACION DE PROYECTOSGTD
-                        // Verificamos si nota.proyectoGTD es un arreglo
-                        if (Array.isArray(nota.proyectoGTD)) {
-                            // Si es un arreglo, iteramos sobre cada elemento
-                            this.nota.proyectoGTD = nota.proyectoGTD.map(elemento => 
-                            elemento.replace(/\[\[\s*|\s*\]\]/g, ''));
+                        // Verificamos AreaVida
+                        this.nota.areaVida = [];
+                        if (notaF?.areaVida) {
+                            if (Array.isArray(notaF.areaVida)) {
+                                // Es un arreglo, usa el primer elemento
+                                this.nota.areaVida = notaF.areaVida[0].replace(/\[\[\s*|\s*\]\]/g, '');
+                            } else if (typeof notaF.areaVida === 'string') {
+                                // Es un string
+                                this.nota.areaVida = notaF.areaVida.replace(/\[\[\s*|\s*\]\]/g, '');
+                            }
                         } else {
-                            // Si no es un arreglo, simplemente aplicamos el regex como antes
-                            this.nota.proyectoGTD = nota.proyectoGTD.replace(/\[\[\s*|\s*\]\]/g, '');
+                            // No está definido o está vacío
+                            this.nota.areaVida = "No es de ningún Area de Vida";
+                        }
+                        debugger;
+                        titulo = [notaF?.titulo];
+
+                        this.nota.proyectoGTD = "";
+                        if (Array.isArray(notaF?.proyectoGTD)) {
+                            // Si es un arreglo, iteramos sobre cada elemento
+                            this.nota.proyectoGTD = notaF.proyectoGTD.map(elemento => 
+                                elemento.replace(/\[\[\s*|\s*\]\]/g, ''));
+                        } else if (notaF?.proyectoGTD) {
+                            // Si existe pero no es un arreglo, aplicamos el regex directamente
+                            this.nota.proyectoGTD = notaF.proyectoGTD.replace(/\[\[\s*|\s*\]\]/g, '');
                         }
                         this.nota.asuntoDefinido = true; // Para que no ejecute la busqueda de proyecto Q
-                        this.nota.proyectoPadre = "PQ";
                     }
+
+
                 }else{
                     titulo = "";
+                    nivel = 0;
                 }
                 break;
 
                 default:
-                //
+                // La salida para default no puede ser solo areaInteres.. Validar cuando corresponda.
+                
                 break;
                 }
 	    
-        return titulo
+        return titulo;
         }else{
-            return this.nota.proyectoQ;//? this.nota.ProyectoGTD;
+            return this.nota.proyectoQ//? this.nota.ProyectoGTD;
         }
     }
 
@@ -1115,7 +1506,7 @@ export class starterAPI {
             },
         PQ: {
             folder: this.plugin.settings.folder_ProyectosQ,
-        },
+            },
         PGTD: {
             folder: this.plugin.settings.folder_ProyectosGTD,
             },
@@ -1127,6 +1518,9 @@ export class starterAPI {
             },
         TQ: {
             folder: this.plugin.settings.folder_Trimestral,
+            },
+        AY: {
+            folder: this.plugin.settings.folder_Anual,
             },
         // Puedes continuar añadiendo más casos aquí
         };
@@ -1164,6 +1558,7 @@ export class starterAPI {
         break;
         case "AI":
         case "TQ":
+        case "AY":
             files = app.vault.getMarkdownFiles().filter(file => 
                 file.path.includes(folder) && !file.path.includes("Plantillas") && !file.path.includes("Archivo"));    
             for (let file of files) {

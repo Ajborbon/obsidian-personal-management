@@ -213,6 +213,17 @@ export class PluginMainSettingsTab extends PluginSettingTab {
                 gtdContent.style.display = 'none';
                 gtdTitle.onclick = toggleCollapse;
 
+                new Setting(gtdContent)
+                .setName('Archivo de Bandeja de Entrada.')
+                .setDesc('Establece la ruta de la Bandeja de entrada GTD.')
+                .addText((text: { setValue: (arg0: any) => { (): any; new(): any; onChange: { (arg0: (value: any) => Promise<void>): any; new(): any; }; }; }) => text
+                    .setValue(this.plugin.settings.file_Inbox)
+                    .onChange(async (value: any) => {
+                        this.plugin.settings.file_Inbox = value;
+                        await this.plugin.saveSettings();
+                    }));
+
+
                 // Proyectos GTD
                 new Setting(gtdContent)
                     .setName('Carpeta de Proyectos GTD')
@@ -395,32 +406,32 @@ export class PluginMainSettingsTab extends PluginSettingTab {
                             this.plugin.settings.indice_ModulosSistema = value;
                             await this.plugin.saveSettings();
                         }));
-                // Bloque desplegable para "Pagos"
-                const pagosTitle = tabContent.createEl('p', { text: '▶ Subsistema de "Pagos"' });
-                pagosTitle.setAttribute('data-title', 'Subsistema de "Pagos"');
-                pagosTitle.style.cursor = 'pointer';
-                const pagosContent = tabContent.createDiv();
-                pagosContent.style.display = 'none';
-                pagosTitle.onclick = toggleCollapse;
+                // Bloque desplegable para "Transacciones y Pagos"
+                const transaccionesTitle = tabContent.createEl('p', { text: '▶ Subsistema de "Transacciones"' });
+                transaccionesTitle.setAttribute('data-title', 'Subsistema de "transacciones"');
+                transaccionesTitle.style.cursor = 'pointer';
+                const transaccionesContent = tabContent.createDiv();
+                transaccionesContent.style.display = 'none';
+                transaccionesTitle.onclick = toggleCollapse;
 
                 // Agrega aquí las configuraciones específicas para "Pagos"
-                new Setting(pagosContent)
-                    .setName('Carpeta de Modulos del Sistema de Pagos')
-                    .setDesc('Establece la ruta de la carpeta donde se guardarán los comprobantes de pagos.')
+                new Setting(transaccionesContent)
+                    .setName('Carpeta de Modulos del Sistema de Transacciones')
+                    .setDesc('Establece la ruta de la carpeta donde se guardarán los comprobantes de las transacciones.')
                     .addText((text: { setValue: (arg0: any) => { (): any; new(): any; onChange: { (arg0: (value: any) => Promise<void>): any; new(): any; }; }; }) => text
-                        .setValue(this.plugin.settings.folder_Pagos)
+                        .setValue(this.plugin.settings.folder_Transacciones)
                         .onChange(async (value: any) => {
-                            this.plugin.settings.folder_Pagos = value;
+                            this.plugin.settings.folder_Transacciones = value;
                             await this.plugin.saveSettings();
                         }));
 
-                new Setting(pagosContent)
-                    .setName('Índice de Pagos')
-                    .setDesc('Establece la ruta del índice de Pagos.')
+                new Setting(transaccionesContent)
+                    .setName('Índice de Transacciones')
+                    .setDesc('Establece la ruta del índice de Transacciones.')
                     .addText((text: { setValue: (arg0: any) => { (): any; new(): any; onChange: { (arg0: (value: any) => Promise<void>): any; new(): any; }; }; }) => text
-                        .setValue(this.plugin.settings.indice_Pagos)
+                        .setValue(this.plugin.settings.indice_Transacciones)
                         .onChange(async (value: any) => {
-                            this.plugin.settings.indice_Pagos = value;
+                            this.plugin.settings.indice_Transacciones = value;
                             await this.plugin.saveSettings();
                         }));
 

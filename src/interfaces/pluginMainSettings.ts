@@ -35,9 +35,9 @@ export interface PluginMainSettings {
     // Módulos Sistema Gestión
     folder_ModulosSistema: string,
     indice_ModulosSistema: string,
-    // Pagos
-    folder_Pagos: string,
-    indice_Pagos: string,
+    // Pagos y Transacciones
+    folder_Transacciones: string,
+    indice_Transacciones: string,
     // Presentaciones
     folder_Presentaciones: string,
     indice_Presentaciones: string,
@@ -86,6 +86,12 @@ export interface PluginMainSettings {
      indice_Trimestral: string,
      folder_Anual: string,
      indice_Anual: string,
+
+     // COMPASS
+    folder_CompassAnual: string,
+    indice_CompassAnual: string,
+    folder_CompassTrimestral: string,
+    indice_CompassTrimestral: string,
     }
 
 
