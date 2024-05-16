@@ -25,6 +25,18 @@ export class subsistemasAPI {
     };
   }
 
+  async mostrarBotonCrearAVTrimestral(dv) {
+    dv.container.innerHTML = ""; // Limpiar el contenedor
+
+    const botonMenuHoy = document.createElement("button");
+    botonMenuHoy.textContent = "Procesar Areas de Vida del trimestre";
+    dv.container.appendChild(botonMenuHoy);
+
+    botonMenuHoy.onclick = async () => {
+      await this.procesarAVTrimestre(dv); // Mostrar los botones adicionales al hacer clic
+    };
+  }
+
   async procesarAV(dv) {
     // Obtener Qs para preguntar el Q para el que desea crear las áreas de vida.
     const folderQ = this.plugin.settings["folder_Trimestral"];
@@ -162,6 +174,120 @@ export class subsistemasAPI {
       }
     } // Fin For AreasVida fileCampos
   } // Fin procesarAV()
+
+
+  async procesarAVTrimestre(dv) {
+    
+    let q = {}; 
+    q.trimestre = dv.current().trimestre;
+    const resultadoAV: GrupoAV[] = [];
+    const fileCampos = app.vault.getAbstractFileByPath(this.pathCampos);
+    try {
+      if (fileCampos instanceof TFile) {
+        // Usa metadataCache para obtener los metadatos del archivo
+        const metadata = app.metadataCache.getFileCache(fileCampos);
+        const arregloAV = metadata?.frontmatter?.AreasVida || [];
+        // Rellena el arreglo con los datos del arregloResult
+        if (Array.isArray(arregloAV)) {
+          arregloAV.forEach((item) => {
+            if (Array.isArray(item) && item.length >= 2) {
+              resultadoAV.push({
+                grupo: item[0],
+                av: item[1],
+                texto: item[0] + " / " + item[1],
+              });
+            }
+          });
+        }
+      }
+    } catch (error) {
+      console.error("Error obteniendo el archivo de campos:", error);
+      // Aquí manejarías el error como sea apropiado para tu aplicación
+      throw error; // O devolver un arreglo vacío como resultado de error
+    }
+
+    const allFiles = app.vault.getMarkdownFiles();
+    let basePath = this.plugin.settings.folder_AreasVida;
+
+    // -..-> Revisión de escenarios.
+
+    for (let areaVida of resultadoAV) {
+      // Verifica si la carpeta existe en la ubicación específica
+      const fullFolderPath = `${basePath}/${areaVida.av}`;
+      const folder = app.vault.getAbstractFileByPath(fullFolderPath);
+
+      //P0 -> Verifica si la carpeta path/areaVida existe
+      //P0 - SI
+      if (folder instanceof TFolder) {
+        console.log(`La carpeta ${areaVida.av} existe dentro de ${basePath}.`);
+        // Ahora, verifica si la nota existe dentro de la carpeta
+        const instancesOfAV = app.vault
+          .getMarkdownFiles()
+          .filter(
+            (file) =>
+              file.path.includes(fullFolderPath) &&
+              !file.path.includes("Plantillas") &&
+              !file.path.includes("Archivo")
+          );
+        // P1 Existe nodeAreaVida?
+        const nodeAVExists = instancesOfAV.some(
+          (file) => file.basename === areaVida.av
+        );
+
+        // P1 SI
+        if (nodeAVExists) {
+          console.log(
+            `La nota ${areaVida.av} existe dentro de la carpeta ${areaVida.av}.`
+          );
+          // P2 areaVida Q Existe?
+          await this.validacionAVQ(fullFolderPath, q, areaVida);
+        }
+        //P1 - NO (nodeAreaVida no Existe)
+        else {
+          debugger;
+          // Caso 3 y 4
+          console.log(
+            `La nota ${areaVida.av} no existe dentro de la carpeta ${areaVida.av}.`
+          );
+          // P3 Agregar Nodo Area Vida?
+          let nAV = await this.agregarNodoAreaVida(areaVida); // Quieres Agregar esta AV a tu sistema de Gestión?
+          //P3 -> SI
+          if (nAV) {
+            // P2 .. -> Si y No
+            await this.validacionAVQ(fullFolderPath, q, areaVida);
+          }
+          //P3 -> NO
+          else if (nAV == false) {
+            continue; //Sentencia que debe pasar al siguiente elemento del ciclo for.
+          } else {
+            return; // En caso de que se de escape.
+          }
+        }
+      }
+      // PO -> NO (La Carpeta no existe)
+      else {
+        console.log(
+          `La carpeta ${areaVida.av} no existe aún dentro de ${basePath}.`
+        );
+        // P3 Agregar Nodo Area Vida?
+        let nAV = await this.agregarNodoAreaVida(areaVida); // Quieres Agregar esta AV a tu sistema de Gestión?
+        // P3 -> SI
+        if (nAV) {
+          // P2
+          await this.validacionAVQ(fullFolderPath, q, areaVida);
+        }
+        //P3 -> NO
+        else if (nAV == false) {
+          continue; //Sentencia que debe pasar al siguiente elemento del ciclo for.
+        }
+        // P3 -> Escape
+        else {
+          return; // En caso de que se de escape.
+        }
+      }
+    } // Fin For AreasVida fileCampos
+  } // Fin procesarAVTrimestre()
+
 
   //P2 areaVida Q Existe?
   async validacionAVQ(
@@ -393,30 +519,21 @@ export class subsistemasAPI {
     };
   }
 
+  async mostrarBotonCompassTrimestral(dv) {
+    dv.container.innerHTML = ""; // Limpiar el contenedor
+
+    const boton = document.createElement("button");
+    boton.textContent = "Procesar Objetivos AV Trimestrales";
+    dv.container.appendChild(boton);
+
+    boton.onclick = async () => {
+      await this.procesarCompassTrimestral(dv); 
+    };
+  }
+
   async procesarCompassAnual(dv) {
-    /* 
-        // PROCESO DE BUSCAR LOS AÑOS QUE ESTAN CREADOS EN EL SGP PARA MOSTRAR MENU.
-        
-         const folderY = this.plugin.settings["folder_Anual"]
-         const filesY = app.vault.getMarkdownFiles().filter(file => 
-             file.path.includes(folderY) && !file.path.includes("Plantillas") && !file.path.includes("Archivo")
-         );
-         let yCreados = [];
- 
-         for (let file of filesY) {
-             let metadata = app.metadataCache.getFileCache(file)?.frontmatter;
- 
-             if (metadata?.type === "AY" && metadata?.año) {
-                 let yActivo = {file}; // Asumiendo que quieres guardar el path del archivo
-                 Object.assign(yActivo, metadata); // Agrega el metadata al objeto qActivo
-                 yCreados.push(yActivo); // Añade el registro activo al array              
-             }
-         }
-         
-         let suggester = this.plugin.tp.system.static_functions.get("suggester");
-         let año = await suggester( yCreados.map(b => b.año), yCreados.map(b => b), true, `De que año vamos a procesar los objetivos de las Areas de Vida?`);
-         */
-    let año = dv.current();
+  
+    let año = dv.current().año;
     const resultadoAV: GrupoAV[] = [];
     const fileCampos = app.vault.getAbstractFileByPath(this.pathCampos);
     try {
@@ -525,133 +642,198 @@ export class subsistemasAPI {
     } // Fin For AreasVida fileCampos
   } // Metodo Procesar Compass Anual
 
-  async objetivoAnual(año: any, areaVida: any): Promise<void> {
+  async procesarCompassTrimestral(dv) {
     debugger;
-    const pathAV = `${this.plugin.settings.folder_AreasVida}/${areaVida}/${areaVida}.md`;
-    const fileAV = app.vault.getAbstractFileByPath(pathAV);
+    let trimestre = dv.current().trimestre;
+    const resultadoAV: GrupoAV[] = [];
+    const fileCampos = app.vault.getAbstractFileByPath(this.pathCampos);
+    try {
+      if (fileCampos instanceof TFile) {
+        // Usa metadataCache para obtener los metadatos del archivo
+        const metadata = app.metadataCache.getFileCache(fileCampos);
+        const arregloAV = metadata?.frontmatter?.AreasVida || [];
+        // Rellena el arreglo con los datos del arregloResult
+        if (Array.isArray(arregloAV)) {
+          arregloAV.forEach((item) => {
+            if (Array.isArray(item) && item.length >= 2) {
+              resultadoAV.push({
+                grupo: item[0],
+                av: item[1],
+                texto: item[0] + " / " + item[1],
+              });
+            }
+          });
+        }
+      }
+    } catch (error) {
+      console.error("Error obteniendo el archivo de campos:", error);
+      // Aquí manejarías el error como sea apropiado para tu aplicación
+      throw error; // O devolver un arreglo vacío como resultado de error
+    }
+
+    const allFiles = app.vault.getMarkdownFiles();
+    let basePath = this.plugin.settings.folder_AreasVida;
+
+    // -..-> Revisión de escenarios.
+    for (let areaVida of resultadoAV) {
+      // Verifica si la carpeta existe en la ubicación específica
+      const fullFolderPath = `${basePath}/${areaVida.av}`;
+      const folder = app.vault.getAbstractFileByPath(fullFolderPath);
+
+      //P0 -> Verifica si la carpeta path/areaVida existe
+      //P0 - SI
+      if (folder instanceof TFolder) {
+        console.log(`La carpeta ${areaVida.av} existe dentro de ${basePath}.`);
+        // Ahora, verifica si la nota existe dentro de la carpeta
+        const instancesOfAV = app.vault
+          .getMarkdownFiles()
+          .filter(
+            (file) =>
+              file.path.includes(fullFolderPath) &&
+              !file.path.includes("Plantillas") &&
+              !file.path.includes("Archivo")
+          );
+        // P1 Existe nodeAreaVida?
+        const nodeAVExists = instancesOfAV.some(
+          (file) => file.basename === areaVida.av
+        );
+
+        // P1 SI
+        if (nodeAVExists) {
+          console.log(
+            `La nota ${areaVida.av} existe dentro de la carpeta ${areaVida.av}.`
+          );
+          // P2 areaVida Q Existe?
+          // Preguntar El objetivo y guardarlo en el nodo de AV.
+          await this.objetivoTrimestral(trimestre, areaVida.av);
+        }
+        //P1 - NO (nodeAreaVida no Existe)
+        else {
+          // Caso 3 y 4
+          console.log(
+            `La nota ${areaVida.av} no existe dentro de la carpeta ${areaVida.av}.`
+          );
+          // P3 Agregar Nodo Area Vida?
+          let nAV = await this.agregarNodoAreaVida(areaVida); // Quieres Agregar esta AV a tu sistema de Gestión?
+          //P3 -> SI
+          if (nAV) {
+            // P2 .. -> Si y No
+            await this.objetivoTrimestral(trimestre, areaVida.av);
+          }
+          //P3 -> NO
+          else if (nAV == false) {
+            continue; //Sentencia que debe pasar al siguiente elemento del ciclo for.
+          } else {
+            return; // En caso de que se de escape.
+          }
+        }
+      }
+      // PO -> NO (La Carpeta no existe)
+      else {
+        console.log(
+          `La carpeta ${areaVida.av} no existe aún dentro de ${basePath}.`
+        );
+        // P3 Agregar Nodo Area Vida?
+        let nAV = await this.agregarNodoAreaVida(areaVida); // Quieres Agregar esta AV a tu sistema de Gestión?
+        // P3 -> SI
+        if (nAV) {
+          // P2
+          await this.objetivoTrimestral(trimestre, areaVida.av);
+        }
+        //P3 -> NO
+        else if (nAV == false) {
+          continue; //Sentencia que debe pasar al siguiente elemento del ciclo for.
+        }
+        // P3 -> Escape
+        else {
+          return; // En caso de que se de escape.
+        }
+      }
+    } // Fin For AreasVida fileCampos
+  } // Metodo Procesar Compass Trimestral 
+
+
+  async objetivoAnual(año: any, areaVida: any): Promise<void> {
+    // Buscar si ya hay objetivos creados para ese año y esa area de vida.
+
+    const folderObj = this.plugin.settings["folder_ObjCompassAnual"];
+    const filesObj = app.vault
+      .getMarkdownFiles()
+      .filter(
+        (file) =>
+          file.path.includes(folderObj) &&
+          !file.path.includes("Plantillas") &&
+          !file.path.includes("Archivo")
+      );
+    let objCreados = [];
+
+    for (let file of filesObj) {
+      debugger;
+      let metadata = app.metadataCache.getFileCache(file)?.frontmatter;
+      const regex = /\[\[\s*(.*?)\s*\]\]/;
+      let fileAV = metadata?.areaVida.match(regex)[1];
+      const sameAV = fileAV === areaVida;
+
+      if (metadata?.año === año && sameAV) {
+        let objActivo = { file }; // Asumiendo que quieres guardar el path del archivo
+        Object.assign(objActivo, metadata); // Agrega el metadata al objeto qActivo
+        objCreados.push(objActivo); // Añade el registro activo al array
+      }
+    }
     let prompt = this.plugin.tp.system.static_functions.get("prompt");
     let suggester = this.plugin.tp.system.static_functions.get("suggester");
     let objetivos = [];
-
-    // Verificar si el nAV Existe
-    if (fileAV instanceof TFile) {
-      let metadata = app.metadataCache.getFileCache(fileAV);
-      let propiedad = `objetivos_${año.año}`;
-      let deseaAgregarObjetivo;
-      if (metadata?.frontmatter && metadata.frontmatter[propiedad]) {
+    let deseaAgregarObjetivo;
+    if (objCreados.length > 0) {
         // Si hay objetivos creados.
         // Logica cuando ya hay objetivos creados.
-        let nextStep = await suggester(
-          [
-            "Agregar Objetivos",
-            "Borrar y Crear de nuevo los objetivos",
-            "Dejar los objetivos como están ",
-          ],
-          ["upd", "del+cre", "continue"],
-          true,
-          `¿Ya hay ${metadata.frontmatter[propiedad].length} objetivos creados para ${areaVida} en el ${año.año}. Elige una opción:`
-        );
+      let nextStep = await suggester(
+        [
+          "Agregar Objetivos",
+          "Borrar y Crear de nuevo los objetivos",
+          "Dejar los objetivos como están ",
+        ],
+        ["upd", "del+cre", "continue"],
+        true,
+        `¿Ya hay ${objCreados.length} objetivos creados para ${areaVida} en el ${año}. Elige una opción:`
+      );
 
         switch (nextStep) {
           case "upd":
-            objetivos = metadata.frontmatter[propiedad];
-
             do {
-              let objetivo = await prompt(
-                `¿Cuál es el nuevo objetivo para ${areaVida} para ${año.año}?`,
-                "",
-                true
-              );
-              let q = await suggester(
-                ["Q1", "Q2", "Q3", "Q4"],
-                [
-                  `${año.año}-Q1`,
-                  `${año.año}-Q2`,
-                  `${año.año}-Q3`,
-                  `${año.año}-Q4`,
-                ],
-                true,
-                `¿En qué trimestre consideras que se puede realizar ese objetivo?`
-              );
-                let id;
-                if (objetivos.length > 0) {
-                let cadena = objetivos[objetivos.length - 1][4]; 
-                let regex = /-\s*([^\d]*)(\d+)$/;
-                let match = cadena.match(regex);
-                if (match) {
-                  id = match[2]; // Captura el grupo de dígitos después del -
-                  console.log(id); // Muestra el valor de id
-                } else {
-                  console.log("No se encontró el patrón para el ID.");
-                }
-                id ++;
-              }else{
-                id = 0;
-              }
-              objetivos.push([objetivo, q ,"Por Hacer","Por Definir", `${areaVida} - ${año.año} - ${id}`]);
+              let objetivo = await this.crearObjetivo(areaVida, año);
 
               // Preguntar nuevamente si desea agregar otro objetivo.
               deseaAgregarObjetivo = await suggester(
                 ["Si", "No"],
                 [true, false],
                 true,
-                `¿Desea agregar otro objetivo para ${areaVida} en ${año.año}?`
+                `¿Desea agregar otro objetivo para ${areaVida} en ${año}?`
               );
             } while (deseaAgregarObjetivo);
             break;
           case "del+cre":
+            await this.borrarObjetivos(objCreados);
             deseaAgregarObjetivo = await suggester(
               ["Si", "No"],
               [true, false],
               true,
-              `¿Desea agregar algún objetivo para ${areaVida} en ${año.año}?`
+              `¿Desea agregar algún objetivo para ${areaVida} en ${año}?`
             );
             while (deseaAgregarObjetivo) {
-              let objetivo = await prompt(
-                `¿Cuál es el objetivo para ${areaVida} para ${año.año}?`,
-                "",
-                true
-              );
-              let q = await suggester(
-                ["Q1", "Q2", "Q3", "Q4"],
-                [
-                  `${año.año}-Q1`,
-                  `${año.año}-Q2`,
-                  `${año.año}-Q3`,
-                  `${año.año}-Q4`,
-                ],
-                true,
-                `¿En qué trimestre consideras que se puede realizar ese objetivo?`
-              );
-              let id;
-              if (objetivos.length > 0) {
-                debugger;
-              let cadena = objetivos[objetivos.length - 1][4]; 
-              let regex = /-\s*([^\d]*)(\d+)$/;
-              let match = cadena.match(regex);
-              if (match) {
-                id = match[2]; // Captura el grupo de dígitos después del -
-                console.log(id); // Muestra el valor de id
-              } else {
-                console.log("No se encontró el patrón para el ID.");
-              }
-              id ++;
-            }else{
-              id = 0;
-            }
-              objetivos.push([objetivo, q ,"Por Hacer","Por Definir", `${areaVida} - ${año.año} - ${id}`]);
-
+              let objetivo = await this.crearObjetivo(areaVida, año);
+              // Borrar los objetivos anteriores.
               // Preguntar nuevamente si desea agregar otro objetivo.
               deseaAgregarObjetivo = await suggester(
                 ["Si", "No"],
                 [true, false],
                 true,
-                `¿Desea agregar otro objetivo para ${areaVida} en ${año.año}?`
+                `¿Desea agregar otro objetivo para ${areaVida} en ${año}?`
               );
             }
             break;
           case "continue":
-            console.log(`Continuar sin hacer nada con ${fileAV.basename}`);
+            console.log(`Continuar sin hacer nada con los objetivos de ${areaVida}`);
             break;
         }
       }
@@ -662,105 +844,239 @@ export class subsistemasAPI {
           ["Si", "No"],
           [true, false],
           true,
-          `¿Desea agregar algún objetivo para ${areaVida} en ${año.año}?`
+          `¿Desea agregar algún objetivo para ${areaVida} en ${año}?`
         );
         while (deseaAgregarObjetivo) {
-          let objetivo = await prompt(
-            `¿Cuál es el objetivo para ${areaVida} para ${año.año}?`,
-            "",
-            true
-          );
-          let q = await suggester(
-            ["Q1", "Q2", "Q3", "Q4"],
-            [
-              `${año.año}-Q1`,
-              `${año.año}-Q2`,
-              `${año.año}-Q3`,
-              `${año.año}-Q4`,
-            ],
-            true,
-            `¿En qué trimestre consideras que se puede realizar ese objetivo?`
-          );
-          let id;
-          if (objetivos.length > 0) {
-            debugger;
-          let cadena = objetivos[objetivos.length - 1][4]; 
-          let regex = /-\s*([^\d]*)(\d+)$/;
-          let match = cadena.match(regex);
-          if (match) {
-            id = match[2]; // Captura el grupo de dígitos después del -
-            console.log(id); // Muestra el valor de id
-          } else {
-            console.log("No se encontró el patrón para el ID.");
-          }
-          id ++;
-        }else{
-          id = 0;
-        }
-          objetivos.push([objetivo, q ,"Por Hacer","Por Definir", `${areaVida} - ${año.año} - ${id}`]);
+          let objetivo = await this.crearObjetivo(areaVida, año);
+          objetivos.push([objetivo]);
 
           // Preguntar nuevamente si desea agregar otro objetivo.
           deseaAgregarObjetivo = await suggester(
             ["Si", "No"],
             [true, false],
             true,
-            `¿Desea agregar otro objetivo para ${areaVida} en ${año.año}?`
+            `¿Desea agregar otro objetivo para ${areaVida} en ${año}?`
           );
         }
       }
-      // Actualizar YAML
-      // Mostrar el suggester para seleccionar el nuevo estado
-      try {
-        // Actualizar el estado en el frontmatter
-        await app.fileManager.processFrontMatter(fileAV, (frontmatter) => {
-          //if (frontmatter.hasOwnProperty(propiedad)) {
-          frontmatter[propiedad] = objetivos; // Actualizar el estado
-          console.log("Objetivos actualizados con éxito.");
-          //}
-        });
-      } catch (err) {
-        console.error(
-          "Error al actualizar los objetivos en el area de vida:",
-          err
-        );
-      }
-    }
-    // P2 NO
-    // ->> CASO 1
-    // ->> CASO 3
-    // --> CASO 6
-    else {
-      debugger;
-      // Si AV de Q no Existe (2) Agrega AreaVida de Q, preguntando en que estado quiere tener esa AV ese Q
-      // await this.agregarAVQ(areaVida, q.trimestre);
-    }
   } // Método objetivoAnual.
   
+  async objetivoTrimestral(trimestre: any, areaVida: any): Promise<void> {
+    debugger;
+    // Buscar si ya hay objetivos creados para ese año y esa area de vida.
+
+    const folderObj = this.plugin.settings["folder_ObjCompassAnual"];
+    const filesObj = app.vault
+      .getMarkdownFiles()
+      .filter(
+        (file) =>
+          file.path.includes(folderObj) &&
+          !file.path.includes("Plantillas") &&
+          !file.path.includes("Archivo")
+      );
+    let objCreados = [];
+
+    for (let file of filesObj) {
+      debugger;
+      let metadata = app.metadataCache.getFileCache(file)?.frontmatter;
+      const regex = /\[\[\s*(.*?)\s*\]\]/;
+      let fileAV = metadata?.areaVida.match(regex)[1];
+      const sameAV = fileAV === areaVida;
+
+      if (metadata?.trimestre?.path && typeof (metadata.trimestre.path === 'string') &&  metadata.trimestre.path.includes(trimestre) && sameAV) {
+        let objActivo = { file }; // Asumiendo que quieres guardar el path del archivo
+        Object.assign(objActivo, metadata); // Agrega el metadata al objeto qActivo
+        objCreados.push(objActivo); // Añade el registro activo al array
+      }
+    }
+    let prompt = this.plugin.tp.system.static_functions.get("prompt");
+    let suggester = this.plugin.tp.system.static_functions.get("suggester");
+    let objetivos = [];
+    let deseaAgregarObjetivo;
+    if (objCreados.length > 0) {
+        // Si hay objetivos creados.
+        // Logica cuando ya hay objetivos creados.
+      let nextStep = await suggester(
+        [
+          "Agregar Objetivos",
+          "Borrar y Crear de nuevo los objetivos",
+          "Dejar los objetivos como están ",
+        ],
+        ["upd", "del+cre", "continue"],
+        true,
+        `¿Ya hay ${objCreados.length} objetivos creados para ${areaVida} en el ${trimestre}. Elige una opción:`
+      );
+
+        switch (nextStep) {
+          case "upd":
+            do {
+              let objetivo = await this.crearObjetivoTrimestre(areaVida, trimestre);
+
+              // Preguntar nuevamente si desea agregar otro objetivo.
+              deseaAgregarObjetivo = await suggester(
+                ["Si", "No"],
+                [true, false],
+                true,
+                `¿Desea agregar otro objetivo para ${areaVida} en ${trimestre}?`
+              );
+            } while (deseaAgregarObjetivo);
+            break;
+          case "del+cre":
+            await this.borrarObjetivos(objCreados);
+            deseaAgregarObjetivo = await suggester(
+              ["Si", "No"],
+              [true, false],
+              true,
+              `¿Desea agregar algún objetivo para ${areaVida} en ${trimestre}?`
+            );
+            while (deseaAgregarObjetivo) {
+              let objetivo = await this.crearObjetivoTrimestre(areaVida, trimestre);
+              // Borrar los objetivos anteriores.
+              // Preguntar nuevamente si desea agregar otro objetivo.
+              deseaAgregarObjetivo = await suggester(
+                ["Si", "No"],
+                [true, false],
+                true,
+                `¿Desea agregar otro objetivo para ${areaVida} en ${trimestre}?`
+              );
+            }
+            break;
+          case "continue":
+            console.log(`Continuar sin hacer nada con los objetivos de ${areaVida}`);
+            break;
+        }
+      }
+      // No hay objetivos creados.
+      else {
+        // Verificar si desea agregar algún objetivo.
+        deseaAgregarObjetivo = await suggester(
+          ["Si", "No"],
+          [true, false],
+          true,
+          `¿Desea agregar algún objetivo para ${areaVida} en ${trimestre}?`
+        );
+        while (deseaAgregarObjetivo) {
+          let objetivo = await this.crearObjetivoTrimestre(areaVida, trimestre);
+          objetivos.push([objetivo]);
+
+          // Preguntar nuevamente si desea agregar otro objetivo.
+          deseaAgregarObjetivo = await suggester(
+            ["Si", "No"],
+            [true, false],
+            true,
+            `¿Desea agregar otro objetivo para ${areaVida} en ${trimestre}?`
+          );
+        }
+      }
+  } // Método objetivoTrimestral.
+
+
+
+/* 
+----------------------------------------------------------------
+Método que crea el botón que se agrega en la tabla de proyectos en el 
+Compass Anual, para crear el proyecto a cada Objetivo.
+----------------------------------------------------------------
+*/ 
   createButtonTable(dv, objetivo) {
     const buttonContainer = dv.el("div", "");
     const button = dv.el("button", "Nuevo Proyecto");
     button.addEventListener("click", async (event) => {
         event.preventDefault();
-        await this.crearProyectoDesdeAV(dv, objetivo);
+        await this.crearProyectoObjetivo(dv, objetivo);
     });
     buttonContainer.appendChild(button);
     return buttonContainer;
 }
 
-async crearProyectoDesdeAV(dv, objetivo){
+/* 
+----------------------------------------------------------------
+Metodo invocado por el boton de la tabla del compass anual "Nuevo Proyecto" 
+para crear proyecto a un objetivo anual establecido.
+----------------------------------------------------------------
+*/ 
+async crearProyectoObjetivo(dv, objetivo){
+  debugger;
   let suggester = this.plugin.tp.system.static_functions.get("suggester");
   let tipoProyecto = await suggester(
     ["Proyecto GTD", "Proyecto de Q"],
     [true, false],
     true,
-    `¿${objetivo[0]} requiere un Proyecto GTD o Proyecto de Q?`
+    `¿El proyecto ${objetivo.file.name} requiere un Proyecto GTD o Proyecto de Q?`
   );
   let proyecto;
   if (tipoProyecto){
     proyecto = this.crearProyectoGTD(objetivo);// Crear Proyecto GTD
   }else{
-    //Crear Proyecto de Q.
+    /* 
+    Buscando optimizar el uso del método crear proyectoQ, 
+    vamos a confirmar el trimestre desde crearProyectoObjetivo; 
+    */
+    debugger;
+    const regexTrim = /\[?\[?(\d{4}-Q[1-4])\]?\]?/g;
+    const trimestre = objetivo.trimestre.path.match(regexTrim);
+
+    const confirmaTrim = await suggester(
+      ["Si", "No"],
+      [true, false],
+      true,
+      `¿Vamos a crear el proyecto ${objetivo.file.name} en el trimestre ${trimestre}?`
+    );
+   
+    if (!confirmaTrim){  
+      const q = await this.establecerTrimestre("objetivo del año");
+      //objetivo.trimestre.path = q.trimestre;
+      debugger;
+      await this.actualizarYAMLs({trimestre: `[[${q.trimestre}]]`}, objetivo.file.path);
+      }
+    proyecto = await this.crearProyectoQ(objetivo);
   }
+}
+
+/* 
+----------------------------------------------------------------
+Metodo que inicializa la creación de la plantilla de objetivo Compass.
+----------------------------------------------------------------
+*/ 
+async crearObjetivo(areaVida, año){
+  debugger;
+  const templatePath = `Plantillas/${this.plugin.settings["folder_ObjCompassAnual"]}/Plt - ObjCompassAnual.md`;
+  const template = app.vault.getAbstractFileByPath(templatePath);
+  const folder = app.vault.getAbstractFileByPath("Inbox");
+  let crearNota = this.plugin.tp.file.static_functions.get("create_new") 
+  let filename = `${año} - Objetivo para ${areaVida}`;
+  let objetivo = await crearNota (template, filename, false, folder);
+  return objetivo;
+}
+
+async crearObjetivoTrimestre(areaVida, trimestre){
+  debugger;
+  const templatePath = `Plantillas/${this.plugin.settings["folder_ObjCompassAnual"]}/Plt - ObjCompassAnual.md`;
+  const template = app.vault.getAbstractFileByPath(templatePath);
+  const folder = app.vault.getAbstractFileByPath("Inbox");
+  let crearNota = this.plugin.tp.file.static_functions.get("create_new") 
+  let filename = `Trimestre ${trimestre} - Objetivo para ${areaVida}`;
+  let objetivo = await crearNota (template, filename, false, folder);
+  return objetivo;
+}
+
+/* 
+----------------------------------------------------------------
+Metodo invocado desde crearProyectoObjetivo(dv, objetivo)
+Esté método hace parte del proceso de Compass Anual.
+Facilita la creación del un proyecto de Q para un objetivo anual establecido.
+----------------------------------------------------------------
+*/ 
+async crearProyectoQ(objetivo){
+  let suggester = this.plugin.tp.system.static_functions.get("suggester");
+  debugger;
+  const templatePath = `Plantillas/${this.plugin.settings["folder_ProyectosQ"]}/Plt - ProyectosQ.md`;
+  const template = app.vault.getAbstractFileByPath(templatePath);
+  const folder = app.vault.getAbstractFileByPath("Inbox");
+  let crearNota = this.plugin.tp.file.static_functions.get("create_new") 
+  let filename = `Proyecto para Objetivo Compass Anual - ${objetivo.id}`;
+  let proyecto = await crearNota(template, filename, true, folder);
+  return proyecto;
 }
 
 async crearProyectoGTD(objetivo){
@@ -769,11 +1085,112 @@ async crearProyectoGTD(objetivo){
   const template = app.vault.getAbstractFileByPath(templatePath);
   const folder = app.vault.getAbstractFileByPath("Inbox");
   let crearNota = this.plugin.tp.file.static_functions.get("create_new") 
-  let filename = objetivo[4];
-  let proyecto = await crearNota (template, filename, true, folder).basename;
+  let filename = `Proyecto para Objetivo Compass Anual - ${objetivo.id}`;
+  let proyecto = await crearNota (template, filename, true, folder);
   return proyecto;
 }
 
+
+/* 
+----------------------------------------------------------------
+Metodo invocado en el proceso de Compass Anual, cuando elijo volver
+a crear todos los proyectos de un area de vida para un año.
+----------------------------------------------------------------
+*/ 
+async borrarObjetivos(objetivos){
+  debugger;
+  for (let objetivo of objetivos){ 
+    try {
+      // Intenta borrar el archivo actual del arreglo
+      await app.vault.delete(objetivo.file);
+      console.log(`Archivo borrado: ${objetivo.file.path}`);
+    } catch (error) {
+        console.error(`Error al borrar el archivo ${objetivo.file.path}: ${error}`);
+     }
+  }
+
+  }
+
+
+/* 
+----------------------------------------------------------------
+Metodo que permite para cualquier caso en el que se requiera elegir 
+un trimestre para continuar un proceso, hacer la verificación sobre los
+trimestres que esten creados a partir de la nota TQ.  
+----------------------------------------------------------------
+*/
+  async establecerTrimestre(temaTrimestre){
+    // Obtener Qs para preguntar el Q para el que desea crear las áreas de vida.
+    const folderQ = this.plugin.settings["folder_Trimestral"];
+    const filesQ = app.vault
+      .getMarkdownFiles()
+      .filter(
+        (file) =>
+          file.path.includes(folderQ) &&
+          !file.path.includes("Plantillas") &&
+          !file.path.includes("Archivo")
+      );
+    let qCreados = [];
+
+    for (let file of filesQ) {
+      let metadata = app.metadataCache.getFileCache(file)?.frontmatter;
+
+      if (metadata?.type === "TQ" && metadata?.trimestre) {
+        let qActivo = { file }; // Asumiendo que quieres guardar el path del archivo
+        Object.assign(qActivo, metadata); // Agrega el metadata al objeto qActivo
+        qCreados.push(qActivo); // Añade el registro activo al array
+      }
+    }
+
+    let suggester = this.plugin.tp.system.static_functions.get("suggester");
+    try {
+      let q = await suggester(
+        qCreados.map((b) => b.trimestre),
+        qCreados.map((b) => b),
+        true,
+        `De que trimestre vamos a procesar tus ${temaTrimestre}`
+      );
+  
+      // Aquí asumimos que si q es undefined, el usuario canceló la operación.
+      if (q === undefined) {
+          console.log("Operación cancelada por el usuario.");
+          // Maneja el escape o cancelación aquí. Por ejemplo, podrías salir de la función actual o hacer otra cosa.
+          return; // Sale de la función si el usuario cancela.
+      }
+  
+      // Continuar con la lógica después de que el usuario ha seleccionado una opción
+        console.log("El usuario seleccionó:", q);
+        return q;
+      } catch (error) {
+          console.error("Error en el suggester:", error);
+      }
+  }
+
+/* 
+----------------------------------------------------------------
+Con este método puedo actualizar valores en las notas ya existentes.
+Lo utilizo en esta clase, para actualizar el trimestre.
+Esta función solo actualiza, no crea el campos si no existe. 
+----------------------------------------------------------------
+*/
+  async actualizarYAMLs(campos, ruta) {
+        
+    try {
+        const file = app.vault.getAbstractFileByPath(ruta);
+        await app.fileManager.processFrontMatter(file, frontmatter => {
+            // Iterar sobre cada propiedad del objeto 'nota'
+            for (const campo in campos) {
+                
+                if (frontmatter.hasOwnProperty(campo)) {
+                    // Actualizar el campo en el frontmatter con el valor correspondiente
+                    frontmatter[campo] = campos[campo];
+                }
+            }
+        });
+        console.log("Frontmatter actualizado con éxito");
+    } catch (err) {
+        console.error("Error al actualizar el frontmatter", err);
+    }
 }
 
-
+}

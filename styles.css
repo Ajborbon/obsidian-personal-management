@@ -31,11 +31,24 @@
     /* Cualquier otro estilo que quieras aplicar a h1 */
 }
 
+
+.table-resumenSemanal {
+  overflow-y: auto; /* Permite desplazamiento vertical si el texto excede el espacio */
+  overflow-x: hidden; /* Permite desplazamiento horizontal si el texto excede el espacio */
+  width: 100%;
+  display: block;
+  margin-bottom: 10px;
+  user-select: text;
+  /* Puedes ajustar el 0.8em al tamaño que prefieras */
+}
+
 /* Clase usada para establecer el tamaño de la letra de la tabla que incluye la vista de Registro Tiempo.*/
 .table-small {
     font-size: 0.5em; /* Hace el texto de los párrafos más pequeño */
     /* Puedes ajustar el 0.8em al tamaño que prefieras */
 }
+
+
 
 /* Clase usada en la vista de Registro Tiempo para que habilite el scroll vertical. */
 .table-container {

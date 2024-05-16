@@ -195,8 +195,11 @@ export class starterAPI {
         let prompt = this.tp.system.static_functions.get("prompt");
         let titulo;
         switch(this.infoSubsistema.type) {
-            case "Tx":
+            case "Tx": //Transacción
                 titulo = await prompt(`Nombre de este(a) ${this.infoSubsistema.typeName}`, `${this.infoSubsistema.typeName} - ${this.nota.id}`, true)
+                break;
+            case "OCA": //ObjetivoCompassAnual
+                titulo = await prompt(`Cual es tu objetivo en ${this.nota.año} para ${this.nota.areaVida}?`, `Voy a `, true, true) // 4 parametro true: Multilinea.
                 break;
             default:
                 titulo = await prompt(`Titulo de este(a) ${this.infoSubsistema.typeName}`, `${this.infoSubsistema.typeName} - ${this.nota.id}`, true)
@@ -230,6 +233,9 @@ export class starterAPI {
             case "PGTD":
                  descripcion = await prompt("¿Sobre que es este proyecto GTD?", " " + `Proyecto sobre `, false, true )
             break;
+            case "OCA":
+                 descripcion = await prompt("¿Quieres agregar detalles de tu objetivo?", `${this.nota.titulo}`, false, true )
+            break;
             default:
                 descripcion = await prompt("¿Quieres agregar una descripción?", " " + `Esta nota es sobre ${this.nota.titulo}`, false, true )
             break;
@@ -251,6 +257,7 @@ export class starterAPI {
             case "Ax":
             case "PGTD":
             case "Tx":
+            case "CPE":  // Contenido para Estudio
                 nota.aliases.push(`${this.nota.titulo}`)
                 nota.aliases.push(`${this.infoSubsistema.type}/${this.nota.titulo}`)
                 break;
@@ -277,7 +284,20 @@ export class starterAPI {
                 nota.aliases.push(`${this.infoSubsistema.type}/${Array.isArray(this.nota.areaVida) ? this.nota.areaVida[0] : this.nota.areaVida}/${this.nota.trimestre}/${this.nota.titulo}`);
                 nota.aliases.push(`${this.infoSubsistema.type}/${this.nota.trimestre}/${Array.isArray(this.nota.areaVida) ? this.nota.areaVida[0] : this.nota.areaVida}/${this.nota.titulo}`)
             break;    
-            }
+            case "OCA":
+                nota.aliases.push(`${this.infoSubsistema.type}/${this.nota.año}/${this.nota.id}`)
+                nota.aliases.push(`${this.infoSubsistema.type}/${this.nota.año}/${this.nota.areaVida}/${this.nota.id}`)
+                nota.aliases.push(`${this.infoSubsistema.type}/${this.nota.titulo}`)
+                break;
+            case "CAI": // CompassAnualInicio
+                nota.aliases.push(`${this.infoSubsistema.typeName}/${this.nota.año}`)   
+                nota.aliases.push(`${this.infoSubsistema.typeName}/${this.nota.id}`)   
+                break;
+            case "CTI": // CompassTrimestralInicio
+                nota.aliases.push(`${this.infoSubsistema.typeName}/${this.nota.trimestre}`)   
+                nota.aliases.push(`${this.infoSubsistema.typeName}/${this.nota.id}`)   
+            break;
+          }       
 
             return nota.aliases;
        
@@ -296,6 +316,10 @@ export class starterAPI {
         if (activo != null) {
             nombre = activo.basename;
             nota = app.metadataCache.getFileCache(activo);
+            // Asegurar que nota.frontmatter existe y asignar un objeto vacío a file
+            nota.frontmatter = nota.frontmatter || {};
+            nota.frontmatter.file = {};
+            Object.assign(nota.frontmatter.file, activo);
             //1. siAsunto = await suggester(["Si", "No"], [true, false], true, nombre + " es origen de " + this.nota.titulo + "?");
             padres.unshift(nombre); // Añade el nombre al inicio del arreglo, desplazando los demás elementos
             switch(tipoSistema) { // Estoy creando un: 
@@ -303,6 +327,7 @@ export class starterAPI {
                 case "PGTD":
                 case "Ax":
                 case "Tx":
+                case "CPE":  // Contenido para Estudio
                     siAsunto = await suggester(["Si", "No"], [true, false], true, nombre + " es origen de " + this.nota.titulo + "?");
                     if (siAsunto) {
                         debugger;
@@ -430,7 +455,7 @@ export class starterAPI {
                                 debugger;
                                 // VERIFICACION DE AREA DE INTERES
                                 if (nota?.frontmatter?.type === "AI"){
-                                    this.nota.areaInteres = [nota.frontmatter.titulo]; 
+                                    this.nota.areaInteres = [nota.frontmatter.file.basename]; 
                                     // Inicializamos this.nota.areaInteres con nota.titulo como el primer elemento.
                                     // Este solo aplica para cuando estoy construyendo desde Area de Interes otra Area de Interes.
                                 }
@@ -523,7 +548,7 @@ export class starterAPI {
                             case "AI":
                                 // VERIFICACION DE AREA DE INTERES
                                 if (nota?.frontmatter?.type === "AI"){
-                                    this.nota.areaInteres = [nota.frontmatter.titulo]; 
+                                    this.nota.areaInteres = [nota.frontmatter.file.basename]; 
                                     // Inicializamos this.nota.areaInteres con nota.titulo como el primer elemento.
                                     // Este solo aplica para cuando estoy construyendo desde Area de Interes otra Area de Interes.
                                 }else{
@@ -587,7 +612,7 @@ export class starterAPI {
                                 // Inicializamos this.nota.areaInteres con nota.titulo como el primer elemento
                                 
                                 if (nota?.frontmatter?.type === "AI"){
-                                    this.nota.areaInteres = [nota.frontmatter.titulo]; 
+                                    this.nota.areaInteres = [nota.frontmatter.file.basename]; 
                                     // Verificamos si nota.areaInteres es un arreglo
                                     if (Array.isArray(nota.frontmatter.areaInteres)) {
                                         // Si es un arreglo, iteramos sobre cada elemento (excluyendo el primer elemento ya agregado que es nota.titulo)
@@ -639,7 +664,7 @@ export class starterAPI {
                 break; // Creando un AI
                 
                 default:  // Asunto De la nota que esté creando cuando es cualqueir cosa
-                    
+                    console.log("Dependiendo de la estructura, getAsunto deberia tener su clasificación. Aqui vas a tener un error.") 
                     
                 break;
                 } // switch tipo(sistema) -> Sobre la nota que esté creando.
@@ -918,7 +943,10 @@ export class starterAPI {
             case "AY":
                 campo = await suggester(["🔵 -> Año Archivado", "🟢 -> Año activo","🟡 -> Año en planeación", "🔴 -> Nota por arreglar"],["🔵", "🟢","🟡", "🔴"], false, `Estado del año elegido:`);
                 break;
-            
+            case "OCA": // En la creación del objetivo fijo va en amarillo.
+            case "CTI": // CompassTrimestralInicio
+                campo = "🟡";
+                break;
             default:
                 // Si el usuario elige "Otro" o cualquier otra opción.
                 campo = await suggester(["🔵 -> Completado - Información", "🟢 -> Finalizado","🟡 -> En desarrollo", "🔴 -> Detenido"],["🔵", "🟢","🟡", "🔴"], false, "Seleccione el estado de la nota:");
@@ -934,6 +962,16 @@ export class starterAPI {
         return campo;
     }
 
+    /* 
+    ----------------------------------------------------------------
+    Metodo que tiene dos propositos, inicialmente se creó para  devolver
+    el filename de las AI, AV, nAV, Ax y PGTD y desde la plantilla 
+    cambiarle el nombre al archivo. Sin embargo, se modificó y ahora sirve
+    para cuando una plantilla tiene un nombre especial, porque es resultado
+    de un proceso previo y se debe traer información para que se genere la
+    nota de la plantilla adecuadamente.  
+    ----------------------------------------------------------------
+    */ 
     async getFilename(){
         let fileName;
         switch(this.infoSubsistema.type) {  
@@ -962,10 +1000,29 @@ export class starterAPI {
                 this.nota.areaVida = partes[1];
                 fileName = `${partes[1]}`;    
                 break;
-            case "Ax":
-            case "PGTD":    
-                fileName = (`${this.infoSubsistema.folder}/${this.infoSubsistema.type} - ${this.nota.id}`)
-                break;     
+            case "PGTD": 
+            case "PQ":   
+                 
+                if (this.infoSubsistema.hasOwnProperty("fileName")){
+                    let regexFileName = /([^/]+)\s-\s(\d+)\.md$/;
+                    let partes = this.infoSubsistema.fileName.match(regexFileName);
+                    // con este regexFileName, partes[0] es el nombre del archivo con la extensión md.
+                    let type = partes[1]; 
+                    let id = partes[2];
+                    switch(type){
+                        case "Proyecto para Objetivo Compass Anual":
+                            let nota = await this.getOrigen("ObjCompassAnual", id);
+                            const regex = /\[\[\s*(.*?)\s*\]\]/;
+                            this.nota.areaVida = nota?.areaVida.match(regex)[1];
+                            this.nota.areaInterés = nota.areaInteres;
+                            this.nota.asunto = {siAsunto: true, nombre: nota.file.basename} 
+                            this.nota.trimestre = nota?.trimestre.match(regex)[1];
+                            this.nota.nivelP = 0;
+                            fileName = this.infoSubsistema.fileName;
+                        break;
+                    }
+                }
+            break; // GTD y PQ Viniendo de compass Anual.
             }
             return fileName;
     }
@@ -986,6 +1043,32 @@ export class starterAPI {
                 
                 trimestre = await suggester(trimestres.map(b => b.file.basename),trimestres.map(b => b.file.basename), false, `Trimestre del ${nombreSistema}:`);
                 break;
+            case "OCA": // ObjetivoCompassAnual 
+                    trimestre = await suggester(
+                        ["Q1", "Q2", "Q3", "Q4"],
+                        [
+                          `${this.nota.año}-Q1`,
+                          `${this.nota.año}-Q2`,
+                          `${this.nota.año}-Q3`,
+                          `${this.nota.año}-Q4`,
+                        ],
+                        true,
+                        `¿En qué trimestre del ${this.nota.año} consideras que se puede realizar ese objetivo?`
+                      );
+                    break;
+                    case "CTI": // CompassTrimestralInicio
+                    trimestre = await suggester(
+                        ["Q1", "Q2", "Q3", "Q4"],
+                        [
+                          `${this.nota.año}-Q1`,
+                          `${this.nota.año}-Q2`,
+                          `${this.nota.año}-Q3`,
+                          `${this.nota.año}-Q4`,
+                        ],
+                        true,
+                        `¿De qué trimestre del ${this.nota.año} es esta planeación?`
+                      );
+                    break;
             default:
                 // Si el usuario elige "Otro" o cualquier otra opción.
                 trimestre = await suggester(trimestres.map(b => b.file.basename),trimestres.map(b => b.file.path), false, `Trimestre del ${nombreSistema}:`);
@@ -1012,6 +1095,7 @@ export class starterAPI {
         switch(tipoSistema) {
             case "CAC":
             case "CAI":
+            case "CTI": // CompassTrimestralInicio
                 año = await suggester(años.map(b => b.file.basename),años.map(b => b.file.basename), false, `Selecciona el año que deseas para el ${nombreSistema}:`);
                 break;
             case "AY":
@@ -1023,6 +1107,19 @@ export class starterAPI {
                 año = await suggester(arregloAños,arregloAños, false, `Selecciona el año que vamos a crear.`)
                 
 
+            break;
+            case "OCA": // ObjetivoCompassAnual
+                debugger;
+                let nombreArchivo = this.infoSubsistema.fileName;
+                const regex = /\/(\d{4})/;
+                const resultado = nombreArchivo.match(regex);
+                if (resultado && resultado[1]) {
+                    // Retornamos el grupo capturado, que es el valor deseado de substr
+                    año = resultado[1];
+                } else {
+                    // Si no se encuentra una coincidencia, podríamos retornar null o alguna otra señal de no encontrado
+                    return null;
+                }
             break;
             default:
                 // Si el usuario elige "Otro" o cualquier otra opción.
@@ -1038,16 +1135,21 @@ export class starterAPI {
     }
 
     async getRename(){
+        let suggester = this.tp.system.static_functions.get("suggester");
         let newName, name, folder;
         debugger;
         switch(this.infoSubsistema.type) { 
+        case "Ax":
+            newName = `${this.infoSubsistema.folder}/${this.infoSubsistema.type} - ${this.nota.id}.md`
+            name = `${this.nota.fileName}`
+            break;
         case "AI":
         case "PGTD":
             if (this.nota.areaVida==="No es de ningún Area de Vida"){
-                newName = `${this.infoSubsistema.folder}/Otras/${this.nota.titulo}.md`
+                newName = `${this.infoSubsistema.folder}/Otras/${this.infoSubsistema.type} - ${this.nota.id}.md`
                 folder = `${this.infoSubsistema.folder}/Otras`
             }else{
-                newName = `${this.infoSubsistema.folder}/${this.nota.areaVida}/${this.nota.titulo}.md`
+                newName = `${this.infoSubsistema.folder}/${this.nota.areaVida}/${this.infoSubsistema.type} - ${this.nota.id}.md`
                 folder = `${this.infoSubsistema.folder}/${this.nota.areaVida}`
             }
             await this.crearCarpeta(folder);
@@ -1064,6 +1166,7 @@ export class starterAPI {
             name = `${this.nota.fileName}`
             break;
         case "PQ": 
+        debugger;
             let folderAV = Array.isArray(this.nota.areaVida)? this.nota.areaVida[0] : this.nota.areaVida; 
             newName = `${this.infoSubsistema.folder}/${this.nota.trimestre}/${folderAV}/${this.infoSubsistema.type} - ${this.nota.id}.md`
             folder = `${this.infoSubsistema.folder}/${this.nota.trimestre}/${folderAV}`
@@ -1082,13 +1185,20 @@ export class starterAPI {
             name = `${this.nota.fileName}`
             break;
         case "CAC":     // CompassAnual_Cierre   
-            newName = `${this.infoSubsistema.folder}/${this.nota.año}/${this.infoSubsistema.typeName}_Cierre ${this.nota.año}.md`
+            newName = `${this.infoSubsistema.folder}/${this.nota.año}/Desempeño ${this.nota.año}.md`
             folder = `${this.infoSubsistema.folder}/${this.nota.año}`
             await this.crearCarpeta(folder);
             name = `${this.nota.fileName}`
         break;
-        case "CAI":     // CompassAnual_Cierre   
-            newName = `${this.infoSubsistema.folder}/${this.nota.año}/${this.infoSubsistema.typeName}_Inicio ${this.nota.año}.md`
+        case "CAI":     // CompassAnual_Inicio   
+            debugger;
+            newName = `${this.infoSubsistema.folder}/${this.nota.año}/Planeación ${this.nota.año}.md`
+            folder = `${this.infoSubsistema.folder}/${this.nota.año}`
+            await this.crearCarpeta(folder);
+            name = `${this.nota.fileName}`
+        break;
+        case "CTI":     // CompassTrimestral_Inicio   
+            newName = `${this.infoSubsistema.folder}/${this.nota.año}/Planeación ${this.nota.trimestre}.md`
             folder = `${this.infoSubsistema.folder}/${this.nota.año}`
             await this.crearCarpeta(folder);
             name = `${this.nota.fileName}`
@@ -1099,16 +1209,56 @@ export class starterAPI {
             await this.crearCarpeta(folder);
             name = `${this.nota.fileName}`
         break;
+        case "OCA":  // ObjetivoCompassAnual
+            newName = `${this.infoSubsistema.folder}/${this.nota.año}/${this.infoSubsistema.type} - ${this.nota.id}.md`
+            folder = `${this.infoSubsistema.folder}/${this.nota.año}`
+            await this.crearCarpeta(folder);
+            name = `${this.nota.fileName}`
+            break;
+        case "CPE":     // Contenido Para Estudio 
+        debugger;
+            newName = `${this.infoSubsistema.folder}/${this.nota.fecha.slice(0, 4)}/${this.infoSubsistema.type} - ${this.nota.id}.md`
+            folder = `${this.infoSubsistema.folder}/${this.nota.fecha.slice(0, 4)}`
+            await this.crearCarpeta(folder);
+            name = `${this.nota.fileName}`
+        break;
         default:
             break;
         }
         const file = app.vault.getAbstractFileByPath(name);
+        const existe = app.vault.getAbstractFileByPath(newName);
+        debugger;
         try{
-        if (file instanceof TFile){
-            await app.vault.rename(file, newName);
-            console.log("Archivo renombrado con éxito.");
-            return true;
-        }
+            if (existe instanceof TFile){
+                let nombreFile = newName?.split("/");
+
+                let borrar = await suggester(
+                    ["Sobreescribir Archivo Actual", "Detener creación del archivo."],
+                    [
+                      true,
+                      false],
+                    true,
+                    `¿${nombreFile.pop()} ya existe. Que deseas hacer?`
+                  );
+                if (borrar){
+                    await app.vault.delete(existe);
+                    if (file instanceof TFile){
+                        await app.vault.rename(file, newName);
+                        console.log("Archivo renombrado con éxito.");
+                        return true;
+                    }
+                }else{
+                    console.log("Cancelando la creación del archivo.");
+                    this.nota.borrarNota = true;
+                    return false;
+                }  
+            }else{
+            if (file instanceof TFile){
+                await app.vault.rename(file, newName);
+                console.log("Archivo renombrado con éxito.");
+                return true;
+                }
+            }
         }catch (error){
             console.error("Error al cambiar el nombre", error)
             return false;
@@ -1149,6 +1299,20 @@ export class starterAPI {
                debugger;
                 areaVida = await suggester(areasVida.map(b => b.file.basename),areasVida.map(b => [b.areaVida, b.file.basename]), false, `A que Area de Vida pertenece esta(e) ${nombreTipo}:`);
                 this.nota.nivelP = 0;
+            break;
+
+            case "OCA": // ObjetivoCompassAnual
+                debugger;
+                let nombreArchivo = this.infoSubsistema.fileName;
+                const regex = /Objetivo para (.+)\.md$/;
+                const resultado = nombreArchivo.match(regex);
+                if (resultado && resultado[1]) {
+                    // Retornamos el grupo capturado, que es el valor deseado de substr
+                    areaVida = resultado[1];
+                } else {
+                    // Si no se encuentra una coincidencia, podríamos retornar null o alguna otra señal de no encontrado
+                    return null;
+                }
             break;
             default:
                 areasVida = await this.findMainFilesWithState("AV")
@@ -1603,5 +1767,31 @@ export class starterAPI {
             console.error(`Error al crear la carpeta '${folderPath}':`, error);
             }
     }
-  }
+  
+    /* 
+    ----------------------------------------------------------------
+    Metodo con el cual puedo desde el método fileName obtener la nota 
+    de origen de la plantilla que estoy creando, para contar con toda 
+    la información que requiero en la creación.
+    ----------------------------------------------------------------
+    */ 
+    async getOrigen(typeName, id){
+    debugger;
+    let folder = this.plugin.settings[`folder_${typeName}`];
+    let files = app.vault.getMarkdownFiles().filter(file => 
+        file.path.includes(folder) && !file.path.includes("Plantillas") && !file.path.includes("Archivo"));
+    
+    for (let file of files) {
+
+        let metadata = app.metadataCache.getFileCache(file)?.frontmatter;
+
+        if (metadata?.id === +id) { // +id se hace para convertirlo en número.
+            let activeFile = Object.assign({}, metadata);
+            activeFile.file = file;
+            return activeFile;        
+            }
+        }
+    }
+
+}
   

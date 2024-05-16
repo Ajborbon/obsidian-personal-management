@@ -236,6 +236,8 @@ export class utilsAPI {
         case "Nota":
           registro.titulo = registro.nombre; // El título es el nombre de la nota actual.
           registro.siAsunto = true;
+          debugger;
+          registro = this.copiarCampos(registro);
           break;
         case "Tarea":
           // Lógica para permitir al usuario elegir una tarea específica.
@@ -254,6 +256,111 @@ export class utilsAPI {
       // Manejo de errores o cierre del modal sin selección.
       // Por ejemplo, podrías establecer un valor predeterminado para registro.detener aquí.
     }
+  }
+
+  copiarCampos(registro){
+    let nombre = registro.activo.basename;
+    let nota = app.metadataCache.getFileCache(registro.activo);
+        // VERIFICACION DE PROYECTOS DE Q Y PROYECTO GTD
+        if (nota.frontmatter?.type === "PQ"){ 
+          // CUANDO LA NOTA ACTIVA ES UN PQ.
+          registro.proyectoQ = nombre;                                
+          // VERIFICACION DE PROYECTOSGTD
+          // Inicializamos registro.proyectoGTD con un valor predeterminado de cadena vacía
+          registro.proyectoGTD = "";
+          // Verificamos si nota.proyectoGTD existe y es un arreglo
+          if (Array.isArray(nota.frontmatter.proyectoGTD)) {
+              // Si es un arreglo, iteramos sobre cada elemento
+              registro.proyectoGTD = nota.frontmatter.proyectoGTD.map(elemento => 
+                  elemento.replace(/\[\[\s*|\s*\]\]/g, ''));
+          } else if (nota.frontmatter.proyectoGTD) {
+              // Si existe pero no es un arreglo, aplicamos el regex directamente
+              registro.proyectoGTD = nota.frontmatter.proyectoGTD.replace(/\[\[\s*|\s*\]\]/g, '');
+          }
+          // Si nota.proyectoGTD no existe, registro.proyectoGTD ya está establecido en "" por defecto
+          // Obtener ProyectoQ y Proyecto GTD cuando la nota es ProyectoGTD.
+           } else if (nota.frontmatter?.type === "PGTD"){
+           
+           // CUANDO LA NOTA ACTIVA ES UN GTD.
+           // VERIFICACION DE PROYECTOSGTD
+           registro.proyectoGTD = [nombre];
+
+           if (Array.isArray(nota.frontmatter.proyectoGTD)) {
+               // Si es un arreglo, utilizamos concat para añadir los elementos ya procesados con el regex al arreglo registro.proyectoGTD
+               registro.proyectoGTD = registro.proyectoGTD.concat(nota.frontmatter.proyectoGTD.map(elemento => 
+                   elemento.replace(/\[\[\s*|\s*\]\]/g, '')));
+           } else if (nota.frontmatter.proyectoGTD) {
+               // Si existe pero no es un arreglo, aplicamos el regex directamente y usamos push para agregarlo a registro.proyectoGTD
+               registro.proyectoGTD.push(nota.frontmatter.proyectoGTD.replace(/\[\[\s*|\s*\]\]/g, ''));
+           }
+           
+           // Si nota.proyectoGTD no existe, registro.proyectoGTD ya está establecido en "" por defecto
+           registro.proyectoQ = "";
+           if (Array.isArray(nota.frontmatter.proyectoQ)) {
+              // Si es un arreglo, iteramos sobre cada elemento
+              registro.proyectoQ = nota.frontmatter.proyectoQ.map(elemento => 
+                  elemento.replace(/\[\[\s*|\s*\]\]/g, ''));
+          } else if (nota.frontmatter.proyectoQ) {
+              // Si existe pero no es un arreglo, aplicamos el regex directamente
+              registro.proyectoQ = nota.frontmatter.proyectoQ.replace(/\[\[\s*|\s*\]\]/g, '');
+          }
+
+
+           }
+           // Obtener ProyectoQ y Proyecto GTD cuando la nota es otra cosa que no es proyecto
+           else{
+
+              registro.proyectoQ = "";
+              if (Array.isArray(nota?.frontmatter?.proyectoQ)) {
+                  // Si es un arreglo, iteramos sobre cada elemento
+                  registro.proyectoQ = nota.frontmatter.proyectoQ.map(elemento => 
+                      elemento.replace(/\[\[\s*|\s*\]\]/g, ''));
+              } else if (nota?.frontmatter?.proyectoQ) {
+                  // Si existe pero no es un arreglo, aplicamos el regex directamente
+                  registro.proyectoQ = nota.frontmatter.proyectoQ.replace(/\[\[\s*|\s*\]\]/g, '');
+              }
+
+              registro.proyectoGTD = "";
+              // Verificamos si nota.proyectoGTD existe y es un arreglo
+              if (Array.isArray(nota?.frontmatter?.proyectoGTD)) {
+                  // Si es un arreglo, iteramos sobre cada elemento
+                  registro.proyectoGTD = nota.frontmatter.proyectoGTD.map(elemento => 
+                      elemento.replace(/\[\[\s*|\s*\]\]/g, ''));
+              } else if (nota?.frontmatter?.proyectoGTD) {
+                  // Si existe pero no es un arreglo, aplicamos el regex directamente
+                  registro.proyectoGTD = nota.frontmatter.proyectoGTD.replace(/\[\[\s*|\s*\]\]/g, '');
+              }
+
+          }
+          // Verificamos areaInteres 
+          registro.areaInteres = [];
+          if (Array.isArray(nota?.frontmatter?.areaInteres)) {
+              // Si es un arreglo, iteramos sobre cada elemento (excluyendo el primer elemento ya agregado que es nota.titulo)
+              // y aplicamos el regex a cada elemento. Luego concatenamos con el array existente.
+              registro.areaInteres = registro.areaInteres.concat(nota.frontmatter.areaInteres.map(elemento => 
+                  elemento.replace(/\[\[\s*|\s*\]\]/g, '')));
+          } else {
+              // Si no es un arreglo, revisamos si nota.frontmatter.areaInteres existe
+              if (nota?.frontmatter?.areaInteres) {
+                  // Si existe, aplicamos el regex y lo añadimos como segundo elemento
+                  registro.areaInteres.push(nota.frontmatter.areaInteres.replace(/\[\[\s*|\s*\]\]/g, ''));
+              }
+          }
+          // Verificamos AreaVida
+          registro.areaVida = "";
+          if (nota?.frontmatter?.areaVida) {
+              if (Array.isArray(nota.frontmatter.areaVida)) {
+                  // Es un arreglo, usa el primer elemento
+                  registro.areaVida = nota.frontmatter.areaVida[0].replace(/\[\[\s*|\s*\]\]/g, '');
+              } else if (typeof nota.frontmatter.areaVida === 'string') {
+                  // Es un string
+                  registro.areaVida = nota.frontmatter.areaVida.replace(/\[\[\s*|\s*\]\]/g, '');
+              }
+          } else {
+              // No está definido o está vacío
+              registro.areaVida = "No es de ningún Area de Vida";
+          }
+          return registro;
   }
 
   async encontrarTareasPendientes(

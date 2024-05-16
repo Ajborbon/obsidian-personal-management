@@ -35,6 +35,10 @@ export const DEFAULT_SETTINGS: PluginMainSettings = {
   indice_Recetas: "Subsistemas/Recetas/Indice Recetas",
   folder_RegistroTiempo: "Subsistemas/Registro Tiempo/Registros",
   indice_RegistroTiempo: "Subsistemas/Registro Tiempo/Indice Registro Tiempo",
+  folder_ContenidoParaEstudio: "Subsistemas/Contenido para Estudio/Contenido",
+  indice_ContenidoParaEstudio: "Subsistemas/Contenido para Estudio/Indice Contenido para Estudio",
+
+
   // Estructura
   folder_AreasVida: "Estructura/Areas de Vida",
   indice_AreasVida: "Estructura/Areas de Vida/Indice Areas de Vida",
@@ -67,9 +71,13 @@ export const DEFAULT_SETTINGS: PluginMainSettings = {
   indice_Anual: "Estructura/Journal/Anual/Indice Anual",
 
   // COMPASS
-  folder_CompassAnual: "Estructura/Compass/Anual",
-  indice_CompassAnual: "Estructura/Compass/Indice Compass Anual",
-  folder_CompassTrimestral: "Estructura/Compass/Trimestral",
-  indice_CompassTrimestral: "Estructura/Compass/Indice Compass trimestral",
+  folder_CompassAnual: "Estructura/Compass/Reportes/Anual",
+  indice_CompassAnual: "Estructura/Compass/Reportes/Indice Compass Anual",
+  folder_CompassTrimestral: "Estructura/Compass/Reportes/Trimestral",
+  indice_CompassTrimestral: "Estructura/Compass/Reportes/Indice Compass trimestral",
+  folder_ObjCompassAnual: "Estructura/Compass/Objetivos/Anual",
+  indice_ObjCompassAnual: "Estructura/Compass/Objetivos/Indice Compass Anual",
+  folder_ObjCompassTrimestral: "Estructura/Compass/Objetivos/Trimestral",
+  indice_ObjCompassTrimestral: "Estructura/Compass/Objetivos/Indice Compass trimestral",
 };
 

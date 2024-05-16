@@ -56,7 +56,10 @@ export interface PluginMainSettings {
     // Registro Tiempo
     folder_RegistroTiempo: string,
     indice_RegistroTiempo: string,
-    
+    // Contenido para Estudio
+    folder_ContenidoParaEstudio: string,
+    indice_ContenidoParaEstudio: string,
+  
     // Estructura
     folder_AreasVida: string,
     indice_AreasVida: string,
@@ -92,6 +95,10 @@ export interface PluginMainSettings {
     indice_CompassAnual: string,
     folder_CompassTrimestral: string,
     indice_CompassTrimestral: string,
+    folder_ObjCompassAnual: string,
+    indice_ObjCompassAnual: string,
+    folder_ObjCompassTrimestral: string,
+    indice_ObjCompassTrimestral: string,
     }
 
 

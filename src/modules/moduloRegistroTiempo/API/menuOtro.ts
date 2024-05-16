@@ -53,7 +53,7 @@ export class menuOtro {
             return error;
             }
             debugger
-            return {titulo: temaOtro.actividad + " / " + temaOtro.grupo, siAsunto ,nombre: temaOtro.grupo}
+            return {titulo: temaOtro.actividad + " / " + temaOtro.grupo, siAsunto ,nombre: temaOtro.grupo, areaVida: temaOtro.grupo}
         }
 
         async habitual (app: App){

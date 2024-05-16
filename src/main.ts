@@ -11,10 +11,14 @@
   import { addOnsAPI } from './modules/noteLifecycleManager/API/addOnsAPI';
   import { YAMLUpdaterAPI } from './modules/noteLifecycleManager/API/YAMLUpdaterAPI';
   import { menuHoyAPI} from './modules/noteLifecycleManager/API/menuDiarioAPI'
+  import { menuSemanalAPI } from './modules/noteLifecycleManager/API/menuSemanalAPI';
   import { VistaRegistroActivo } from './modules/moduloRegistroTiempo/views/vistaRTActivo';
   import { ModuloGTD } from './modules/moduloGTD';
+  //import { ModuloTerceros } from './modules/modulo_Terceros';
   import { ingresarBandejaEntrada } from './modules/moduloGTD/inbox';
   import { subsistemasAPI } from './modules/noteLifecycleManager/API/subsistemasAPI';
+  import { VistaResumenSemanal } from './modules/noteLifecycleManager/views/vistaResumenSemanal';
+  import { VistaRegistroDiario } from './modules/noteLifecycleManager/views/vistaRegistroDiario';
 
 export default class ManagementPlugin extends Plugin {
   settings: PluginMainSettings | undefined;
@@ -23,15 +27,18 @@ export default class ManagementPlugin extends Plugin {
   moduloRegistroTiempo: ModuloRegistroTiempo | null = null;
   moduloBase: ModuloBase | null = null;
   moduloGTD : ModuloGTD | null = null;
+  //moduloTerceros: ModuloTerceros | null = null;
   registeredCommandIdsRT: string[] = [];
   registeredCommandIdsMB: string[] = [];
   registeredCommandIdsGTD: string[] = [];
+  registeredCommandIds_Terceros: string[] = [];
   ribbonButtonRT: ReturnType<Plugin['addRibbonIcon']> | null = null;
   app: any;
   registroTiempoAPI: registroTiempoAPI | undefined;
   starterAPI: starterAPI | undefined;
   addOnsAPI: addOnsAPI | undefined;
   menuHoyAPI: menuHoyAPI | undefined;
+  menuSemanalAPI: menuSemanalAPI | undefined;
   subsistemasAPI: subsistemasAPI | undefined;
   newInbox : any;
   tp: any;
@@ -42,10 +49,10 @@ export default class ManagementPlugin extends Plugin {
         
         await this.loadSettings();
         this.tp = this.getTp();
-        this.registerView(
-          "vista-registro-activo", 
-          (leaf) => new VistaRegistroActivo(leaf, this)
-        );
+        
+        this.registerView("vista-registro-activo",(leaf) => new VistaRegistroActivo(leaf, this));
+        this.registerView("vista-resumen-semanal", (leaf) => new VistaResumenSemanal(leaf, this));
+        this.registerView("vista-registro-diario", (leaf) => new VistaRegistroDiario(leaf, this));
 
         // cargar API registro Tiempo
         this.registroTiempoAPI = new registroTiempoAPI(this);
@@ -53,6 +60,7 @@ export default class ManagementPlugin extends Plugin {
         this.addOnsAPI = new addOnsAPI(this);
         this.YAMLUpdaterAPI = new YAMLUpdaterAPI(this);
         this.menuHoyAPI = new menuHoyAPI(this);
+        this.menuSemanalAPI = new menuSemanalAPI(this);
         this.subsistemasAPI = new subsistemasAPI(this);
         this.newInbox = ingresarBandejaEntrada.bind(this);
 
@@ -62,6 +70,7 @@ export default class ManagementPlugin extends Plugin {
         this.statusBarExtension = new StatusBarExtension(this);
         this.moduloRegistroTiempo = new ModuloRegistroTiempo(this);
         this.moduloBase = new ModuloBase(this);
+        //this.moduloTerceros = new ModuloTerceros(this);
         this.moduloGTD = new ModuloGTD(this);
         this.applyConfiguration();
         // Aplica la configuración inicial basada en los ajustes cargados o predeterminados.
@@ -93,6 +102,8 @@ export default class ManagementPlugin extends Plugin {
       } else {
           this.moduloGTD?.deactivate(this);
       }
+
+      //this.moduloTerceros?.activate(this);
 
     }
     

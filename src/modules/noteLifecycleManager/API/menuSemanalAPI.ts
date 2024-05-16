@@ -2,13 +2,13 @@ import {Notice, TFile} from 'obsidian'
 import {DateTime, Duration} from 'luxon'
 import { starterAPI } from './starterAPI';
 import { utilsAPI } from '../../moduloRegistroTiempo/API/utilsAPI';
-import { registroTiempoAPI } from '../../moduloRegistroTiempo/API/registroTiempoAPI';
+import { VistaResumenSemanal } from '../views/vistaResumenSemanal';
 
-export class menuHoyAPI {
+export class menuSemanalAPI {
     constructor(plugin: Plugin) {
         this.plugin = plugin;
         this.app = plugin.app;  // Guarda una referencia a la aplicación Obsidian para acceder a sus métodos y propiedades
-        this.registroTiempoAPI = new registroTiempoAPI(this.plugin);
+        // this.registroTiempoAPI = new registroTiempoAPI(this.plugin);
     }
 
     // Función para crear y mostrar el botón inicial "Menú hoy"
@@ -16,7 +16,7 @@ export class menuHoyAPI {
         dv.container.innerHTML = ''; // Limpiar el contenedor
 
         const botonMenuHoy = document.createElement('button');
-        botonMenuHoy.textContent = 'Menú hoy';
+        botonMenuHoy.textContent = 'Menú Semanal';
         dv.container.appendChild(botonMenuHoy);
 
         botonMenuHoy.onclick = async () => {
@@ -29,7 +29,7 @@ export class menuHoyAPI {
         dv.container.innerHTML = ''; // Limpiar el contenedor para remover el botón de menú
 
         const botones = [
-            "Hábitos", "Balance", "Registro de Tareas", "Notas día", "Personales"
+            "Resumen diario", "Agradecimientos", "Creadas", "Modificadas", "x Fecha", "Tareas Cerradas"
         ];
 
         // Crear y mostrar cada botón
@@ -38,20 +38,23 @@ export class menuHoyAPI {
             boton.textContent = textoBoton;
             boton.onclick = async () => {
                 switch(textoBoton) {
-                    case 'Balance':
-                        await this.mostrarBotonBalancePersonal(dv);
+                    case 'Resumen diario':
+                        await this.mostrarResumenDiario(dv);
                         break;
-                    case 'Hábitos':
-                        await this.mostrarFormularioHabitos(dv);
+                    case 'Agradecimientos':
+                        await this.mostrarAgradecimientos(dv);
                         break;
-                    case 'Registro de Tareas':
-                        await this.mostrarBotonRegistroTareas(dv);
+                    case 'Creadas':
+                        await this.mostrarCreadas(dv);
                         break;
-                    case 'Notas día':
-                        await this.mostrarBotonesNotasDía(dv);
+                    case 'Modificadas':
+                        await this.mostrarModificadas(dv);
                         break;
-                    case 'Personales':
-                        await this.mostrarBotonesNotasPersonales(dv);
+                    case 'x Fecha':
+                        await this.mostrarxFecha(dv);
+                        break;
+                    case 'Tareas Cerradas':
+                        await this.mostrarTareasCerradas(dv);
                         break;
                     default:
                         console.log(`${textoBoton} presionado.`);
@@ -100,6 +103,31 @@ export class menuHoyAPI {
             new Notice('Error al actualizar el YAML.');
         }
     }
+
+    async mostrarResumenDiario(dv){
+        debugger;
+
+        // Obtener el leaf activo actual
+        const activeLeaf = app.workspace.activeLeaf;
+
+        // Obtener el path del TFile asociado con el leaf activo, si existe
+        const currentFilePath = activeLeaf.view?.file?.path;
+
+        // Crear una nueva división a la derecha del leaf activo
+        const newLeaf = await app.workspace.splitActiveLeaf('vertical');
+
+        // Configurar el nuevo leaf para mostrar tu vista personalizada
+        // y pasar el path del TFile como parte del estado
+ 
+        await newLeaf.setViewState({
+            type: "vista-resumen-semanal",
+        });
+ 
+        app.workspace.revealLeaf(newLeaf);
+    }
+    
+
+
 
     // Método adaptado para mostrarBotonBalancePersonal
     async mostrarBotonBalancePersonal(dv) {
@@ -420,23 +448,110 @@ export class menuHoyAPI {
 
 
     async mostrarRegistrosHoy(dv) {
-           // Obtener el leaf activo actual
-           const activeLeaf = app.workspace.activeLeaf;
+        dv.container.innerHTML = ''; // Limpiar el contenedor de Dataview
+        
+        // Obtén la fecha actual basada en el nombre del archivo
+        const fechaHoy = DateTime.fromFormat(app.workspace.getActiveFile().basename.split(" ")[0], 'yyyy-MM-dd', { locale: 'es' });
+       
+        // Encuentra archivos que contienen registros de tiempo
+        const folder = this.plugin.settings.folder_RegistroTiempo
+        const files = app.vault.getMarkdownFiles().filter(file => file.path.includes(folder));
 
-           // Obtener el path del TFile asociado con el leaf activo, si existe
-           const currentFilePath = activeLeaf.view?.file?.path;
-   
-           // Crear una nueva división a la derecha del leaf activo
-           const newLeaf = await app.workspace.splitActiveLeaf('vertical');
-   
-           // Configurar el nuevo leaf para mostrar tu vista personalizada
-           // y pasar el path del TFile como parte del estado
+        // Lee y procesa el contenido de cada archivo para extraer registros de tiempo
+        let totalDia = 0;
+        let registrosHoy = [];
+        
+        for (let file of files) {
+            
+            let metadata = app.metadataCache.getFileCache(file)?.frontmatter;
+
+            if (metadata?.horaInicio) {
+                let horaInicio = DateTime.fromFormat(metadata.horaInicio, 'yyyy-MM-dd EEEE HH:mm', { locale: 'es' });
+                const startOfDay = horaInicio.startOf('day');
     
-           await newLeaf.setViewState({
-               type: "vista-registro-diario",
-           });
+                if (startOfDay.ts === fechaHoy.startOf('day').ts) {
+                    registrosHoy.push({path: file.path, frontmatter : metadata}); // Corregido para agregar el objeto archivo directamente
+                    // Asegúrate de convertir tiempoTrabajado a número antes de sumar
+                    totalDia += metadata.tiempoTrabajado ? parseInt(metadata.tiempoTrabajado) : 0;
+                }
+            }
+        }
+        // Mostrar el total de tiempo trabajado hoy
+        dv.header(3, "Tiempo registrado hoy: " + Duration.fromMillis(totalDia).toFormat('hh:mm:ss'));
+
+
+            // Ordena los registros por hora de inicio antes de generar la tabla
+        registrosHoy.sort((a, b) => {
+            
+                // Verifica si horaInicio está presente y es una cadena válida para ambos objetos
+                if (typeof a.frontmatter.horaInicio === 'string' && typeof b.frontmatter.horaInicio === 'string') {
+                    try {
+                        const millisA = DateTime.fromFormat(a.frontmatter.horaInicio, 'yyyy-MM-dd EEEE HH:mm', { locale: 'es' }).toMillis();
+                        const millisB = DateTime.fromFormat(b.frontmatter.horaInicio, 'yyyy-MM-dd EEEE HH:mm', { locale: 'es' }).toMillis();
+                        return millisB - millisA;
+                    } catch (e) {
+                        console.error("Error parsing dates:", e);
+                        return 0;
+                    }
+                } else {
+                    // Manejo de casos donde los datos no sean strings válidos
+                    console.warn('Invalid date format for sorting:', a.horaInicio, b.horaInicio);
+                    return 0;
+                }
+            });
+                
+if (registrosHoy.length>0){
+// Crea la tabla HTML
+const table = dv.container.createEl('table', {cls: 'dataview table'});
+table.style.width = '100%';
+
+// Crea y añade los encabezados de la tabla
+const header = dv.el('tr', '', table);
+["Registro", "Descripción", "Hora Inicio", "Tiempo", "Estado", "Id", "Acción"].forEach(text => dv.el('th', text, header));
+
+// Crea y añade cada fila de registro a la tabla
+registrosHoy.forEach(registro => {
+    const row = dv.el('tr','',table)
+    dv.el('td', dv.func.link(registro.path,registro.frontmatter.aliases[0]), row);
+     // Añade la celda de descripción y título
+    dv.el('td', registro.frontmatter.descripcion ? registro.frontmatter.descripcion : 'Sin descripción', row);
+    dv.el('td', DateTime.fromFormat(registro.frontmatter.horaInicio, 'yyyy-MM-dd EEEE HH:mm', { locale: 'es' }).toFormat('h:mm a') +
+    " / " + DateTime.fromFormat(registro.frontmatter.horaFinal, 'yyyy-MM-dd EEEE HH:mm', { locale: 'es' }).toFormat('h:mm a'), row);
+    if (registro.frontmatter.estado === "🟢"){
+    // Separamos la fecha y la hora, y eliminamos el día de la semana
+    let partes = registro.frontmatter.horaInicio.split(' ');
+    // Reorganizamos las partes para formar una fecha en formato "YYYY-MM-DDTHH:mm"
+    let fechaHoraISO = `${partes[0]}T${partes[2]}`;
+    // Parseamos la fecha en formato ISO
+    let inicio = Date.parse(fechaHoraISO);
+    let ahora = Date.now();
+    let diferencia = ahora - inicio; // Diferencia en milisegundos
+    dv.el('td', Duration.fromMillis(diferencia).toFormat('h:mm'), row)
+    }else{
+    dv.el('td', Duration.fromMillis(registro.frontmatter.tiempoTrabajado).toFormat('h:mm'), row);
+    }
+    dv.el('td', registro.frontmatter.estado, row);
+    dv.el('td', registro.frontmatter.id, row);
+    if (registro.frontmatter.estado === "🟢"){
+        dv.el('td', this.createButtonTable('Cerrar', async () => {
+        debugger
+        // Lógica que manejará el clic del botón.
+        // Por ejemplo, retomar la tarea representada por `registro`
+        await this.registroTiempoAPI.cerrarRegistro(registro.frontmatter.id);
+        //this.cerrarTarea(registro.frontmatter.id);
+        }), row);
+    }else{
+    dv.el('td', this.createButtonTable('Retomar', () => {
+        // Lógica que manejará el clic del botón.
+        // Por ejemplo, retomar la tarea representada por `registro`
+        this.retomarTarea(registro.frontmatter.id);
+        }), row);
+    }
+    });
+    }
+    const botonSalir = this.agregarBotonSalir(dv);
+    dv.container.appendChild(botonSalir);
     
-           app.workspace.revealLeaf(newLeaf);    
 }
 
     createButtonTable(buttonText, onClickCallback) {
