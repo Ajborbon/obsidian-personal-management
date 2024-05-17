@@ -1,0 +1,4 @@
+---
+typeName: Mensual
+type: M
+---
