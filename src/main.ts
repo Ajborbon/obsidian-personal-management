@@ -19,6 +19,7 @@
   import { subsistemasAPI } from './modules/noteLifecycleManager/API/subsistemasAPI';
   import { VistaResumenSemanal } from './modules/noteLifecycleManager/views/vistaResumenSemanal';
   import { VistaRegistroDiario } from './modules/noteLifecycleManager/views/vistaRegistroDiario';
+  import GPThoraPlugin from './modules/GPThora/GPThora';
 
 export default class ManagementPlugin extends Plugin {
   settings: PluginMainSettings | undefined;
@@ -63,7 +64,7 @@ export default class ManagementPlugin extends Plugin {
         this.menuSemanalAPI = new menuSemanalAPI(this);
         this.subsistemasAPI = new subsistemasAPI(this);
         this.newInbox = ingresarBandejaEntrada.bind(this);
-
+        
         // Añade la pestaña de configuración - 
         this.addSettingTab(new PluginMainSettingsTab(this));
         // Inicializa las instancias de los módulos
@@ -75,7 +76,13 @@ export default class ManagementPlugin extends Plugin {
         this.applyConfiguration();
         // Aplica la configuración inicial basada en los ajustes cargados o predeterminados.
         console.log('Iniciando carga de plugin de Gestión Personal');
-      
+        
+        this.registerGPThora();
+      }
+
+      registerGPThora() {
+        const gptHora = new GPThoraPlugin(this.app);
+        gptHora.onload();
       }
 
       applyConfiguration() {
