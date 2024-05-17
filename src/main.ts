@@ -19,7 +19,7 @@
   import { subsistemasAPI } from './modules/noteLifecycleManager/API/subsistemasAPI';
   import { VistaResumenSemanal } from './modules/noteLifecycleManager/views/vistaResumenSemanal';
   import { VistaRegistroDiario } from './modules/noteLifecycleManager/views/vistaRegistroDiario';
-  import GPThoraPlugin from './modules/GPThora/GPThora';
+  import GPThora from './modules/GPThora/GPThora';
 
 export default class ManagementPlugin extends Plugin {
   settings: PluginMainSettings | undefined;
@@ -81,9 +81,9 @@ export default class ManagementPlugin extends Plugin {
       }
 
       registerGPThora() {
-        const gptHora = new GPThoraPlugin(this.app);
+        const gptHora = new GPThora(this.app);  // Crear una instancia de GPThora
         gptHora.onload();
-      }
+    }
 
       applyConfiguration() {
         // Modulo Base es el módulo sobre el que estoy haciendo pruebas de desarrollo.

@@ -1,16 +1,18 @@
-import { App, Modal, Plugin } from 'obsidian';
+import { App, Modal } from 'obsidian';
 
-export default class GPThoraPlugin extends Plugin {
+export default class GPThora {
+    app: App;
+
     constructor(app: App) {
-        super(app);
+        this.app = app;
     }
 
-    async onload() {
-        this.addCommand({
+    onload() {
+        this.app.commands.addCommand({
             id: 'show-local-time',
-            name: 'Hora Local',
+            name: 'Mostrar Hora Local',
             callback: () => this.showLocalTimeModal()
-          });
+        });
     }
 
     showLocalTimeModal() {
@@ -25,7 +27,7 @@ class LocalTimeModal extends Modal {
     }
 
     onOpen() {
-        const { contentEl } = this ;
+        const { contentEl } = this;
         contentEl.empty();
 
         const now = new Date();
@@ -45,7 +47,7 @@ class LocalTimeModal extends Modal {
     }
 
     onClose() {
-        const { contentEl } = this ;
+        const { contentEl } = this;
         contentEl.empty();
     }
 }
