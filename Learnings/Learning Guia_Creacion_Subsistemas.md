@@ -16,6 +16,14 @@ folder_Anotaciones: "Anotaciones/Notas",
 folder_ABlog: "Subsistemas/Artículos Blog/Artículos",
 folder_Desarrollos: "Subsistemas/Desarrollos/Códigos"
 ```
+Las interfaces de estas rutas están definidas en el archivo `src/interfaces/pluginMainSettings.ts`. Ejemplo
+
+```typescript
+folder_RegistroTiempo: string,
+folder_Anotaciones: string,
+folder_ABlog: string,
+folder_Desarrollos: string
+```
 
 ### Plantillas
 

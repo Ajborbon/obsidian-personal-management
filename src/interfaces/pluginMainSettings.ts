@@ -99,6 +99,14 @@ export interface PluginMainSettings {
     indice_ObjCompassAnual: string,
     folder_ObjCompassTrimestral: string,
     indice_ObjCompassTrimestral: string,
+
+    // Registros Personales
+    folder_Agradecimientos: string,
+    indice_Agradecimientos: string,
+    folder_Reflexiones: string,
+    indice_Reflexiones: string,
+    folder_RegistrosAkashikos: string,
+    indice_RegistrosAkashikos: string,
     }
 
 

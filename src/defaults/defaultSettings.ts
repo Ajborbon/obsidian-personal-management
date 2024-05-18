@@ -79,5 +79,15 @@ export const DEFAULT_SETTINGS: PluginMainSettings = {
   indice_ObjCompassAnual: "Estructura/Compass/Objetivos/Indice Compass Anual",
   folder_ObjCompassTrimestral: "Estructura/Compass/Objetivos/Trimestral",
   indice_ObjCompassTrimestral: "Estructura/Compass/Objetivos/Indice Compass trimestral",
+
+
+   // Registros Personales
+   folder_Agradecimientos: "Registros Personales/Agradecimientos/Notas",
+   indice_Agradecimientos: "Registros Personales/Agradecimientos/Indice Agradecimientos",
+   folder_Reflexiones: "Registros Personales/Reflexiones/Notas",
+   indice_Reflexiones: "Registros Personales/Reflexiones/Indice Reflexiones",
+   folder_RegistrosAkashikos: "Registros Personales/Registros Akashikos/Notas",
+   indice_RegistrosAkashikos: "Registros Personales/Registros Akashikos/Indice Registros Akashikos",
+   
 };
 
