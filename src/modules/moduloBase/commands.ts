@@ -1,7 +1,6 @@
 import {crearCarpeta} from "./utils/crearCarpeta"
 import {crearPlantilla} from "./utils/crearPlantilla"
 import {insertFileLink} from "./utils/fileLinkModal"
-import {plantilla} from "../../plantillas/Anotaciones/Plt - Anotaciones"
 import {TFile, TFolder} from "obsidian"
 import {createNoteFromTemplate} from "./utils/createNoteFromTemplate"
 
@@ -17,22 +16,6 @@ export function registerCommands(plugin: Plugin): void {
         }
     });
     plugin.registeredCommandIdsMB.push(comando1.id);
-
-    const comando2 = plugin.addCommand({
-        id: "crear-template",
-        name: "Crear un archivo template",
-        callback: async () => {
-             
-            const archivo = await crearPlantilla(plantilla);
-            if (!archivo) {
-                new Notice("No se pudo crear el archivo.");
-                return;
-            }
-         
-        },
-    });
-    // Almacenar el ID del comando en registeredCommandIds.
-    plugin.registeredCommandIdsMB.push(comando2.id);
 
 
     const comando3 = plugin.addCommand({

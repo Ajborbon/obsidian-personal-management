@@ -1,4 +1,3 @@
-import {plantilla} from '../../../plantillas/Anotaciones/Plt - Anotaciones';
 import { TFile } from 'obsidian';
 
 export async function crearPlantilla(contenido: string): Promise<TFile> {
