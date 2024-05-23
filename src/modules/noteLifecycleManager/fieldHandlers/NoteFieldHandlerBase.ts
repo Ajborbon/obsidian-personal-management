@@ -92,4 +92,8 @@ export class NoteFieldHandlerBase implements NoteFieldHandlerBase{
     return '🟢';
   }
 
+  async getNota(): Promise<any> {
+    return this.nota;
+}
+
 }

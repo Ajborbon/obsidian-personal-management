@@ -22,6 +22,10 @@ export interface PluginMainSettings {
     folder_Estudio: string,
     indice_Estudio: string,    
     // Lectura
+    folder_RepositorioLibros: string,
+    indice_RepositorioLibros: string,
+    folder_Biblioteca: string,
+    indice_Biblioteca: string,
     folder_LecturaSesiones: string,
     indice_LecturaSesiones: string,
     folder_LecturaResumenes: string,

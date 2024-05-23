@@ -16,6 +16,8 @@ import { AreaVidaFieldHandler } from '../fieldHandlers/AreaVidaFieldHandler';
 import { nodoAreaVidaFieldHandler } from '../fieldHandlers/nodoAreaVidaFieldHandler';
 import { ObjCompassAnualFieldHandler} from '../fieldHandlers/ObjCompassAnualFieldHandler';
 import { CompassPlaneacionAnual_FH } from '../fieldHandlers/CompassPlaneacionAnual_FH';
+import { RepositorioLibros_FH } from '../fieldHandlers/RepositorioLibros_FH';
+import { Biblioteca_FH } from '../fieldHandlers/Biblioteca_FH';
 // obsidian
 
 export class starterAPI {
@@ -86,7 +88,13 @@ export class starterAPI {
           case "CAI":
             fieldHandler = new CompassPlaneacionAnual_FH(this.tp, this.infoSubsistema, this.plugin);
             break;
+          case "RL":
+            fieldHandler = new RepositorioLibros_FH(this.tp, this.infoSubsistema, this.plugin);
+            break;
           default:
+          case "BL":
+            fieldHandler = new Biblioteca_FH(this.tp, this.infoSubsistema, this.plugin);
+            break;
             throw new Error(`No se ha definido un manejador de campos para el tipo ${this.infoSubsistema.type}`);
         }
         

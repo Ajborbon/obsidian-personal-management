@@ -20,6 +20,7 @@
   import { VistaResumenSemanal } from './modules/noteLifecycleManager/views/vistaResumenSemanal';
   import { VistaRegistroDiario } from './modules/noteLifecycleManager/views/vistaRegistroDiario';
   import GPThora from './modules/GPThora/GPThora';
+  import { librosAPI } from './modules/moduloLibros/librosAPI'; 
 
 export default class ManagementPlugin extends Plugin {
   settings: PluginMainSettings | undefined;
@@ -41,8 +42,10 @@ export default class ManagementPlugin extends Plugin {
   menuHoyAPI: menuHoyAPI | undefined;
   menuSemanalAPI: menuSemanalAPI | undefined;
   subsistemasAPI: subsistemasAPI | undefined;
+  librosAPI: librosAPI | undefined;
   newInbox : any;
   tp: any;
+
   // Declara una propiedad para mantener una instancia de `StatusBarExtension`.
   
 
@@ -63,6 +66,7 @@ export default class ManagementPlugin extends Plugin {
         this.menuHoyAPI = new menuHoyAPI(this);
         this.menuSemanalAPI = new menuSemanalAPI(this);
         this.subsistemasAPI = new subsistemasAPI(this);
+        this.librosAPI = new librosAPI(this);
         this.newInbox = ingresarBandejaEntrada.bind(this);
         
         // Añade la pestaña de configuración - 
