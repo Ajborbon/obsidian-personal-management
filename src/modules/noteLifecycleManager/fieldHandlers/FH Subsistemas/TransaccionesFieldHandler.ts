@@ -1,5 +1,5 @@
-import { NoteFieldHandler } from './NoteFieldHandler'; // Asegúrate de importar NoteFieldHandler si es necesario
-import { FieldHandlerUtils } from '../FieldHandlerUtils';
+import { NoteFieldHandler } from '../FH Base/NoteFieldHandler'; // Asegúrate de importar NoteFieldHandler si es necesario
+import { FieldHandlerUtils } from '../../FieldHandlerUtils';
 import { TFile } from 'obsidian';
 
 export class TransaccionesFieldHandler extends NoteFieldHandler{

@@ -1,23 +1,24 @@
-
+/* src/modules/noteLifecycleManager/API/starterAPI.ts */
 import { TFile, Notice, TFolder } from 'obsidian';
 import {DateTime , Duration} from 'luxon';
 // Interfaces
 import { NoteFieldHandler } from '../Interfaces/NoteFieldHandler';
 // FileHandlers
-import { AgradecimientosFieldHandler } from '../fieldHandlers/AgradecimientosFieldHandler';
-import { ContenidoParaEstudioFieldHandler } from '../fieldHandlers/CPEFieldHandler';
+import { AgradecimientosFieldHandler } from '../fieldHandlers/FH Subsistemas/AgradecimientosFieldHandler';
+import { ReflexionesFieldHandler } from '../fieldHandlers/FH Subsistemas/ReflexionesFieldHandlers';
+import { ContenidoParaEstudioFieldHandler } from '../fieldHandlers/FH Subsistemas/CPEFieldHandler';
 import { RecursosRecurrentesFieldHandler } from '../fieldHandlers/RRFieldHandler';
-import { PGTDFieldHandler } from '../fieldHandlers/PGTDFieldHandler';
-import { PQFieldHandler } from '../fieldHandlers/PQFieldHandler';
-import { AnotacionesFieldHandler } from '../fieldHandlers/AnotacionesFieldHandler';
-import { TransaccionesFieldHandler } from '../fieldHandlers/TransaccionesFieldHandler';
-import { AreasInteresFieldHandler } from '../fieldHandlers/AreasInteresFieldHandler';
-import { AreaVidaFieldHandler } from '../fieldHandlers/AreaVidaFieldHandler';
-import { nodoAreaVidaFieldHandler } from '../fieldHandlers/nodoAreaVidaFieldHandler';
+import { PGTDFieldHandler } from '../fieldHandlers/FH Estructura/PGTDFieldHandler';
+import { PQFieldHandler } from '../fieldHandlers/FH Estructura/PQFieldHandler';
+import { AnotacionesFieldHandler } from '../fieldHandlers/FH Subsistemas/AnotacionesFieldHandler';
+import { TransaccionesFieldHandler } from '../fieldHandlers/FH Subsistemas/TransaccionesFieldHandler';
+import { AreasInteresFieldHandler } from '../fieldHandlers/FH Estructura/AreasInteresFieldHandler';
+import { AreaVidaFieldHandler } from '../fieldHandlers/FH Estructura/AreaVidaFieldHandler';
+import { nodoAreaVidaFieldHandler } from '../fieldHandlers/FH Estructura/nodoAreaVidaFieldHandler';
 import { ObjCompassAnualFieldHandler} from '../fieldHandlers/ObjCompassAnualFieldHandler';
 import { CompassPlaneacionAnual_FH } from '../fieldHandlers/CompassPlaneacionAnual_FH';
-import { RepositorioLibros_FH } from '../fieldHandlers/RepositorioLibros_FH';
-import { Biblioteca_FH } from '../fieldHandlers/Biblioteca_FH';
+import { RepositorioLibros_FH } from '../fieldHandlers/FH Subsistemas/RepositorioLibros_FH';
+import { Biblioteca_FH } from '../fieldHandlers/FH Subsistemas/Biblioteca_FH';
 // obsidian
 
 export class starterAPI {
@@ -91,10 +92,13 @@ export class starterAPI {
           case "RL":
             fieldHandler = new RepositorioLibros_FH(this.tp, this.infoSubsistema, this.plugin);
             break;
-          default:
-          case "BL":
-            fieldHandler = new Biblioteca_FH(this.tp, this.infoSubsistema, this.plugin);
+          case "LB":
+              fieldHandler = new Biblioteca_FH(this.tp, this.infoSubsistema, this.plugin);
+              break;
+          case "Rx":
+            fieldHandler = new ReflexionesFieldHandler(this.tp, this.infoSubsistema, this.plugin);
             break;
+          default:
             throw new Error(`No se ha definido un manejador de campos para el tipo ${this.infoSubsistema.type}`);
         }
         

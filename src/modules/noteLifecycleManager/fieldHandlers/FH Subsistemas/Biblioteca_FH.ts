@@ -1,7 +1,7 @@
 import { TFile, TFolder, Notice } from 'obsidian';
-import { FieldHandlerUtils } from '../FieldHandlerUtils';
-import { NoteFieldHandler } from './NoteFieldHandler'; // Asegúrate de importar NoteFieldHandler si es necesario
-import { Biblioteca_FH } from '../Interfaces/Biblioteca_FH';
+import { FieldHandlerUtils } from '../../FieldHandlerUtils';
+import { NoteFieldHandler } from '../FH Base/NoteFieldHandler'; // Asegúrate de importar NoteFieldHandler si es necesario
+import { Biblioteca_FH } from '../../Interfaces/Biblioteca_FH';
 
 export class Biblioteca_FH extends NoteFieldHandler implements Biblioteca_FH{
     constructor(tp: any, folder: string, plugin: any) {

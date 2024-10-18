@@ -1,3 +1,4 @@
+/* File Location:  src/modules/moduloGTD/index.ts */
 import { Plugin, TFile } from 'obsidian';
 import { registerCommands, deactivateCommands } from "./commands";
 

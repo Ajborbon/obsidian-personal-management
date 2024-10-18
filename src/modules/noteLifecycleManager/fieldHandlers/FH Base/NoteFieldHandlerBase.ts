@@ -1,6 +1,6 @@
-import { NoteFieldHandlerBase } from '../Interfaces/NoteFieldHandlerBase';
+import { NoteFieldHandlerBase } from '../../Interfaces/NoteFieldHandlerBase';
 import { TFile } from 'obsidian';
-import { FieldHandlerUtils } from '../FieldHandlerUtils';
+import { FieldHandlerUtils } from '../../FieldHandlerUtils';
 
 export class NoteFieldHandlerBase implements NoteFieldHandlerBase{
   private tp: any;

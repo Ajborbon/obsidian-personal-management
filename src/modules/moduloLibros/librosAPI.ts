@@ -13,6 +13,62 @@ export class librosAPI {
         this.tp = this.plugin.tp;
     }
 
+      async kindle(dv) {
+    let folderPrincipal = this.plugin.settings["folder_KindleNotes"];
+    const libraryFolder = this.plugin.app.vault.getAbstractFileByPath(folderPrincipal);
+
+    if (!(libraryFolder instanceof TFolder)) {
+      new Notice(`La carpeta ${folderPrincipal} no existe.`);
+      return;
+    }
+
+    let archivoActivo = this.plugin.app.workspace.getActiveFile();
+    if (!archivoActivo) {
+      new Notice("No hay una nota activa.");
+      return;
+    }
+
+    const metadata = this.plugin.app.metadataCache.getFileCache(archivoActivo);
+    const yamlData = metadata?.frontmatter || {};
+
+    if (yamlData.kindleNote) {
+      const linkElement = document.createElement("a");
+      linkElement.href = yamlData.kindleNote;
+      linkElement.textContent = "Ver en Kindle";
+      dv.container.innerHTML = ""; // Limpiar el contenedor
+      dv.container.appendChild(linkElement);
+    } else {
+      // Mostrar suggester para elegir la nota Kindle correspondiente
+      const notesList = await this.getNotesFromFolder(folderPrincipal);
+
+      if (notesList.length === 0) {
+        new Notice("No hay notas en el folder de Kindle.");
+        return;
+      }
+
+      const suggestorConfig: SuggesterConfig<TFile> = {
+        onChooseItem: async (selectedNote, evt): Promise<void> => {
+          yamlData.kindleNote = selectedNote.path;
+          await this.plugin.app.vault.modify(archivoActivo, `---\n${yamlData}\n...`);
+          new Notice("Se ha guardado el link de la nota Kindle en el archivo actual.");
+        },
+        getItems: () => notesList,
+        renderSuggestion: (item: TFile, el: HTMLElement) => {
+          el.textContent = item.basename;
+        }
+      };
+
+      new Suggester(this.plugin, suggestorConfig).start();
+    }
+  }
+
+async getNotesFromFolder(folderPath: string): Promise<TFile[]> {
+  const folderFiles = await this.plugin.app.vault.getAllLoadedFiles();
+  return folderFiles.filter(file => file instanceof TFile && file.path.startsWith(folderPath));
+}
+
+
+
       // Función para crear y mostrar el botón inicial "Menú hoy"
       async mostrarBotonCrearLibro(dv) {
         let folderPrincipal = this.plugin.settings["folder_Biblioteca"];

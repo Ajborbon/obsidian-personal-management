@@ -1,0 +1,219 @@
+.
+|-- CHANGELOG.md
+|-- Learnings
+|   |-- 2024-05-17 1512 Learnings.md
+|   |-- 20240516 - LEARNINGS.md
+|   `-- Learning Guia_Creacion_Subsistemas.md
+|-- README.md
+|-- data.json
+|-- dist
+|   |-- main.d.ts
+|   |-- main.js
+|   `-- main.js.map
+|-- esbuild.config.mjs
+|-- estructura_plugin.txt
+|-- main.js
+|-- manifest.json
+|-- package-lock.json
+|-- package.json
+|-- rollup.config.mjs
+|-- src
+|   |-- Plantillas
+|   |   |-- Anotaciones
+|   |   |   `-- Notas
+|   |   |       `-- Plt - Anotaciones.md
+|   |   |-- Estructura
+|   |   |   |-- Areas de Interes
+|   |   |   |   `-- Plt - AreasInteres.md
+|   |   |   |-- Areas de Vida
+|   |   |   |   |-- Plt - AreasVida.md
+|   |   |   |   `-- Plt - nodoAreasVida.md
+|   |   |   |-- Compass
+|   |   |   |   |-- Objetivos
+|   |   |   |   |   |-- Anual
+|   |   |   |   |   |   `-- Plt - ObjCompassAnual.md
+|   |   |   |   |   `-- Trimestral
+|   |   |   |   `-- Reportes
+|   |   |   |       |-- Anual
+|   |   |   |       |   |-- Plt - Compass_DesempeñoAnual.md
+|   |   |   |       |   `-- Plt - Compass_PlaneacionAnual.md
+|   |   |   |       `-- Trimestral
+|   |   |   |           `-- Plt - Compass_PlaneacionTrimestral.md
+|   |   |   |-- GTD
+|   |   |   |   `-- Proyectos GTD
+|   |   |   |       `-- Proyectos
+|   |   |   |           `-- Plt - ProyectosGTD.md
+|   |   |   |-- Journal
+|   |   |   |   |-- Anual
+|   |   |   |   |   `-- Notas
+|   |   |   |   |       `-- Plt - Anual.md
+|   |   |   |   |-- Diario
+|   |   |   |   |   `-- Notas
+|   |   |   |   |       `-- Plt - Diario.md
+|   |   |   |   |-- Mensual
+|   |   |   |   |   `-- Notas
+|   |   |   |   |       `-- Plt - Mensual.md
+|   |   |   |   |-- Semanal
+|   |   |   |   |   `-- Notas
+|   |   |   |   |       |-- Plt - Semana API.md
+|   |   |   |   |       `-- Plt - Semanal.md
+|   |   |   |   `-- Trimestral
+|   |   |   |       `-- Notas
+|   |   |   |           `-- Plt - Trimestral.md
+|   |   |   |-- Proyectos de Q
+|   |   |   |   `-- Plt - ProyectosQ.md
+|   |   |   `-- Recursos Recurrentes
+|   |   |       `-- Recursos
+|   |   |           `-- Plt - RecursosRecurrentes.md
+|   |   |-- Excalidraw
+|   |   |   |-- Adjuntos
+|   |   |   |-- Default.md
+|   |   |   |-- Default.svg
+|   |   |   |-- Marca AJBB.md
+|   |   |   `-- Paleta Color pastel.md
+|   |   |-- Indice Plantillas.md
+|   |   |-- Registros Personales
+|   |   |   |-- Agradecimientos
+|   |   |   |   `-- Notas
+|   |   |   |       `-- Plt - Agradecimientos.md
+|   |   |   |-- Reflexiones
+|   |   |   |   `-- Notas
+|   |   |   |       `-- Plt - Reflexiones.md
+|   |   |   `-- Registros Akashikos
+|   |   |       `-- Notas
+|   |   |           `-- Plt - Registros Akashikos.md
+|   |   `-- Subsistemas
+|   |       |-- Contenido para Estudiar
+|   |       |   `-- Contenido
+|   |       |       `-- Plt - Contenido para Estudio.md
+|   |       |-- Desarrollo
+|   |       |   `-- Plt - Desarrollos.md
+|   |       |-- Modulos Sistema Gestion
+|   |       |   `-- Plt - Modulos Sistema Gestion.md
+|   |       |-- Registro Tiempo
+|   |       |   |-- Plt - registro Tiempo API.md
+|   |       |   `-- Registros
+|   |       |       `-- Plt - RegistroTiempo.md
+|   |       `-- Transacciones
+|   |           `-- Plt - Transacciones.md
+|   |-- defaults
+|   |   `-- defaultSettings.ts
+|   |-- interfaces
+|   |   `-- pluginMainSettings.ts
+|   |-- main.ts
+|   |-- modules
+|   |   |-- GPThora
+|   |   |   `-- GPThora.ts
+|   |   |-- M_busquedaAvanzada
+|   |   |   |-- activadores.ts
+|   |   |   |-- search
+|   |   |   |   |-- FuzzyNoteSuggester.ts
+|   |   |   |   `-- noteSearcher.ts
+|   |   |   |-- ui
+|   |   |   |   |-- modal.ts
+|   |   |   |   `-- ribbonButton.ts
+|   |   |   `-- utils
+|   |   |       `-- searchUtils.ts
+|   |   |-- modales
+|   |   |   |-- fuzzySelectOrCreate.ts
+|   |   |   |-- inboxModal.ts
+|   |   |   `-- seleccionModal.ts
+|   |   |-- moduloAliasStatusBar
+|   |   |   |-- index.ts
+|   |   |   `-- statusBar.ts
+|   |   |-- moduloBase
+|   |   |   |-- commands.ts
+|   |   |   |-- index.ts
+|   |   |   |-- utils
+|   |   |   |   |-- crearCarpeta.ts
+|   |   |   |   |-- crearPlantilla.ts
+|   |   |   |   |-- createNoteFromTemplate.ts
+|   |   |   |   `-- fileLinkModal.ts
+|   |   |   `-- vistaNotaActiva.ts
+|   |   |-- moduloGTD
+|   |   |   |-- commands.ts
+|   |   |   |-- inbox.ts
+|   |   |   `-- index.ts
+|   |   |-- moduloLibros
+|   |   |   `-- librosAPI.ts
+|   |   |-- moduloRegistroTiempo
+|   |   |   |-- API
+|   |   |   |   |-- RTBase.ts
+|   |   |   |   |-- SesionLectura.ts
+|   |   |   |   |-- menuOtro.ts
+|   |   |   |   |-- registroTiempoAPI.ts
+|   |   |   |   |-- updateSesionLectura.ts
+|   |   |   |   `-- utilsAPI.ts
+|   |   |   |-- Interfaces
+|   |   |   |   |-- RTBase.ts
+|   |   |   |   |-- RegistroTiempo.ts
+|   |   |   |   |-- SesionLectura.ts
+|   |   |   |   `-- UpdateSL.ts
+|   |   |   |-- Prueba
+|   |   |   |-- commands.ts
+|   |   |   |-- index.ts
+|   |   |   |-- modals
+|   |   |   |   |-- cambioHF.ts
+|   |   |   |   `-- modal_Ahora.ts
+|   |   |   |-- ribbonMenu.ts
+|   |   |   |-- utils.ts
+|   |   |   `-- views
+|   |   |       `-- vistaRTActivo.ts
+|   |   |-- modulo_Terceros
+|   |   |   |-- commands.ts
+|   |   |   |-- index.ts
+|   |   |   `-- utils
+|   |   |       `-- googleCalendarPlugin.ts
+|   |   `-- noteLifecycleManager
+|   |       |-- API
+|   |       |   |-- YAMLUpdaterAPI.ts
+|   |       |   |-- addOnsAPI.ts
+|   |       |   |-- menuDiarioAPI.ts
+|   |       |   |-- menuSemanalAPI.ts
+|   |       |   |-- starterAPI back.ts
+|   |       |   |-- starterAPI.ts
+|   |       |   `-- subsistemasAPI.ts
+|   |       |-- FieldHandlerUtils.ts
+|   |       |-- Interfaces
+|   |       |   |-- AgradecimientosFieldHandler.ts
+|   |       |   |-- AnotacionesFieldHandler.ts
+|   |       |   |-- AreaVidaFieldHandler.ts
+|   |       |   |-- Biblioteca_FH.ts
+|   |       |   |-- CompassPlaneacionAnual_FH.ts
+|   |       |   |-- NoteFieldHandler.ts
+|   |       |   |-- NoteFieldHandlerBase.ts
+|   |       |   |-- ObjCompassAnualFieldHandler.ts
+|   |       |   |-- PQFieldHandler.ts
+|   |       |   |-- ReflexionesFieldHandler.ts
+|   |       |   `-- nodoAreaVidaFieldHandler.ts
+|   |       |-- fieldHandlers
+|   |       |   |-- CompassPlaneacionAnual_FH.ts
+|   |       |   |-- FH Base
+|   |       |   |   |-- NoteFieldHandler.ts
+|   |       |   |   `-- NoteFieldHandlerBase.ts
+|   |       |   |-- FH Estructura
+|   |       |   |   |-- AreaVidaFieldHandler.ts
+|   |       |   |   |-- AreasInteresFieldHandler.ts
+|   |       |   |   |-- PGTDFieldHandler.ts
+|   |       |   |   |-- PQFieldHandler.ts
+|   |       |   |   `-- nodoAreaVidaFieldHandler.ts
+|   |       |   |-- FH Subsistemas
+|   |       |   |   |-- AgradecimientosFieldHandler.ts
+|   |       |   |   |-- AnotacionesFieldHandler.ts
+|   |       |   |   |-- Biblioteca_FH.ts
+|   |       |   |   |-- CPEFieldHandler.ts
+|   |       |   |   |-- ReflexionesFieldHandlers.ts
+|   |       |   |   |-- RepositorioLibros_FH.ts
+|   |       |   |   `-- TransaccionesFieldHandler.ts
+|   |       |   |-- ObjCompassAnualFieldHandler.ts
+|   |       |   `-- RRFieldHandler.ts
+|   |       `-- views
+|   |           |-- vistaRegistroDiario.ts
+|   |           `-- vistaResumenSemanal.ts
+|   |-- obsidian.d.ts
+|   |-- settings
+|   `-- settingsTab.ts
+|-- styles.css
+`-- tsconfig.json
+
+82 directories, 135 files

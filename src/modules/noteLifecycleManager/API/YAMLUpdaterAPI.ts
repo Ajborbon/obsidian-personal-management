@@ -8,9 +8,9 @@ export class YAMLUpdaterAPI {
     private plugin: Plugin;
     private infoSubsistema: object; // Asumiendo que es un string
     private tp: object;
-    private nota: object;
     private pathCampos: string; 
-    infoNota: {};
+    private nota: object;
+    private infoNota: object;
 
     constructor(plugin: Plugin) {
         this.plugin = plugin;
@@ -23,8 +23,8 @@ export class YAMLUpdaterAPI {
     
 
     async actualizarNota(infoNota: any, campos: any) {
-        
-        let nota = {}; // Inicializa el objeto nota.
+        debugger;
+        //let nota = {}; // Inicializa el objeto nota.
         Object.assign(this.infoNota, infoNota); 
         
             try {
@@ -51,9 +51,9 @@ export class YAMLUpdaterAPI {
                     if (typeof this[functionName] === 'function') {
                         // Llama a la función de manera dinámica. Si existe un parámetro, pásalo a la función.
                         if (parametro !== null) {
-                            nota[campoName] = await this[functionName](parametro,valorActualCampo);
+                            this.nota[campoName] = await this[functionName](parametro,valorActualCampo);
                         } else {
-                            nota[campoName] = await this[functionName]();
+                            this.nota[campoName] = await this[functionName]();
                         }
                     } else {
                         console.error(`La función ${functionName} no está definida.`);
@@ -63,9 +63,9 @@ export class YAMLUpdaterAPI {
                 
                 
                 // Actualizar la nota
-                if (Object.keys(nota).length > 0) {
+                if (Object.keys(this.nota).length > 0) {
                     // Ejecuta tu código aquí si el objeto `nota` tiene más de una propiedad
-                    await this.updateYAMLFields(nota, infoNota.file.path)
+                    await this.updateYAMLFields(this.nota, infoNota.file.path)
                 }else{
                     //No se encontraron campos para modificar
                 }
@@ -77,7 +77,7 @@ export class YAMLUpdaterAPI {
                 new Notice("No se pudo crear el objeto de registro.");
                 return null;
             }
-        return nota; // Retorna el objeto nota con todas las propiedades agregadas.
+        return this.nota; // Retorna el objeto nota con todas las propiedades agregadas.
     }
     
     async archivarNota(infoNota: any, campos: any) {

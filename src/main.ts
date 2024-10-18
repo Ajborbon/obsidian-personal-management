@@ -1,3 +1,4 @@
+  /* fileLocation: src/main.ts */
   import { Plugin } from 'obsidian';
   import { PluginMainSettingsTab } from './settingsTab';
   import { ModuloBase } from "./modules/moduloBase/index";
@@ -21,6 +22,8 @@
   import { VistaRegistroDiario } from './modules/noteLifecycleManager/views/vistaRegistroDiario';
   import GPThora from './modules/GPThora/GPThora';
   import { librosAPI } from './modules/moduloLibros/librosAPI'; 
+  import { updateSesionLectura } from './modules/moduloRegistroTiempo/API/updateSesionLectura';
+
 
 export default class ManagementPlugin extends Plugin {
   settings: PluginMainSettings | undefined;
@@ -63,6 +66,7 @@ export default class ManagementPlugin extends Plugin {
         this.starterAPI = new starterAPI(this);
         this.addOnsAPI = new addOnsAPI(this);
         this.YAMLUpdaterAPI = new YAMLUpdaterAPI(this);
+        this.updateSesionLectura = new updateSesionLectura(this)
         this.menuHoyAPI = new menuHoyAPI(this);
         this.menuSemanalAPI = new menuSemanalAPI(this);
         this.subsistemasAPI = new subsistemasAPI(this);

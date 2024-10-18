@@ -26,8 +26,10 @@ export interface PluginMainSettings {
     indice_RepositorioLibros: string,
     folder_Biblioteca: string,
     indice_Biblioteca: string,
-    folder_LecturaSesiones: string,
-    indice_LecturaSesiones: string,
+    folder_KindleNotes: string,
+    indice_KindleNotes: string,
+    //folder_LecturaSesiones: string,
+    //indice_LecturaSesiones: string,
     folder_LecturaResumenes: string,
     indice_LecturaResumenes: string,
     // Mentorias

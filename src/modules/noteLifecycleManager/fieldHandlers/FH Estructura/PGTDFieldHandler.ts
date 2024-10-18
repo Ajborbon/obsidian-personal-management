@@ -1,9 +1,8 @@
-import { NoteFieldHandler } from './NoteFieldHandler'; // Asegúrate de importar NoteFieldHandler si es necesario
-import { FieldHandlerUtils } from '../FieldHandlerUtils';
+import { NoteFieldHandler } from '../FH Base/NoteFieldHandler'; // Asegúrate de importar NoteFieldHandler si es necesario
+import { FieldHandlerUtils } from '../../FieldHandlerUtils';
 import { TFile, TFolder, Notice } from 'obsidian';
-import { PQFieldHandler } from '../Interfaces/PQFieldHandler';
 
-export class PQFieldHandler extends NoteFieldHandler implements PQFieldHandler{
+export class PGTDFieldHandler extends NoteFieldHandler{
     constructor(tp: any, folder: string, plugin: any) {
       super(tp, folder, plugin); // Llama al constructor de la clase padre
     }
@@ -434,9 +433,13 @@ export class PQFieldHandler extends NoteFieldHandler implements PQFieldHandler{
     async getRename(){
         let newName, folder;
         debugger;
-        let folderAV = Array.isArray(this.nota.areaVida)? this.nota.areaVida[0] : this.nota.areaVida; 
-        newName = `${this.infoSubsistema.folder}/${this.nota.trimestre}/${folderAV}/${this.infoSubsistema.type} - ${this.nota.id}.md`
-        folder = `${this.infoSubsistema.folder}/${this.nota.trimestre}/${folderAV}`
+        if (this.nota.areaVida==="No es de ningún Area de Vida"){
+            newName = `${this.infoSubsistema.folder}/Otras/${this.infoSubsistema.type} - ${this.nota.id}.md`
+            folder = `${this.infoSubsistema.folder}/Otras`
+        }else{
+            newName = `${this.infoSubsistema.folder}/${this.nota.areaVida}/${this.infoSubsistema.type} - ${this.nota.id}.md`
+            folder = `${this.infoSubsistema.folder}/${this.nota.areaVida}`
+        }
         await FieldHandlerUtils.crearCarpeta(folder);
         const file = this.tp.file.config.target_file;
         const existe = app.vault.getAbstractFileByPath(newName);
@@ -475,57 +478,4 @@ export class PQFieldHandler extends NoteFieldHandler implements PQFieldHandler{
         }
     }
 
-
-     async getTrimestre(){  
-        let tipoSistema = this.infoSubsistema.type;
-        let nombreSistema = this.infoSubsistema.typeName;
-        let trimestre;
-        //let trimestres = await this.activeStructureResources("Trimestral"); // Funciona en la versión 1.0 de Areas de Vida.
-        let trimestres = await FieldHandlerUtils.findMainFilesWithState("TQ",null, this.plugin);
-        
-        switch(tipoSistema) {
-            case "AV":
-            case "PQ":
-                // Lógica para permitir al usuario elegir una tarea específica.
-                
-                trimestre = await this.suggester(trimestres.map(b => b.file.basename),trimestres.map(b => b.file.basename), false, `Trimestre del ${nombreSistema}:`);
-                break;
-            case "OCA": // ObjetivoCompassAnual 
-                    trimestre = await this.suggester(
-                        ["Q1", "Q2", "Q3", "Q4"],
-                        [
-                          `${this.nota.año}-Q1`,
-                          `${this.nota.año}-Q2`,
-                          `${this.nota.año}-Q3`,
-                          `${this.nota.año}-Q4`,
-                        ],
-                        true,
-                        `¿En qué trimestre del ${this.nota.año} consideras que se puede realizar ese objetivo?`
-                      );
-                    break;
-                    case "CTI": // CompassTrimestralInicio
-                    trimestre = await this.suggester(
-                        ["Q1", "Q2", "Q3", "Q4"],
-                        [
-                          `${this.nota.año}-Q1`,
-                          `${this.nota.año}-Q2`,
-                          `${this.nota.año}-Q3`,
-                          `${this.nota.año}-Q4`,
-                        ],
-                        true,
-                        `¿De qué trimestre del ${this.nota.año} es esta planeación?`
-                      );
-                    break;
-            default:
-                // Si el usuario elige "Otro" o cualquier otra opción.
-                trimestre = await this.suggester(trimestres.map(b => b.file.basename),trimestres.map(b => b.file.path), false, `Trimestre del ${nombreSistema}:`);
-                }
-	    // Verificar si el usuario presionó Esc.
-        if (trimestre === null) {
-        new Notice("Modificación de nota cancelada por el usuario.");
-        return; // Termina la ejecución de la función aquí.
-	    }
-        this.nota.trimestre = trimestre;
-        return trimestre;
-    }
   }

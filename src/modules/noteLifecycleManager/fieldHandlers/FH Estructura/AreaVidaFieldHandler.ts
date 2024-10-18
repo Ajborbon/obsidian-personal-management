@@ -1,7 +1,7 @@
-import { AreaVidaFieldHandler } from '../Interfaces/AreaVidaFieldHandler';
+import { AreaVidaFieldHandler } from '../../Interfaces/AreaVidaFieldHandler';
 import { TFile, TFolder, Notice } from 'obsidian';
-import { FieldHandlerUtils } from '../FieldHandlerUtils';
-import { NoteFieldHandlerBase } from './NoteFieldHandlerBase'; // Asegúrate de importar NoteFieldHandler si es necesario
+import { FieldHandlerUtils } from '../../FieldHandlerUtils';
+import { NoteFieldHandlerBase } from '../FH Base/NoteFieldHandlerBase'; // Asegúrate de importar NoteFieldHandler si es necesario
 
 export class AreaVidaFieldHandler extends NoteFieldHandlerBase implements AreaVidaFieldHandler {
     constructor(tp: any, folder: string, plugin: any) {

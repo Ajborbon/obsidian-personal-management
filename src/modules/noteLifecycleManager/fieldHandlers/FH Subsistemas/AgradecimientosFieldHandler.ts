@@ -1,7 +1,7 @@
-import { AgradecimientosFieldHandler } from '../Interfaces/AgradecimientosFieldHandler';
+import { AgradecimientosFieldHandler } from '../../Interfaces/AgradecimientosFieldHandler';
 import { TFile, TFolder, Notice } from 'obsidian';
-import { FieldHandlerUtils } from '../FieldHandlerUtils';
-import { NoteFieldHandlerBase } from './NoteFieldHandlerBase'; // Asegúrate de importar NoteFieldHandler si es necesario
+import { FieldHandlerUtils } from '../../FieldHandlerUtils';
+import { NoteFieldHandlerBase } from '../FH Base/NoteFieldHandlerBase'; // Asegúrate de importar NoteFieldHandler si es necesario
 
 export class AgradecimientosFieldHandler extends NoteFieldHandlerBase implements AgradecimientosFieldHandler {
     constructor(tp: any, folder: string, plugin: any) {

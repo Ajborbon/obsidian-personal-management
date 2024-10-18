@@ -1,7 +1,7 @@
 import { TFile, TFolder, Notice } from 'obsidian';
-import { FieldHandlerUtils } from '../FieldHandlerUtils';
-import { NoteFieldHandlerBase } from './NoteFieldHandlerBase'; // Asegúrate de importar NoteFieldHandler si es necesario
-import { nodoAreaVidaFieldHandler } from '../Interfaces/nodoAreaVidaFieldHandler';
+import { FieldHandlerUtils } from '../../FieldHandlerUtils';
+import { NoteFieldHandlerBase } from '../FH Base/NoteFieldHandlerBase'; // Asegúrate de importar NoteFieldHandler si es necesario
+import { nodoAreaVidaFieldHandler } from '../../Interfaces/nodoAreaVidaFieldHandler';
 
 export class nodoAreaVidaFieldHandler extends NoteFieldHandlerBase implements nodoAreaVidaFieldHandler{
     

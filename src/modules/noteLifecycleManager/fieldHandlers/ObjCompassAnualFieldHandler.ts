@@ -1,6 +1,6 @@
 // campos = ["id","fecha","areaVida","año","titulo","descripcion","trimestre","estado","aliases","rename"];
 
-import { NoteFieldHandler } from './NoteFieldHandler'; // Asegúrate de importar NoteFieldHandler si es necesario
+import { NoteFieldHandler } from './FH Base/NoteFieldHandler'; // Asegúrate de importar NoteFieldHandler si es necesario
 import { ObjCompassAnualFieldHandler } from '../Interfaces/ObjCompassAnualFieldHandler';
 import { FieldHandlerUtils } from '../FieldHandlerUtils';
 import { TFile } from 'obsidian';

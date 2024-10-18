@@ -1,7 +1,7 @@
-import { NoteFieldHandler } from './NoteFieldHandler'; // Asegúrate de importar NoteFieldHandler si es necesario
-import { FieldHandlerUtils } from '../FieldHandlerUtils';
+import { NoteFieldHandler } from '../FH Base/NoteFieldHandler'; // Asegúrate de importar NoteFieldHandler si es necesario
+import { FieldHandlerUtils } from '../../FieldHandlerUtils';
 import { TFile, TFolder, Notice } from 'obsidian';
-import { AnotacionesFieldHandler} from '../Interfaces/AnotacionesFieldHandler';
+import { AnotacionesFieldHandler} from '../../Interfaces/AnotacionesFieldHandler';
 
 export class AnotacionesFieldHandler extends NoteFieldHandler implements AnotacionesFieldHandler{
     constructor(tp: any, folder: string, plugin: any) {

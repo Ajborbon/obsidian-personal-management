@@ -2,7 +2,7 @@
 
 import { TFile, TFolder, Notice } from 'obsidian';
 import { FieldHandlerUtils } from '../FieldHandlerUtils';
-import { NoteFieldHandlerBase } from './NoteFieldHandlerBase'; // Asegúrate de importar NoteFieldHandler si es necesario
+import { NoteFieldHandlerBase } from './FH Base/NoteFieldHandlerBase'; // Asegúrate de importar NoteFieldHandler si es necesario
 import { CompassPlaneacionAnual_FH } from '../Interfaces/CompassPlaneacionAnual_FH';
 
 export class CompassPlaneacionAnual_FH extends NoteFieldHandlerBase implements nodoAreaVidaFieldHandler{

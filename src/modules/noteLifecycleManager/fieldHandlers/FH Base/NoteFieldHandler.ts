@@ -1,6 +1,7 @@
-import { NoteFieldHandler } from '../Interfaces/NoteFieldHandler';
+import { NoteFieldHandler } from '../../Interfaces/NoteFieldHandler';
 import { TFile, TFolder, Notice } from 'obsidian';
-import { FieldHandlerUtils } from '../FieldHandlerUtils';
+import { FieldHandlerUtils } from '../../FieldHandlerUtils';
+import {DateTime} from 'luxon';
 
 /* ----------------------------------------------------------------
 Esta clase sirve para cualquier clase que solamente deba procesar 
@@ -53,11 +54,11 @@ export class NoteFieldHandler implements NoteFieldHandler {
 
 
     async getFecha(): Promise<string> {
-        const currentDate = new Date().toISOString().slice(0, 10);
-        const currentDay = new Date().toLocaleDateString('es-ES', { weekday: 'long' });
-        const formattedDate = `${currentDate} ${currentDay}`;
-        this.nota.fecha = formattedDate;
-        return formattedDate;
+        let fechaActual = DateTime.now();
+        fechaActual = fechaActual.setLocale('es');
+        fechaActual = fechaActual.toFormat('yyyy-MM-dd EEEE HH:mm');
+        this.nota.fecha = fechaActual;
+        return fechaActual;
     }
 
     async getTitulo(): Promise<string> {

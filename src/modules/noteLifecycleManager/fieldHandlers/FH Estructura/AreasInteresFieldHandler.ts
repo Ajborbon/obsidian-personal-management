@@ -1,5 +1,6 @@
-import { NoteFieldHandler } from './NoteFieldHandler'; // Asegúrate de importar NoteFieldHandler si es necesario
-import { FieldHandlerUtils } from '../FieldHandlerUtils';
+/* src/modules/noteLifecycleManager/fieldHandlers/FH Estructura/AreasInteresFieldHandler.ts */
+import { NoteFieldHandler } from '../FH Base/NoteFieldHandler'; // Asegúrate de importar NoteFieldHandler si es necesario
+import { FieldHandlerUtils } from '../../FieldHandlerUtils';
 import { TFile, TFolder, Notice } from 'obsidian';
 
 
