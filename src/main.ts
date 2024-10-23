@@ -1,29 +1,33 @@
-  /* fileLocation: src/main.ts */
-  import { Plugin } from 'obsidian';
-  import { PluginMainSettingsTab } from './settingsTab';
-  import { ModuloBase } from "./modules/moduloBase/index";
-  import {activateModuloBusquedaAvanzada} from "./modules/M_busquedaAvanzada/activadores"
-  import { StatusBarExtension } from "./modules/moduloAliasStatusBar/statusBar";
-  import { ModuloRegistroTiempo } from "./modules/moduloRegistroTiempo/index";
-  import type { PluginMainSettings } from './interfaces/pluginMainSettings';
-  import { DEFAULT_SETTINGS } from './defaults/defaultSettings';
-  import {registroTiempoAPI} from './modules/moduloRegistroTiempo/API/registroTiempoAPI'
-  import { starterAPI} from './modules/noteLifecycleManager/API/starterAPI';
-  import { addOnsAPI } from './modules/noteLifecycleManager/API/addOnsAPI';
-  import { YAMLUpdaterAPI } from './modules/noteLifecycleManager/API/YAMLUpdaterAPI';
-  import { menuHoyAPI} from './modules/noteLifecycleManager/API/menuDiarioAPI'
-  import { menuSemanalAPI } from './modules/noteLifecycleManager/API/menuSemanalAPI';
-  import { VistaRegistroActivo } from './modules/moduloRegistroTiempo/views/vistaRTActivo';
-  import { ModuloGTD } from './modules/moduloGTD';
-  //import { ModuloTerceros } from './modules/modulo_Terceros';
-  import { ingresarBandejaEntrada } from './modules/moduloGTD/inbox';
-  import { subsistemasAPI } from './modules/noteLifecycleManager/API/subsistemasAPI';
-  import { VistaResumenSemanal } from './modules/noteLifecycleManager/views/vistaResumenSemanal';
-  import { VistaRegistroDiario } from './modules/noteLifecycleManager/views/vistaRegistroDiario';
-  import GPThora from './modules/GPThora/GPThora';
-  import { librosAPI } from './modules/moduloLibros/librosAPI'; 
-  import { updateSesionLectura } from './modules/moduloRegistroTiempo/API/updateSesionLectura';
+/* fileLocation: src/main.ts */
+import { Plugin } from "obsidian";
+import { PluginMainSettingsTab } from "./settingsTab";
+import { ModuloBase } from "./modules/moduloBase/index";
+import { activateModuloBusquedaAvanzada } from "./modules/M_busquedaAvanzada/activadores";
+import { StatusBarExtension } from "./modules/moduloAliasStatusBar/statusBar";
+import { ModuloRegistroTiempo } from "./modules/moduloRegistroTiempo/index";
+import type { PluginMainSettings } from "./interfaces/pluginMainSettings";
+import { DEFAULT_SETTINGS } from "./defaults/defaultSettings";
+import { registroTiempoAPI } from "./modules/moduloRegistroTiempo/API/registroTiempoAPI";
+import { starterAPI } from "./modules/noteLifecycleManager/API/starterAPI";
+import { addOnsAPI } from "./modules/noteLifecycleManager/API/addOnsAPI";
+import { YAMLUpdaterAPI } from "./modules/noteLifecycleManager/API/YAMLUpdaterAPI";
+import { menuHoyAPI } from "./modules/noteLifecycleManager/API/menuDiarioAPI";
+import { menuSemanalAPI } from "./modules/noteLifecycleManager/API/menuSemanalAPI";
+import { VistaRegistroActivo } from "./modules/moduloRegistroTiempo/views/vistaRTActivo";
+import { ModuloGTD } from "./modules/moduloGTD";
+//import { ModuloTerceros } from './modules/modulo_Terceros';
+import { ingresarBandejaEntrada } from "./modules/moduloGTD/inbox";
+import { subsistemasAPI } from "./modules/noteLifecycleManager/API/subsistemasAPI";
+import { VistaResumenSemanal } from "./modules/noteLifecycleManager/views/vistaResumenSemanal";
+import { VistaRegistroDiario } from "./modules/noteLifecycleManager/views/vistaRegistroDiario";
+import GPThora from "./modules/GPThora/GPThora";
+import { librosAPI } from "./modules/moduloLibros/librosAPI";
+import { updateSesionLectura } from "./modules/moduloRegistroTiempo/API/updateSesionLectura";
 
+import {
+  getTareasVencidasAbiertas,
+  mostrarTareasVencidas,
+} from "./modules/moduloGTD/tareasAPI";
 
 export default class ManagementPlugin extends Plugin {
   settings: PluginMainSettings | undefined;
@@ -31,13 +35,13 @@ export default class ManagementPlugin extends Plugin {
   statusBarExtension: StatusBarExtension | null = null;
   moduloRegistroTiempo: ModuloRegistroTiempo | null = null;
   moduloBase: ModuloBase | null = null;
-  moduloGTD : ModuloGTD | null = null;
+  moduloGTD: ModuloGTD | null = null;
   //moduloTerceros: ModuloTerceros | null = null;
   registeredCommandIdsRT: string[] = [];
   registeredCommandIdsMB: string[] = [];
   registeredCommandIdsGTD: string[] = [];
   registeredCommandIds_Terceros: string[] = [];
-  ribbonButtonRT: ReturnType<Plugin['addRibbonIcon']> | null = null;
+  ribbonButtonRT: ReturnType<Plugin["addRibbonIcon"]> | null = null;
   app: any;
   registroTiempoAPI: registroTiempoAPI | undefined;
   starterAPI: starterAPI | undefined;
@@ -46,125 +50,146 @@ export default class ManagementPlugin extends Plugin {
   menuSemanalAPI: menuSemanalAPI | undefined;
   subsistemasAPI: subsistemasAPI | undefined;
   librosAPI: librosAPI | undefined;
-  newInbox : any;
+  newInbox: any;
   tp: any;
+  getTareasVencidasAbiertas: () => Promise<Task[]>;
+  mostrarTareasVencidas: () => Promise<void>;
 
   // Declara una propiedad para mantener una instancia de `StatusBarExtension`.
-  
 
-    async onload() { 
-        
-        await this.loadSettings();
-        this.tp = this.getTp();
-        
-        this.registerView("vista-registro-activo",(leaf) => new VistaRegistroActivo(leaf, this));
-        this.registerView("vista-resumen-semanal", (leaf) => new VistaResumenSemanal(leaf, this));
-        this.registerView("vista-registro-diario", (leaf) => new VistaRegistroDiario(leaf, this));
+  async onload() {
+    await this.loadSettings();
+    this.tp = this.getTp();
 
-        // cargar API registro Tiempo
-        this.registroTiempoAPI = new registroTiempoAPI(this);
-        this.starterAPI = new starterAPI(this);
-        this.addOnsAPI = new addOnsAPI(this);
-        this.YAMLUpdaterAPI = new YAMLUpdaterAPI(this);
-        this.updateSesionLectura = new updateSesionLectura(this)
-        this.menuHoyAPI = new menuHoyAPI(this);
-        this.menuSemanalAPI = new menuSemanalAPI(this);
-        this.subsistemasAPI = new subsistemasAPI(this);
-        this.librosAPI = new librosAPI(this);
-        this.newInbox = ingresarBandejaEntrada.bind(this);
-        
-        // Añade la pestaña de configuración - 
-        this.addSettingTab(new PluginMainSettingsTab(this));
-        // Inicializa las instancias de los módulos
-        this.statusBarExtension = new StatusBarExtension(this);
-        this.moduloRegistroTiempo = new ModuloRegistroTiempo(this);
-        this.moduloBase = new ModuloBase(this);
-        //this.moduloTerceros = new ModuloTerceros(this);
-        this.moduloGTD = new ModuloGTD(this);
-        this.applyConfiguration();
-        // Aplica la configuración inicial basada en los ajustes cargados o predeterminados.
-        console.log('Iniciando carga de plugin de Gestión Personal');
-        
-        this.registerGPThora();
-      }
+    this.registerView(
+      "vista-registro-activo",
+      (leaf) => new VistaRegistroActivo(leaf, this)
+    );
+    this.registerView(
+      "vista-resumen-semanal",
+      (leaf) => new VistaResumenSemanal(leaf, this)
+    );
+    this.registerView(
+      "vista-registro-diario",
+      (leaf) => new VistaRegistroDiario(leaf, this)
+    );
 
-      registerGPThora() {
-        const gptHora = new GPThora(this.app);  // Crear una instancia de GPThora
-        gptHora.onload();
-    }
+    // cargar API registro Tiempo
+    this.registroTiempoAPI = new registroTiempoAPI(this);
+    this.starterAPI = new starterAPI(this);
+    this.addOnsAPI = new addOnsAPI(this);
+    this.YAMLUpdaterAPI = new YAMLUpdaterAPI(this);
+    this.updateSesionLectura = new updateSesionLectura(this);
+    this.menuHoyAPI = new menuHoyAPI(this);
+    this.menuSemanalAPI = new menuSemanalAPI(this);
+    this.subsistemasAPI = new subsistemasAPI(this);
+    this.librosAPI = new librosAPI(this);
+    this.newInbox = ingresarBandejaEntrada.bind(this);
 
-      applyConfiguration() {
-        // Modulo Base es el módulo sobre el que estoy haciendo pruebas de desarrollo.
-        if (this.settings.moduloBase) {
-          this.moduloBase?.activate(this);
-      } else {
-          this.moduloBase?.deactivate(this);
-      }
-        if (this.settings.moduloRegistroTiempo) {
-            this.moduloRegistroTiempo?.activate(this);
-        } else {
-            this.moduloRegistroTiempo?.deactivate(this);
-        }
-         if (this.settings.moduloAliasStatusBar) {
-          this.statusBarExtension?.activate();
-          // Si la configuración para `moduloAliasStatusBar` es verdadera, activa el módulo.
-        } else {
-          this.statusBarExtension?.deactivate();
-          // Si es falsa, desactiva el módulo.
-        }
-        if (this.settings.moduloGTD) {
-          this.moduloGTD?.activate(this);
-      } else {
-          this.moduloGTD?.deactivate(this);
-      }
+    // Añade la pestaña de configuración -
+    this.addSettingTab(new PluginMainSettingsTab(this));
+    // Inicializa las instancias de los módulos
+    this.statusBarExtension = new StatusBarExtension(this);
+    this.moduloRegistroTiempo = new ModuloRegistroTiempo(this);
+    this.moduloBase = new ModuloBase(this);
+    //this.moduloTerceros = new ModuloTerceros(this);
+    this.moduloGTD = new ModuloGTD(this);
+    this.getTareasVencidasAbiertas = () => getTareasVencidasAbiertas(this);
+    this.mostrarTareasVencidas = () => mostrarTareasVencidas(this);
+    // Expose functions globally
+    (this.app as any).gpManagement = {
+      getTareasVencidasAbiertas: this.getTareasVencidasAbiertas,
+      mostrarTareasVencidas: this.mostrarTareasVencidas,
+    };
+    this.applyConfiguration();
+    // Aplica la configuración inicial basada en los ajustes cargados o predeterminados.
+    console.log("Iniciando carga de plugin de Gestión Personal");
 
-      //this.moduloTerceros?.activate(this);
-
-    }
-    
-      async onunload() {
-          // Código de limpieza aquí
-          console.log('Descargando plugin Gestión Personal');
-          return Promise.resolve();
-      }
-
-      async loadSettings() {
-        // Método para cargar la configuración desde el almacenamiento de Obsidian.
-        this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
-        // Intenta cargar la configuración y mezcla los valores cargados con los predeterminados.
-      }
-
-      async saveSettings() {
-        // Método para guardar la configuración actual en el almacenamiento de Obsidian.
-        await this.saveData(this.settings);
-        // Guarda la configuración actual.
-        
-        this.applyConfiguration();
-        // Vuelve a aplicar la configuración para asegurarse de que los cambios recientes se reflejen inmediatamente.
-      }
-
-      getTp(){
-          debugger;
-          if (!this.app || !this.app.plugins.enabledPlugins.has('templater-obsidian')) {
-              console.error('El plugin Templater no está habilitado.');
-              return;
-          }
-          //  Forma de acceder al objeto tp normal que he usado desde DVJS cuando current Functions esta cargado.
-          //const templaterPlugin = this.app.plugins.plugins['templater-obsidian'];
-          //const tp = templaterPlugin.templater.current_functions_object;
-          // -> version que falla si no esta arriba el plugin porque hace get del plugin directo. const templaterPlugin = this.app.plugins.getPlugin('templater-obsidian');    
-          let tpGen = this.app.plugins.plugins["templater-obsidian"].templater;
-          tpGen = tpGen.functions_generator.internal_functions.modules_array;
-          let tp = {}
-          // get an instance of modules
-          tp.file = tpGen.find(m => m.name == "file");
-          tp.system = tpGen.find(m => m.name == "system");
-
-          if (!tp.system) {
-            console.error("No se pudo acceder al objeto de funciones actuales de Templater.");
-            return;
-        }
-          console.log('Instancia de tp cargada satisfactoriamente en Plugin');
-          return tp;
-        }
+    this.registerGPThora();
   }
+
+  registerGPThora() {
+    const gptHora = new GPThora(this.app); // Crear una instancia de GPThora
+    gptHora.onload();
+  }
+
+  applyConfiguration() {
+    // Modulo Base es el módulo sobre el que estoy haciendo pruebas de desarrollo.
+    if (this.settings.moduloBase) {
+      this.moduloBase?.activate(this);
+    } else {
+      this.moduloBase?.deactivate(this);
+    }
+    if (this.settings.moduloRegistroTiempo) {
+      this.moduloRegistroTiempo?.activate(this);
+    } else {
+      this.moduloRegistroTiempo?.deactivate(this);
+    }
+    if (this.settings.moduloAliasStatusBar) {
+      this.statusBarExtension?.activate();
+      // Si la configuración para `moduloAliasStatusBar` es verdadera, activa el módulo.
+    } else {
+      this.statusBarExtension?.deactivate();
+      // Si es falsa, desactiva el módulo.
+    }
+    if (this.settings.moduloGTD) {
+      this.moduloGTD?.activate(this);
+    } else {
+      this.moduloGTD?.deactivate(this);
+    }
+
+    //this.moduloTerceros?.activate(this);
+  }
+
+  async onunload() {
+    // Código de limpieza aquí
+    console.log("Descargando plugin Gestión Personal");
+    delete (this.app as any).gpManagement;
+    return Promise.resolve();
+  }
+
+  async loadSettings() {
+    // Método para cargar la configuración desde el almacenamiento de Obsidian.
+    this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
+    // Intenta cargar la configuración y mezcla los valores cargados con los predeterminados.
+  }
+
+  async saveSettings() {
+    // Método para guardar la configuración actual en el almacenamiento de Obsidian.
+    await this.saveData(this.settings);
+    // Guarda la configuración actual.
+
+    this.applyConfiguration();
+    // Vuelve a aplicar la configuración para asegurarse de que los cambios recientes se reflejen inmediatamente.
+  }
+
+  getTp() {
+    debugger;
+    if (
+      !this.app ||
+      !this.app.plugins.enabledPlugins.has("templater-obsidian")
+    ) {
+      console.error("El plugin Templater no está habilitado.");
+      return;
+    }
+    //  Forma de acceder al objeto tp normal que he usado desde DVJS cuando current Functions esta cargado.
+    //const templaterPlugin = this.app.plugins.plugins['templater-obsidian'];
+    //const tp = templaterPlugin.templater.current_functions_object;
+    // -> version que falla si no esta arriba el plugin porque hace get del plugin directo. const templaterPlugin = this.app.plugins.getPlugin('templater-obsidian');
+    let tpGen = this.app.plugins.plugins["templater-obsidian"].templater;
+    tpGen = tpGen.functions_generator.internal_functions.modules_array;
+    let tp = {};
+    // get an instance of modules
+    tp.file = tpGen.find((m) => m.name == "file");
+    tp.system = tpGen.find((m) => m.name == "system");
+
+    if (!tp.system) {
+      console.error(
+        "No se pudo acceder al objeto de funciones actuales de Templater."
+      );
+      return;
+    }
+    console.log("Instancia de tp cargada satisfactoriamente en Plugin");
+    return tp;
+  }
+}

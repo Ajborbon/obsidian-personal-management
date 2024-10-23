@@ -63,6 +63,9 @@ export const DEFAULT_SETTINGS: PluginMainSettings = {
   indice_ProyectosGTD: "Estructura/GTD/Proyectos GTD/Indice Proyectos GTD",
   folder_RSGTD: "Estructura/GTD/Revision Semanal/Revisiones",
   indice_RSGTD: "Estructura/GTD/Revision Semanal/Indice Revision Semanal",
+  folder_SistemaGTD: "Estructura/GTD/Sistema GTD/Sistema",
+  indice_SistemaGTD: "Estructura/GTD/Sistema GTD/Indice Sistema GTD",
+  
 
   // Journal
   folder_Diario: "Estructura/Journal/Diario/Notas",

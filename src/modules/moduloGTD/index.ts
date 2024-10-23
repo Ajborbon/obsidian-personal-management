@@ -19,7 +19,7 @@ export class ModuloGTD {
     deactivate() {
         if (!this.moduloGTD) return; // Si ya está desactivado, no hacer nada
         deactivateCommands(this.plugin);
-       
+        this.moduloGTD = null;
     }
 
 

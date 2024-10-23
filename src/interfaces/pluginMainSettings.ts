@@ -76,12 +76,15 @@ export interface PluginMainSettings {
     folder_TemasInteres: string,
     indice_TemasInteres: string,
 
-     // GTD Proyectos y Revisiones Semanales
+     // GTD Proyectos, sistema y Revisiones Semanales
      file_Inbox: string,
      folder_ProyectosGTD: string,
      indice_ProyectosGTD: string,
      folder_RSGTD: string,
      indice_RSGTD: string,
+     folder_SistemaGTD: string,
+     indice_SistemaGTD: string,
+     
 
 
      // JOURNAL

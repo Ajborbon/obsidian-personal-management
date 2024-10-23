@@ -1,8 +1,8 @@
+import { Plugin, Notice } from 'obsidian';
 import { ingresarBandejaEntrada } from "./inbox";
+import { mostrarTareasVencidas } from "./tareasAPI";
 
-// COMANDOS DEL MODULO GTD
 export function registerCommands(plugin: Plugin): void {
-    
     const id1 = plugin.addCommand({
         id: "ingresar-inbox",
         name: "Ingresar Bandeja de Entrada -> Inbox",
@@ -10,24 +10,24 @@ export function registerCommands(plugin: Plugin): void {
             await ingresarBandejaEntrada(plugin);
         }
     });
-    // Almacenar el ID del comando en registeredCommandIds.
 
-    plugin.registeredCommandIdsGTD.push(id1.id);
+    const id2 = plugin.addCommand({
+        id: "mostrar-tareas-vencidas",
+        name: "Mostrar Tareas Vencidas",
+        callback: async () => {
+            await mostrarTareasVencidas(plugin);
+        }
+    });
+
+    plugin.registeredCommandIdsGTD.push(id1.id, id2.id);
 }
 
-
 export function deactivateCommands(plugin: Plugin): void {
-    
     if (!plugin.registeredCommandIdsGTD) return;
-    // Ejemplo de cómo podrías manejar la "desactivación" de comandos.
     plugin.registeredCommandIdsGTD.forEach(commandId => {
         const command = plugin.app.commands.commands[commandId];
-        
         if (command) {
-            // Sobrescribir el callback del comando para que no haga nada.
             command.callback = () => new Notice("Este comando ha sido desactivado.");
-            // O simplemente eliminar el callback si eso se ajusta a tu lógica de aplicación.
-            // delete command.callback;
         }
     });
 }
