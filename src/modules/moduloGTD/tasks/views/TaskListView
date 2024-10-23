@@ -1,0 +1,194 @@
+// src/modules/moduloGTD/tasks/views/TaskListView.ts
+
+import { TFile, Notice } from 'obsidian';
+import { TaskSearchResult } from '../interfaces';
+import { parsearFecha, obtenerFechaLocal } from '../utils/dateUtils';
+
+export class TaskListView {
+    constructor(private plugin: MyPlugin) {}
+
+    async showTasks(searchResult: TaskSearchResult): Promise<void> {
+        if (searchResult.tasks.length === 0) {
+            console.log("No se encontraron tareas");
+            new Notice('No se encontraron tareas.');
+            return;
+        }
+
+        const hoy = obtenerFechaLocal();
+        let contenido = this.generarEncabezado(searchResult);
+        contenido += this.generarBotonActualizacion(searchResult.searchType);
+        contenido += this.generarResumen(searchResult);
+        contenido += await this.generarContenidoTareas(searchResult.tasks, hoy);
+
+        await this.guardarYMostrarNota(contenido, searchResult);
+    }
+
+    private generarEncabezado(searchResult: TaskSearchResult): string {
+        const titulos = {
+            'overdue': 'Tareas Vencidas',
+            'upcoming': 'Tareas Próximas a Vencer',
+            'scheduled': 'Tareas Programadas',
+            'tagged': 'Tareas por Etiqueta'
+        };
+
+        return `# ${titulos[searchResult.searchType] || 'Tareas'}\n\n`;
+    }
+
+    private generarBotonActualizacion(searchType: string): string {
+        return `\`\`\`dataviewjs
+const gp = app.plugins.plugins['obsidian-personal-management'];
+if (!gp) {
+    dv.paragraph("⚠️ Plugin de Gestión Personal no encontrado");
+    return;
+}
+
+const container = this.container;
+const btn = container.createEl('button', {text: '🔄 Actualizar Búsqueda'});
+
+// Estilizar el botón
+btn.style.padding = '5px 15px';
+btn.style.backgroundColor = '#1e1e1e';
+btn.style.color = '#ffffff';
+btn.style.border = '1px solid #4a4a4a';
+btn.style.borderRadius = '4px';
+btn.style.cursor = 'pointer';
+btn.style.marginBottom = '10px';
+
+btn.addEventListener('mouseenter', () => {
+    btn.style.backgroundColor = '#2e2e2e';
+});
+btn.addEventListener('mouseleave', () => {
+    btn.style.backgroundColor = '#1e1e1e';
+});
+
+btn.addEventListener('click', async () => {
+    try {
+        new Notice('Actualizando búsqueda...');
+        // Llamar al método correspondiente según el tipo de búsqueda
+        switch ('${searchType}') {
+            case 'overdue':
+                await gp.taskManager.showOverdueTasks();
+                break;
+            case 'upcoming':
+                await gp.taskManager.showUpcomingTasks(7);
+                break;
+            case 'scheduled':
+                await gp.taskManager.showScheduledTasks();
+                break;
+            case 'tagged':
+                await gp.taskManager.showTaggedTasks([]);
+                break;
+        }
+    } catch (error) {
+        console.error('Error al actualizar tareas:', error);
+        new Notice('Error al actualizar la búsqueda');
+    }
+});
+\`\`\`\n\n`;
+    }
+
+    private generarResumen(searchResult: TaskSearchResult): string {
+        const fechaActual = new Date();
+        return `> [!info] Actualizado: ${fechaActual.toLocaleDateString()} ${fechaActual.toLocaleTimeString()}\n` +
+               `> Total de tareas encontradas: ${searchResult.totalFound}\n\n`;
+    }
+
+    private async generarContenidoTareas(tasks: Task[], hoy: Date): Promise<string> {
+        // Agrupar tareas por archivo
+        const tareasPorArchivo = tasks.reduce((acc, tarea) => {
+            if (!acc[tarea.archivo]) {
+                acc[tarea.archivo] = {
+                    titulo: tarea.titulo,
+                    tareas: []
+                };
+            }
+            acc[tarea.archivo].tareas.push(tarea);
+            return acc;
+        }, {});
+
+        let contenido = '';
+        
+        // Generar contenido por cada archivo
+        for (const archivo in tareasPorArchivo) {
+            contenido += `## [[${archivo}|${tareasPorArchivo[archivo].titulo}]]\n\n`;
+            
+            tareasPorArchivo[archivo].tareas.forEach(tarea => {
+                // Generar información de fecha vencimiento
+                let infoFecha = '';
+                if (tarea.fechaVencimiento) {
+                    const fechaVenc = parsearFecha(tarea.fechaVencimiento);
+                    const diasVencida = Math.floor((hoy.getTime() - fechaVenc.getTime()) / (1000 * 3600 * 24));
+                    const estadoVencimiento = diasVencida === 0 ? "Vence hoy" : 
+                                           diasVencida === 1 ? "Venció ayer" :
+                                           `Venció hace ${diasVencida} días`;
+                    infoFecha += `    - 📅 ${tarea.fechaVencimiento} *(${estadoVencimiento})*\n`;
+                }
+
+                // Agregar fecha programada si existe
+                if (tarea.fechaProgramada) {
+                    infoFecha += `    - ⏳ ${tarea.fechaProgramada}\n`;
+                }
+
+                // Agregar etiquetas si existen
+                let etiquetas = '';
+                if (tarea.etiquetas && tarea.etiquetas.length > 0) {
+                    etiquetas = `    - 🏷️ ${tarea.etiquetas.join(' ')}\n`;
+                }
+
+                contenido += `- [ ] ${tarea.texto}\n${infoFecha}${etiquetas}`;
+            });
+            
+            contenido += '\n';
+        }
+
+        return contenido;
+    }
+
+    private async guardarYMostrarNota(contenido: string, searchResult: TaskSearchResult): Promise<void> {
+        try {
+            // Obtener la carpeta del sistema GTD
+            const folderSistemaGTD = this.plugin.settings.folder_SistemaGTD;
+            const folder = this.plugin.app.vault.getAbstractFileByPath(folderSistemaGTD);
+            
+            if (!folder) {
+                throw new Error(`La carpeta ${folderSistemaGTD} no existe`);
+            }
+
+            // Generar nombre de archivo según el tipo de búsqueda
+            const nombresTipos = {
+                'overdue': 'Vencidas',
+                'upcoming': 'Proximas',
+                'scheduled': 'Programadas',
+                'tagged': 'PorEtiqueta'
+            };
+
+            const nombreArchivo = `${folderSistemaGTD}/Tareas ${nombresTipos[searchResult.searchType]} xFile.md`;
+            const archivo = this.plugin.app.vault.getAbstractFileByPath(nombreArchivo);
+            
+            if (archivo instanceof TFile) {
+                await this.plugin.app.vault.modify(archivo, contenido);
+                await this.plugin.app.workspace.getLeaf().openFile(archivo);
+            } else {
+                const nuevoArchivo = await this.plugin.app.vault.create(nombreArchivo, contenido);
+                await this.plugin.app.workspace.getLeaf().openFile(nuevoArchivo);
+            }
+
+            new Notice(`Se encontraron ${searchResult.totalFound} tareas`);
+            console.log("Vista de tareas creada exitosamente");
+        } catch (error) {
+            console.error("Error al crear/actualizar la vista:", error);
+            new Notice(`Error al mostrar las tareas: ${error.message}`);
+            
+            if (error.message.includes("no existe")) {
+                try {
+                    await this.plugin.app.vault.createFolder(this.plugin.settings.folder_SistemaGTD);
+                    new Notice(`Se creó la carpeta ${this.plugin.settings.folder_SistemaGTD}. Intentando nuevamente...`);
+                    await this.guardarYMostrarNota(contenido, searchResult);
+                } catch (folderError) {
+                    console.error("Error al crear la carpeta:", folderError);
+                    new Notice("No se pudo crear la carpeta del sistema GTD");
+                }
+            }
+        }
+    }
+}

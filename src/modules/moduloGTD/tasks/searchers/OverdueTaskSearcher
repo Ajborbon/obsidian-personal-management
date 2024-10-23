@@ -1,0 +1,120 @@
+// src/modules/moduloGTD/tasks/searchers/OverdueTaskSearcher.ts
+
+import { TFile } from 'obsidian';
+import { BaseTaskSearcher } from './BaseTaskSearcher';
+import { Task, TaskSearchResult } from '../interfaces';
+import { obtenerFechaLocal, parsearFecha } from '../utils/dateUtils';
+import { extraerTextoTarea } from '../utils/taskUtils';
+
+export class OverdueTaskSearcher extends BaseTaskSearcher {
+    async searchTasks(): Promise<TaskSearchResult> {
+        const files = this.plugin.app.vault.getMarkdownFiles();
+        const tareas: Task[] = [];
+        const hoy = obtenerFechaLocal();
+        
+        console.log("\n=== INICIO DE BÚSQUEDA DE TAREAS VENCIDAS ===");
+        console.log(`Fecha actual (local): ${hoy.toLocaleDateString()}`);
+        console.log(`Total de archivos a procesar: ${files.length}`);
+
+        let archivosConTareas = 0;
+        let tareasAnalizadas = 0;
+
+        for (const file of files) {
+            let archivoTieneTareas = false;
+            const contenido = await this.plugin.app.vault.cachedRead(file);
+            const lineas = contenido.split('\n');
+            let tareasEnArchivo = 0;
+            
+            const tituloNota = await this.getFileTitle(file);
+            
+            for (const linea of lineas) {
+                if (linea.trim().startsWith('- [ ]')) {
+                    tareasAnalizadas++;
+                    tareasEnArchivo++;
+                    
+                    const patronesVencimiento = [
+                        /📅 (\d{4}-\d{2}-\d{2})/,
+                        /due:(\d{4}-\d{2}-\d{2})/,
+                        /\[due::(\d{4}-\d{2}-\d{2})\]/
+                    ];
+                    
+                    let fechaVencimiento = null;
+                    for (const patron of patronesVencimiento) {
+                        const match = linea.match(patron);
+                        if (match) {
+                            fechaVencimiento = match[1];
+                            break;
+                        }
+                    }
+                    
+                    if (fechaVencimiento) {
+                        const fechaV = parsearFecha(fechaVencimiento);
+                        
+                        if (fechaV < hoy) {
+                            if (!archivoTieneTareas) {
+                                console.log(`\nArchivo: [[${file.path}|${tituloNota}]]`);
+                                archivoTieneTareas = true;
+                                archivosConTareas++;
+                            }
+
+                            let textoTarea = extraerTextoTarea(linea);
+                            
+                            console.log(`- Tarea vencida: "${textoTarea}" (Vence: ${fechaVencimiento})`);
+                            
+                            // Extraer etiquetas si existen
+                            const etiquetas = linea.match(/#[\w-]+/g) || [];
+                            
+                            // Buscar fecha programada si existe
+                            let fechaProgramada = null;
+                            const matchProgramada = linea.match(/⏳ (\d{4}-\d{2}-\d{2})/);
+                            if (matchProgramada) {
+                                fechaProgramada = matchProgramada[1];
+                            }
+                            
+                            tareas.push({
+                                texto: textoTarea,
+                                archivo: file.path,
+                                titulo: tituloNota,
+                                fechaVencimiento: fechaVencimiento,
+                                fechaProgramada: fechaProgramada,
+                                etiquetas: etiquetas
+                            });
+                        }
+                    }
+                }
+            }
+            
+            if (tareasEnArchivo > 0) {
+                console.log(`Total de tareas analizadas en el archivo: ${tareasEnArchivo}`);
+            }
+        }
+
+        console.log(`\n=== RESUMEN FINAL DE BÚSQUEDA ===`);
+        console.log(`Archivos procesados: ${files.length}`);
+        console.log(`Archivos con tareas vencidas: ${archivosConTareas}`);
+        console.log(`Total de tareas analizadas: ${tareasAnalizadas}`);
+        console.log(`Total de tareas vencidas encontradas: ${tareas.length}`);
+
+        if (tareas.length > 0) {
+            console.log("\nListado de tareas vencidas:");
+            tareas.forEach((tarea, index) => {
+                console.log(`\n${index + 1}. Archivo: [[${tarea.archivo}|${tarea.titulo}]]`);
+                console.log(`   Tarea: ${tarea.texto}`);
+                console.log(`   Vence: ${tarea.fechaVencimiento}`);
+                if (tarea.fechaProgramada) {
+                    console.log(`   Programada: ${tarea.fechaProgramada}`);
+                }
+                if (tarea.etiquetas.length > 0) {
+                    console.log(`   Etiquetas: ${tarea.etiquetas.join(', ')}`);
+                }
+            });
+        }
+
+        return {
+            tasks: tareas,
+            totalFound: tareas.length,
+            searchDate: new Date(),
+            searchType: 'overdue'
+        };
+    }
+}

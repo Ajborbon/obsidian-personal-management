@@ -23,11 +23,9 @@ import { VistaRegistroDiario } from "./modules/noteLifecycleManager/views/vistaR
 import GPThora from "./modules/GPThora/GPThora";
 import { librosAPI } from "./modules/moduloLibros/librosAPI";
 import { updateSesionLectura } from "./modules/moduloRegistroTiempo/API/updateSesionLectura";
+import { TaskManager } from './modules/moduloGTD/tasks/TaskManager';
+//import { getTareasVencidasAbiertas, mostrarTareasVencidas} from "./modules/moduloGTD/tareasAPI";
 
-import {
-  getTareasVencidasAbiertas,
-  mostrarTareasVencidas,
-} from "./modules/moduloGTD/tareasAPI";
 
 export default class ManagementPlugin extends Plugin {
   settings: PluginMainSettings | undefined;
@@ -52,8 +50,9 @@ export default class ManagementPlugin extends Plugin {
   librosAPI: librosAPI | undefined;
   newInbox: any;
   tp: any;
-  getTareasVencidasAbiertas: () => Promise<Task[]>;
-  mostrarTareasVencidas: () => Promise<void>;
+  taskManager: TaskManager;
+  //getTareasVencidasAbiertas: () => Promise<Task[]>;
+  //mostrarTareasVencidas: () => Promise<void>;
 
   // Declara una propiedad para mantener una instancia de `StatusBarExtension`.
 
@@ -94,13 +93,11 @@ export default class ManagementPlugin extends Plugin {
     this.moduloBase = new ModuloBase(this);
     //this.moduloTerceros = new ModuloTerceros(this);
     this.moduloGTD = new ModuloGTD(this);
-    this.getTareasVencidasAbiertas = () => getTareasVencidasAbiertas(this);
-    this.mostrarTareasVencidas = () => mostrarTareasVencidas(this);
+    //this.getTareasVencidasAbiertas = () => getTareasVencidasAbiertas(this);
+    //this.mostrarTareasVencidas = () => mostrarTareasVencidas(this);
     // Expose functions globally
-    (this.app as any).gpManagement = {
-      getTareasVencidasAbiertas: this.getTareasVencidasAbiertas,
-      mostrarTareasVencidas: this.mostrarTareasVencidas,
-    };
+    //(this.app as any).gpManagement = {getTareasVencidasAbiertas: this.getTareasVencidasAbiertas,mostrarTareasVencidas: this.mostrarTareasVencidas,};
+    this.taskManager = new TaskManager(this);
     this.applyConfiguration();
     // Aplica la configuración inicial basada en los ajustes cargados o predeterminados.
     console.log("Iniciando carga de plugin de Gestión Personal");

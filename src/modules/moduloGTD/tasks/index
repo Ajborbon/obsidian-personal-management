@@ -1,0 +1,3 @@
+// src/modules/moduloGTD/tasks/index.ts
+export { TaskManager } from './TaskManager';
+export type { Task, TaskSearchResult } from './interfaces';

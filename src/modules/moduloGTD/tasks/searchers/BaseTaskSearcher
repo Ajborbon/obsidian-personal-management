@@ -1,0 +1,29 @@
+// src/modules/moduloGTD/tasks/searchers/BaseTaskSearcher.ts
+export abstract class BaseTaskSearcher {
+    constructor(protected plugin: MyPlugin) {}
+    
+    abstract searchTasks(): Promise<TaskSearchResult>;
+    
+    protected async getFileTitle(file: TFile): string {
+        const metadata = this.plugin.app.metadataCache.getFileCache(file)?.frontmatter;
+        
+        if (metadata?.aliases) {
+            if (Array.isArray(metadata.aliases)) {
+                return metadata.aliases[0];
+            } else if (typeof metadata.aliases === 'string') {
+                return metadata.aliases;
+            }
+        }
+        
+        if (metadata?.titulo) {
+            return metadata.titulo;
+        }
+
+        const coincidencia = file.basename.match(/(?:PGTD|PQ|AI|AV|Ax|RR|DJ|OCA|CAC) - (.+)/);
+        if (coincidencia && coincidencia[1]) {
+            return coincidencia[1];
+        }
+        
+        return file.basename;
+    }
+}

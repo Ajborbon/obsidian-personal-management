@@ -1,0 +1,6 @@
+export interface TaskSearchResult {
+    tasks: Task[];
+    totalFound: number;
+    searchDate: Date;
+    searchType: string;
+}

@@ -1,0 +1,16 @@
+// src/modules/moduloGTD/tasks/TaskManager.ts
+import { TaskListView } from './views/TaskListView';
+import { OverdueTaskSearcher } from './searchers/OverdueTaskSearcher';
+
+export class TaskManager {
+    constructor(plugin) {
+        this.plugin = plugin;
+        this.taskListView = new TaskListView(plugin);
+    }
+
+    async showOverdueTasks() {
+        const searcher = new OverdueTaskSearcher(this.plugin);
+        const result = await searcher.searchTasks();
+        await this.taskListView.showTasks(result);
+    }
+}

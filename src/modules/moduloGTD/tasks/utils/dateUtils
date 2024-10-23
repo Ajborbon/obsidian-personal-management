@@ -1,0 +1,19 @@
+// src/modules/moduloGTD/tasks/utils/dateUtils.ts
+export function obtenerFechaLocal(): Date {
+    const ahora = new Date();
+    return new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate());
+}
+
+export function parsearFecha(fechaStr: string): Date {
+    const partes = fechaStr.split('-');
+    return new Date(
+        parseInt(partes[0]),
+        parseInt(partes[1]) - 1,
+        parseInt(partes[2])
+    );
+}
+
+export function calcularDiasHasta(fecha: Date): number {
+    const hoy = obtenerFechaLocal();
+    return Math.floor((fecha.getTime() - hoy.getTime()) / (1000 * 3600 * 24));
+}

@@ -1,0 +1,20 @@
+// src/modules/moduloGTD/tasks/utils/taskUtils.ts
+export function extraerTextoTarea(linea: string): string {
+    return linea
+        .replace(/^- \[ \]/, '')
+        .replace(/➕ \d{4}-\d{2}-\d{2}/, '')
+        .replace(/📅 \d{4}-\d{2}-\d{2}/, '')
+        .replace(/\[link\]\([^\)]+\)/, '')
+        .replace(/#\w+/, '')
+        .replace(/%%\[todoist_id:: \d+\]%%/, '')
+        .trim();
+}
+
+export function obtenerEtiquetas(linea: string): string[] {
+    const etiquetas: string[] = [];
+    const matches = linea.match(/#[\w-]+/g);
+    if (matches) {
+        etiquetas.push(...matches);
+    }
+    return etiquetas;
+}

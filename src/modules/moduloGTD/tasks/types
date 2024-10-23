@@ -1,0 +1,15 @@
+import { Plugin } from 'obsidian';
+import { PluginMainSettings } from '../../../interfaces/pluginMainSettings';
+
+export interface ManagementPlugin extends Plugin {
+    settings: PluginMainSettings;
+    registroTiempoAPI: any;
+    starterAPI: any;
+    addOnsAPI: any;
+    YAMLUpdaterAPI: any;
+    menuHoyAPI: any;
+    menuSemanalAPI: any;
+    subsistemasAPI: any;
+    librosAPI: any;
+    tp: any;
+}
