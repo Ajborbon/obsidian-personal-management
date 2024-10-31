@@ -23,11 +23,8 @@ import { VistaRegistroDiario } from "./modules/noteLifecycleManager/views/vistaR
 import GPThora from "./modules/GPThora/GPThora";
 import { librosAPI } from "./modules/moduloLibros/librosAPI";
 import { updateSesionLectura } from "./modules/moduloRegistroTiempo/API/updateSesionLectura";
-
-import {
-  getTareasVencidasAbiertas,
-  mostrarTareasVencidas,
-} from "./modules/moduloGTD/tareasAPI";
+import { TareasAPI } from "./modules/taskManager/api/tareasAPI";
+import { ModuloTabTitle } from './modules/moduloTabTitle';
 
 export default class ManagementPlugin extends Plugin {
   settings: PluginMainSettings | undefined;
@@ -52,9 +49,9 @@ export default class ManagementPlugin extends Plugin {
   librosAPI: librosAPI | undefined;
   newInbox: any;
   tp: any;
-  getTareasVencidasAbiertas: () => Promise<Task[]>;
-  mostrarTareasVencidas: () => Promise<void>;
-
+  tareasAPI: TareasAPI | undefined;
+  moduloTabTitle: ModuloTabTitle | null = null;
+  
   // Declara una propiedad para mantener una instancia de `StatusBarExtension`.
 
   async onload() {
@@ -94,18 +91,27 @@ export default class ManagementPlugin extends Plugin {
     this.moduloBase = new ModuloBase(this);
     //this.moduloTerceros = new ModuloTerceros(this);
     this.moduloGTD = new ModuloGTD(this);
-    this.getTareasVencidasAbiertas = () => getTareasVencidasAbiertas(this);
-    this.mostrarTareasVencidas = () => mostrarTareasVencidas(this);
-    // Expose functions globally
+    //this.getTareasVencidasAbiertas = () => getTareasVencidasAbiertas(this);
+    //this.mostrarTareasVencidas = () => mostrarTareasVencidas(this);
+    this.tareasAPI = new TareasAPI(this);
+    this.moduloTabTitle = new ModuloTabTitle(this);
+  // 
     (this.app as any).gpManagement = {
-      getTareasVencidasAbiertas: this.getTareasVencidasAbiertas,
-      mostrarTareasVencidas: this.mostrarTareasVencidas,
-    };
+      getTareasVencidasAbiertas: () => this.tareasAPI.getTareasVencidasAbiertas(),
+      mostrarTareasVencidas: () => this.tareasAPI.mostrarTareasVencidas()
+  };
+
     this.applyConfiguration();
     // Aplica la configuración inicial basada en los ajustes cargados o predeterminados.
     console.log("Iniciando carga de plugin de Gestión Personal");
 
     this.registerGPThora();
+    // Activación de moduloTagTitle
+    if (this.settings.moduloTabTitle) {
+      this.moduloTabTitle?.activate();
+      } else {
+          this.moduloTabTitle?.deactivate();
+      }
   }
 
   registerGPThora() {

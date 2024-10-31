@@ -5,6 +5,7 @@ export interface PluginMainSettings {
     moduloAliasStatusBar: boolean,
     moduloBase: boolean,
     moduloGTD: boolean,
+    moduloTabTitle: boolean,  // Modulo de cambio de titulo de las pestañas.
     // Archivos de campos
     file_camposCentral: string,
 

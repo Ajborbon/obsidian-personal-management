@@ -1,4 +1,5 @@
 {
+  "titleDisplayMode": "alias",
   "moduloRegistroTiempo": true,
   "moduloAliasStatusBar": false,
   "moduloBase": true,
