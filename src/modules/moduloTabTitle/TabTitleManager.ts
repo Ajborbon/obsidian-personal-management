@@ -37,39 +37,56 @@ export class TabTitleManager {
     private async updateTab(leaf: WorkspaceLeaf) {
         if (!(leaf.view instanceof MarkdownView) || !leaf.view.file) return;
 
-        const title = await this.getPreferredTitle(leaf.view.file);
-        if (title) {
-            leaf.view.titleEl.innerText = title;
+        const { displayTitle, source } = await this.getPreferredTitleWithSource(leaf.view.file);
+        if (displayTitle) {
+            const formattedTitle = `${leaf.view.file.basename} / ${displayTitle}`;
+            leaf.view.titleEl.innerText = formattedTitle;
             if (leaf.tabHeaderInnerTitleEl) {
-                leaf.tabHeaderInnerTitleEl.innerText = title;
+                leaf.tabHeaderInnerTitleEl.innerText = formattedTitle;
             }
+            Logger.debug(`Updated tab title to: ${formattedTitle} (source: ${source})`);
         }
     }
 
-    async getPreferredTitle(file: TFile): Promise<string | null> {
+    async getPreferredTitleWithSource(file: TFile): Promise<{ displayTitle: string | null; source: string }> {
         try {
             const metadata = await this.waitForMetadata(file);
             
             // Primero intenta obtener el primer alias
             if (metadata?.aliases) {
                 if (Array.isArray(metadata.aliases) && metadata.aliases.length > 0) {
-                    return metadata.aliases[0];
+                    return { 
+                        displayTitle: metadata.aliases[0],
+                        source: 'aliases'
+                    };
                 }
                 if (typeof metadata.aliases === 'string') {
-                    return metadata.aliases;
+                    return { 
+                        displayTitle: metadata.aliases,
+                        source: 'aliases'
+                    };
                 }
             }
             
             // Si no hay alias, intenta obtener el título
             if (metadata?.titulo) {
-                return metadata.titulo;
+                return { 
+                    displayTitle: metadata.titulo,
+                    source: 'titulo'
+                };
             }
             
-            // Si no hay alias ni título, usa el nombre del archivo
-            return file.basename;
+            // Si no hay alias ni título, usa solo el nombre del archivo
+            return { 
+                displayTitle: null,
+                source: 'basename'
+            };
         } catch (error) {
             Logger.error(`Error getting title for ${file.path}:`, error);
-            return file.basename;
+            return { 
+                displayTitle: null,
+                source: 'error'
+            };
         }
     }
 
