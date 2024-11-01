@@ -133,7 +133,8 @@
 |   |   |-- moduloGTD
 |   |   |   |-- commands.ts
 |   |   |   |-- inbox.ts
-|   |   |   `-- index.ts
+|   |   |   |-- index.ts
+|   |   |   `-- tareasAPI.ts
 |   |   |-- moduloLibros
 |   |   |   `-- librosAPI.ts
 |   |   |-- moduloRegistroTiempo
@@ -159,61 +160,81 @@
 |   |   |   |-- utils.ts
 |   |   |   `-- views
 |   |   |       `-- vistaRTActivo.ts
+|   |   |-- moduloTabTitle
+|   |   |   |-- TabTitleManager.ts
+|   |   |   |-- commands.ts
+|   |   |   |-- defaults
+|   |   |   |   `-- defaultSettings.ts
+|   |   |   |-- index.ts
+|   |   |   |-- interfaces
+|   |   |   |   `-- TabTitleSettings.ts
+|   |   |   |-- utils
+|   |   |   |   `-- logger.ts
+|   |   |   `-- views
+|   |   |       `-- CustomMarkdownView.ts
 |   |   |-- modulo_Terceros
 |   |   |   |-- commands.ts
 |   |   |   |-- index.ts
 |   |   |   `-- utils
 |   |   |       `-- googleCalendarPlugin.ts
-|   |   `-- noteLifecycleManager
-|   |       |-- API
-|   |       |   |-- YAMLUpdaterAPI.ts
-|   |       |   |-- addOnsAPI.ts
-|   |       |   |-- menuDiarioAPI.ts
-|   |       |   |-- menuSemanalAPI.ts
-|   |       |   |-- starterAPI back.ts
-|   |       |   |-- starterAPI.ts
-|   |       |   `-- subsistemasAPI.ts
-|   |       |-- FieldHandlerUtils.ts
-|   |       |-- Interfaces
-|   |       |   |-- AgradecimientosFieldHandler.ts
-|   |       |   |-- AnotacionesFieldHandler.ts
-|   |       |   |-- AreaVidaFieldHandler.ts
-|   |       |   |-- Biblioteca_FH.ts
-|   |       |   |-- CompassPlaneacionAnual_FH.ts
-|   |       |   |-- NoteFieldHandler.ts
-|   |       |   |-- NoteFieldHandlerBase.ts
-|   |       |   |-- ObjCompassAnualFieldHandler.ts
-|   |       |   |-- PQFieldHandler.ts
-|   |       |   |-- ReflexionesFieldHandler.ts
-|   |       |   `-- nodoAreaVidaFieldHandler.ts
-|   |       |-- fieldHandlers
-|   |       |   |-- CompassPlaneacionAnual_FH.ts
-|   |       |   |-- FH Base
-|   |       |   |   |-- NoteFieldHandler.ts
-|   |       |   |   `-- NoteFieldHandlerBase.ts
-|   |       |   |-- FH Estructura
-|   |       |   |   |-- AreaVidaFieldHandler.ts
-|   |       |   |   |-- AreasInteresFieldHandler.ts
-|   |       |   |   |-- PGTDFieldHandler.ts
-|   |       |   |   |-- PQFieldHandler.ts
-|   |       |   |   `-- nodoAreaVidaFieldHandler.ts
-|   |       |   |-- FH Subsistemas
-|   |       |   |   |-- AgradecimientosFieldHandler.ts
-|   |       |   |   |-- AnotacionesFieldHandler.ts
-|   |       |   |   |-- Biblioteca_FH.ts
-|   |       |   |   |-- CPEFieldHandler.ts
-|   |       |   |   |-- ReflexionesFieldHandlers.ts
-|   |       |   |   |-- RepositorioLibros_FH.ts
-|   |       |   |   `-- TransaccionesFieldHandler.ts
-|   |       |   |-- ObjCompassAnualFieldHandler.ts
-|   |       |   `-- RRFieldHandler.ts
-|   |       `-- views
-|   |           |-- vistaRegistroDiario.ts
-|   |           `-- vistaResumenSemanal.ts
+|   |   |-- noteLifecycleManager
+|   |   |   |-- API
+|   |   |   |   |-- YAMLUpdaterAPI.ts
+|   |   |   |   |-- addOnsAPI.ts
+|   |   |   |   |-- menuDiarioAPI.ts
+|   |   |   |   |-- menuSemanalAPI.ts
+|   |   |   |   |-- starterAPI back.ts
+|   |   |   |   |-- starterAPI.ts
+|   |   |   |   `-- subsistemasAPI.ts
+|   |   |   |-- FieldHandlerUtils.ts
+|   |   |   |-- Interfaces
+|   |   |   |   |-- AgradecimientosFieldHandler.ts
+|   |   |   |   |-- AnotacionesFieldHandler.ts
+|   |   |   |   |-- AreaVidaFieldHandler.ts
+|   |   |   |   |-- Biblioteca_FH.ts
+|   |   |   |   |-- CompassPlaneacionAnual_FH.ts
+|   |   |   |   |-- NoteFieldHandler.ts
+|   |   |   |   |-- NoteFieldHandlerBase.ts
+|   |   |   |   |-- ObjCompassAnualFieldHandler.ts
+|   |   |   |   |-- PQFieldHandler.ts
+|   |   |   |   |-- ReflexionesFieldHandler.ts
+|   |   |   |   `-- nodoAreaVidaFieldHandler.ts
+|   |   |   |-- fieldHandlers
+|   |   |   |   |-- CompassPlaneacionAnual_FH.ts
+|   |   |   |   |-- FH Base
+|   |   |   |   |   |-- NoteFieldHandler.ts
+|   |   |   |   |   `-- NoteFieldHandlerBase.ts
+|   |   |   |   |-- FH Estructura
+|   |   |   |   |   |-- AreaVidaFieldHandler.ts
+|   |   |   |   |   |-- AreasInteresFieldHandler.ts
+|   |   |   |   |   |-- PGTDFieldHandler.ts
+|   |   |   |   |   |-- PQFieldHandler.ts
+|   |   |   |   |   `-- nodoAreaVidaFieldHandler.ts
+|   |   |   |   |-- FH Subsistemas
+|   |   |   |   |   |-- AgradecimientosFieldHandler.ts
+|   |   |   |   |   |-- AnotacionesFieldHandler.ts
+|   |   |   |   |   |-- Biblioteca_FH.ts
+|   |   |   |   |   |-- CPEFieldHandler.ts
+|   |   |   |   |   |-- ReflexionesFieldHandlers.ts
+|   |   |   |   |   |-- RepositorioLibros_FH.ts
+|   |   |   |   |   `-- TransaccionesFieldHandler.ts
+|   |   |   |   |-- ObjCompassAnualFieldHandler.ts
+|   |   |   |   `-- RRFieldHandler.ts
+|   |   |   `-- views
+|   |   |       |-- vistaRegistroDiario.ts
+|   |   |       `-- vistaResumenSemanal.ts
+|   |   `-- taskManager
+|   |       |-- api
+|   |       |   |-- tareasAPI-bck.ts
+|   |       |   `-- tareasAPI.ts
+|   |       |-- interfaces
+|   |       |   `-- taskInterfaces.ts
+|   |       `-- utils
+|   |           `-- taskUtils.ts
 |   |-- obsidian.d.ts
 |   |-- settings
 |   `-- settingsTab.ts
 |-- styles.css
 `-- tsconfig.json
 
-82 directories, 135 files
+91 directories, 147 files

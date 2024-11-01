@@ -1,14 +1,16 @@
 // src/modules/moduloTabTitle/index.ts
+
 import { Plugin, TFile } from 'obsidian';
 import { registerCommands } from './commands';
 import { TabTitleManager } from './TabTitleManager';
 import { TabTitleSettings } from './interfaces/TabTitleSettings';
 import { DEFAULT_TAB_SETTINGS } from './defaults/defaultSettings';
+import { Logger } from './utils/logger';
 
 export class ModuloTabTitle {
     private plugin: Plugin;
     private settings: TabTitleSettings;
-    private tabManager: TabTitleManager;
+    private tabManager: TabTitleManager | null = null;
     
     constructor(plugin: Plugin) {
         this.plugin = plugin;
@@ -20,31 +22,25 @@ export class ModuloTabTitle {
             // Cargar configuración
             await this.loadSettings();
             
-            // Asegurarse de que titleDisplayMode está configurado como 'alias'
+            // Asegurarse de que titleDisplayMode está configurado
             if (!this.settings.titleDisplayMode) {
                 this.settings.titleDisplayMode = 'alias';
-                await this.plugin.saveData(this.settings);
+                await this.saveSettings();
             }
 
             // Inicializar el manejador de títulos
             this.tabManager = new TabTitleManager(this.plugin, this.settings);
-
-            // Forzar una actualización inicial
-            setTimeout(() => {
-                this.tabManager.updateAllTabs();
-            }, 1000); // Esperar 1 segundo después de la activación
-
             
             // Registrar los comandos
             registerCommands(this.plugin, this.settings);
             
-            // Registrar eventos para las pestañas con manejo de errores
+            // Registrar eventos para cambios de layout
             this.plugin.registerEvent(
                 this.plugin.app.workspace.on('layout-change', () => {
                     try {
-                        this.tabManager.updateAllTabs();
+                        this.tabManager?.updateAllTabs();
                     } catch (error) {
-                        console.error('Error updating tabs on layout change:', error);
+                        Logger.error('Error updating tabs on layout change:', error);
                     }
                 })
             );
@@ -53,17 +49,22 @@ export class ModuloTabTitle {
             this.plugin.registerEvent(
                 this.plugin.app.workspace.on('file-open', (file: TFile | null) => {
                     try {
-                        if (file) {
+                        if (file && this.tabManager) {
                             this.tabManager.updateTabForFile(file);
                         }
                     } catch (error) {
-                        console.error('Error updating tab on file open:', error);
+                        Logger.error('Error updating tab on file open:', error);
                     }
                 })
             );
 
+            // Actualización inicial después de un breve retraso
+            setTimeout(() => {
+                this.tabManager?.updateAllTabs();
+            }, 1000);
+
         } catch (error) {
-            console.error('Error activating TabTitle module:', error);
+            Logger.error('Error activating TabTitle module:', error);
         }
     }
 
@@ -71,22 +72,28 @@ export class ModuloTabTitle {
         try {
             if (this.tabManager) {
                 this.tabManager.restoreDefaultTitles();
+                this.tabManager = null;
             }
         } catch (error) {
-            console.error('Error deactivating TabTitle module:', error);
+            Logger.error('Error deactivating TabTitle module:', error);
         }
     }
 
     private async loadSettings() {
         try {
-            this.settings = Object.assign(
-                {},
-                DEFAULT_TAB_SETTINGS,
-                await this.plugin.loadData()
-            );
+            const loadedData = await this.plugin.loadData();
+            this.settings = Object.assign({}, DEFAULT_TAB_SETTINGS, loadedData);
         } catch (error) {
-            console.error('Error loading TabTitle settings:', error);
+            Logger.error('Error loading TabTitle settings:', error);
             this.settings = DEFAULT_TAB_SETTINGS;
+        }
+    }
+
+    private async saveSettings() {
+        try {
+            await this.plugin.saveData(this.settings);
+        } catch (error) {
+            Logger.error('Error saving TabTitle settings:', error);
         }
     }
 }
