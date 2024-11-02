@@ -25,6 +25,7 @@ import { librosAPI } from "./modules/moduloLibros/librosAPI";
 import { updateSesionLectura } from "./modules/moduloRegistroTiempo/API/updateSesionLectura";
 import { TareasAPI } from "./modules/taskManager/api/tareasAPI";
 import { ModuloTabTitle } from './modules/moduloTabTitle';
+import { ModuloTaskManager } from './modules/taskManager';
 
 export default class ManagementPlugin extends Plugin {
   settings: PluginMainSettings | undefined;
@@ -51,7 +52,7 @@ export default class ManagementPlugin extends Plugin {
   tp: any;
   tareasAPI: TareasAPI | undefined;
   moduloTabTitle: ModuloTabTitle | null = null;
-  
+  moduloTaskManager: ModuloTaskManager | null = null;
   // Declara una propiedad para mantener una instancia de `StatusBarExtension`.
 
   async onload() {
@@ -95,12 +96,13 @@ export default class ManagementPlugin extends Plugin {
     //this.mostrarTareasVencidas = () => mostrarTareasVencidas(this);
     this.tareasAPI = new TareasAPI(this);
     this.moduloTabTitle = new ModuloTabTitle(this);
-  // 
+    this.moduloTaskManager = new ModuloTaskManager(this);
+    /*
     (this.app as any).gpManagement = {
       getTareasVencidasAbiertas: () => this.tareasAPI.getTareasVencidasAbiertas(),
       mostrarTareasVencidas: () => this.tareasAPI.mostrarTareasVencidas()
-  };
-
+    };
+    */
     this.applyConfiguration();
     // Aplica la configuración inicial basada en los ajustes cargados o predeterminados.
     console.log("Iniciando carga de plugin de Gestión Personal");
@@ -112,6 +114,9 @@ export default class ManagementPlugin extends Plugin {
       } else {
           this.moduloTabTitle?.deactivate();
       }
+      if (this.settings.moduloTaskManager) {
+        this.moduloTaskManager.activate();
+    }
   }
 
   registerGPThora() {
@@ -143,6 +148,11 @@ export default class ManagementPlugin extends Plugin {
     } else {
       this.moduloGTD?.deactivate(this);
     }
+    if (this.settings.moduloTaskManager) {
+      this.moduloTaskManager?.activate();
+  } else {
+      this.moduloTaskManager?.deactivate();
+  }
 
     //this.moduloTerceros?.activate(this);
   }

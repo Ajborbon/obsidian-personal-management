@@ -20,6 +20,7 @@ export interface Task {
         otras: string[];       // Otras etiquetas no categorizadas
     };
     weight?: TaskWeight;
+    tipoVencimiento?: string[];  // Nueva propiedad para indicar el tipo de vencimiento
 }
 
 // src/modules/taskManager/interfaces/taskInterfaces.ts
@@ -37,5 +38,6 @@ export enum EstadoTarea {
     Vencida = 'vencida',
     Retrasada = 'retrasada',
     Programada = 'programada',
-    Diferida = 'diferida'
+    Diferida = 'diferida',
+    EnEjecucion = 'en_ejecucion'  // Nuevo estado
 }

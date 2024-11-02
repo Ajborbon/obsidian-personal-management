@@ -42,9 +42,97 @@ class TaskDaysModal extends Modal {
     }
 }
 
+// Añadir nueva clase modal para configurar días futuros
+class FutureTasksModal extends Modal {
+    private dias: number = 7;
+
+    constructor(
+        private pluginInstance: MyPlugin,
+        private defaultDays: number = 7
+    ) {
+        super(pluginInstance.app);
+        this.dias = defaultDays;
+    }
+
+    onOpen() {
+        const { contentEl } = this;
+
+        contentEl.createEl('h2', { text: 'Mostrar tareas futuras' });
+
+        new Setting(contentEl)
+            .setName('Número de días hacia adelante')
+            .setDesc('Mostrar tareas programadas para los próximos X días')
+            .addText(text => text
+                .setValue(this.defaultDays.toString())
+                .onChange(value => {
+                    this.dias = parseInt(value) || 7;
+                }));
+
+        new Setting(contentEl)
+            .addButton(btn => btn
+                .setButtonText('Mostrar tareas')
+                .setCta()
+                .onClick(async () => {
+                    this.close();
+                    if (this.pluginInstance.tareasAPI) {
+                        await this.pluginInstance.tareasAPI.mostrarTareasFuturas(this.dias);
+                    }
+                }));
+    }
+
+    onClose() {
+        const { contentEl } = this;
+        contentEl.empty();
+    }
+}
+
+class ScheduledTaskDaysModal extends Modal {
+    private dias: number = 7;
+
+    constructor(
+        private pluginInstance: MyPlugin, 
+        private defaultDays: number = 7
+    ) {
+        super(pluginInstance.app);
+        this.dias = defaultDays;
+    }
+
+    onOpen() {
+        const { contentEl } = this;
+
+        contentEl.createEl('h2', { text: 'Mostrar tareas programadas próximas' });
+
+        new Setting(contentEl)
+            .setName('Número de días')
+            .setDesc('Mostrar tareas programadas para los próximos X días')
+            .addText(text => text
+                .setValue(this.defaultDays.toString())
+                .onChange(value => {
+                    this.dias = parseInt(value) || 7;
+                }));
+
+        new Setting(contentEl)
+            .addButton(btn => btn
+                .setButtonText('Mostrar tareas')
+                .setCta()
+                .onClick(async () => {
+                    this.close();
+                    if (this.pluginInstance.tareasAPI) {
+                        await this.pluginInstance.tareasAPI.mostrarTareasScheduledProximas(this.dias);
+                    }
+                }));
+    }
+
+    onClose() {
+        const { contentEl } = this;
+        contentEl.empty();
+    }
+}
+
 export function registerTaskManagerCommands(plugin: Plugin): void {
     const managementPlugin = plugin as MyPlugin;
     const commandIds: string[] = [];
+
 
     // Comando para mostrar tareas vencidas
     const tareasVencidasCommand = plugin.addCommand({
@@ -63,7 +151,7 @@ export function registerTaskManagerCommands(plugin: Plugin): void {
     // Comando para mostrar tareas próximas
     const tareasProximasCommand = plugin.addCommand({
         id: "mostrar-tareas-proximas",
-        name: "Mostrar Tareas Próximas y Vencidas",
+        name: "Mostrar Tareas Próximas",
         callback: async () => {
             if (managementPlugin.tareasAPI) {
                 await managementPlugin.tareasAPI.mostrarTareasProximas();
@@ -130,6 +218,78 @@ export function registerTaskManagerCommands(plugin: Plugin): void {
         }
     });
     commandIds.push(tareasStartProximasCommand.id);
+
+     // Añadir nuevo comando para tareas futuras
+     const tareasFuturasCommand = plugin.addCommand({
+        id: "mostrar-tareas-futuras",
+        name: "Mostrar Tareas Futuras Programadas",
+        callback: async () => {
+            if (managementPlugin.tareasAPI) {
+                const modal = new FutureTasksModal(managementPlugin);
+                modal.open();
+            } else {
+                new Notice("El módulo de tareas no está disponible.");
+            }
+        }
+    });
+    commandIds.push(tareasFuturasCommand.id);
+
+        // Añadir nuevo comando para tareas en ejecución
+        const tareasEnEjecucionCommand = plugin.addCommand({
+            id: "mostrar-tareas-en-ejecucion",
+            name: "Mostrar Tareas en Ejecución",
+            callback: async () => {
+                if (managementPlugin.tareasAPI) {
+                    await managementPlugin.tareasAPI.mostrarTareasEnEjecucion();
+                } else {
+                    new Notice("El módulo de tareas no está disponible.");
+                }
+            }
+        });
+        commandIds.push(tareasEnEjecucionCommand.id);
+
+        // Comando para tareas scheduled vencidas
+    const tareasScheduledVencidasCommand = plugin.addCommand({
+        id: "mostrar-tareas-scheduled-vencidas",
+        name: "Mostrar Tareas Scheduled Vencidas",
+        callback: async () => {
+            if (managementPlugin.tareasAPI) {
+                await managementPlugin.tareasAPI.mostrarTareasScheduledVencidas();
+            } else {
+                new Notice("El módulo de tareas no está disponible.");
+            }
+        }
+    });
+    commandIds.push(tareasScheduledVencidasCommand.id);
+
+    // Comando para tareas scheduled próximas
+    const tareasScheduledProximasCommand = plugin.addCommand({
+        id: "mostrar-tareas-scheduled-proximas",
+        name: "Mostrar Tareas Scheduled Próximas",
+        callback: async () => {
+            if (managementPlugin.tareasAPI) {
+                const modal = new ScheduledTaskDaysModal(managementPlugin);
+                modal.open();
+            } else {
+                new Notice("El módulo de tareas no está disponible.");
+            }
+        }
+    });
+    commandIds.push(tareasScheduledProximasCommand.id);
+
+      // Comando para todas las tareas vencidas
+      const todasTareasVencidasCommand = plugin.addCommand({
+        id: "mostrar-todas-tareas-vencidas",
+        name: "Mostrar Todas las Tareas Vencidas (Due, Scheduled, Start)",
+        callback: async () => {
+            if (managementPlugin.tareasAPI) {
+                await managementPlugin.tareasAPI.mostrarTodasTareasVencidas();
+            } else {
+                new Notice("El módulo de tareas no está disponible.");
+            }
+        }
+    });
+    commandIds.push(todasTareasVencidasCommand.id);
 
     // Guardar los IDs de los comandos en el plugin
     (plugin as any).registeredTaskManagerCommandIds = commandIds;

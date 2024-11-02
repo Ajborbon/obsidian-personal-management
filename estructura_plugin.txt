@@ -227,6 +227,8 @@
 |   |       |-- api
 |   |       |   |-- tareasAPI-bck.ts
 |   |       |   `-- tareasAPI.ts
+|   |       |-- commands.ts
+|   |       |-- index.ts
 |   |       |-- interfaces
 |   |       |   `-- taskInterfaces.ts
 |   |       `-- utils
@@ -238,4 +240,4 @@
 |-- styles.css
 `-- tsconfig.json
 
-91 directories, 148 files
+91 directories, 150 files
