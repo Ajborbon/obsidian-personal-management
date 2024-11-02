@@ -19,6 +19,16 @@ export interface Task {
         personas: string[];    // Etiquetas que comienzan con px
         otras: string[];       // Otras etiquetas no categorizadas
     };
+    weight?: TaskWeight;
+}
+
+// src/modules/taskManager/interfaces/taskInterfaces.ts
+
+export interface TaskWeight {
+    baseWeight: number;
+    timeWeight: number;
+    priorityWeight: number;
+    totalWeight: number;
 }
 
 export enum EstadoTarea {

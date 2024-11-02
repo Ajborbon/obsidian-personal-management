@@ -5,19 +5,12 @@ import MyPlugin from '../../../main';
 
 export class TaskUtils {
     constructor(private plugin: MyPlugin) {}
-
-    public obtenerFechaLocal(): Date {
-        const ahora = new Date();
-        return new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate());
-    }
-
-    public parsearFechaVencimiento(fechaStr: string): Date {
-        const partes = fechaStr.split('-');
-        return new Date(
-            parseInt(partes[0]),
-            parseInt(partes[1]) - 1,
-            parseInt(partes[2])
-        );
+    
+    public compararFechas(fecha1: Date | null, fecha2: Date | null): number {
+        if (!fecha1 && !fecha2) return 0;
+        if (!fecha1) return 1;  // null se considera mayor
+        if (!fecha2) return -1; // null se considera mayor
+        return fecha1.getTime() - fecha2.getTime();
     }
 
     private normalizarHora(hora: string): string | null {
@@ -267,6 +260,41 @@ export class TaskUtils {
         }
 
         return resultado;
+    }
+
+    public obtenerFechaLocal(): Date {
+        const ahora = new Date();
+
+        // Asegurar que estamos trabajando con la fecha local
+        return new Date(
+            ahora.getFullYear(),
+            ahora.getMonth(),
+            ahora.getDate(),
+            0, 0, 0
+        );
+    }
+
+    public parsearFechaVencimiento(fechaStr: string | null | undefined): Date | null {
+        if (!fechaStr) return null;
+        try {
+            // Asegurar que interpretamos la fecha en la zona horaria local
+            const [año, mes, dia] = fechaStr.split('-').map(num => parseInt(num));
+            if (isNaN(año) || isNaN(mes) || isNaN(dia)) return null;
+            
+            // Crear la fecha en la zona horaria local
+            const fecha = new Date(año, mes - 1, dia, 0, 0, 0);
+            return fecha;
+        } catch (error) {
+            console.error('Error parseando fecha:', error);
+            return null;
+        }
+    }
+
+    public normalizarFechaAString(fecha: Date): string {
+        const año = fecha.getFullYear();
+        const mes = String(fecha.getMonth() + 1).padStart(2, '0');
+        const dia = String(fecha.getDate()).padStart(2, '0');
+        return `${año}-${mes}-${dia}`;
     }
 
 }
