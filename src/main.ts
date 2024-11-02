@@ -26,6 +26,7 @@ import { updateSesionLectura } from "./modules/moduloRegistroTiempo/API/updateSe
 import { TareasAPI } from "./modules/taskManager/api/tareasAPI";
 import { ModuloTabTitle } from './modules/moduloTabTitle';
 import { ModuloTaskManager } from './modules/taskManager';
+import { ModuloDataviewQueries } from './modules/dataviewQueries';
 
 export default class ManagementPlugin extends Plugin {
   settings: PluginMainSettings | undefined;
@@ -53,6 +54,7 @@ export default class ManagementPlugin extends Plugin {
   tareasAPI: TareasAPI | undefined;
   moduloTabTitle: ModuloTabTitle | null = null;
   moduloTaskManager: ModuloTaskManager | null = null;
+  moduloDataviewQueries: ModuloDataviewQueries | null = null;
   // Declara una propiedad para mantener una instancia de `StatusBarExtension`.
 
   async onload() {
@@ -97,6 +99,7 @@ export default class ManagementPlugin extends Plugin {
     this.tareasAPI = new TareasAPI(this);
     this.moduloTabTitle = new ModuloTabTitle(this);
     this.moduloTaskManager = new ModuloTaskManager(this);
+    this.moduloDataviewQueries = new ModuloDataviewQueries(this);
     /*
     (this.app as any).gpManagement = {
       getTareasVencidasAbiertas: () => this.tareasAPI.getTareasVencidasAbiertas(),
@@ -117,6 +120,19 @@ export default class ManagementPlugin extends Plugin {
       if (this.settings.moduloTaskManager) {
         this.moduloTaskManager.activate();
     }
+    if (this.settings.moduloDataviewQueries) {
+      console.log('ManagementPlugin: Aplicando configuración DataviewQueries...');
+      try {
+          if (!this.moduloDataviewQueries.isActive()) {
+              this.moduloDataviewQueries.activate();
+          }
+      } catch (error) {
+          console.error('Error en applyConfiguration:', error);
+      }
+    } else {
+      this.moduloDataviewQueries?.deactivate();
+    }
+  
   }
 
   registerGPThora() {
@@ -153,6 +169,14 @@ export default class ManagementPlugin extends Plugin {
   } else {
       this.moduloTaskManager?.deactivate();
   }
+ 
+  if (this.settings.moduloDataviewQueries) {
+        console.log('Aplicando configuración: Activando DataviewQueries');
+        this.moduloDataviewQueries?.activate();
+    } else {
+        console.log('Aplicando configuración: Desactivando DataviewQueries');
+        this.moduloDataviewQueries?.deactivate();
+    }
 
     //this.moduloTerceros?.activate(this);
   }
@@ -160,6 +184,9 @@ export default class ManagementPlugin extends Plugin {
   async onunload() {
     // Código de limpieza aquí
     console.log("Descargando plugin Gestión Personal");
+    if (this.moduloDataviewQueries) {
+      this.moduloDataviewQueries.deactivate();
+  }
     delete (this.app as any).gpManagement;
     return Promise.resolve();
   }

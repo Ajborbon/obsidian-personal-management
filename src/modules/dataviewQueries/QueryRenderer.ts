@@ -1,139 +1,113 @@
 // src/modules/dataviewQueries/QueryRenderer.ts
-import { ButtonStyle } from './interfaces/ButtonStyle';
-
 export class QueryRenderer {
-    private createStyles() {
-        const style = document.createElement('style');
-        style.textContent = `
-            .custom-query-container {
-                background-color: var(--background-secondary);
-                border-radius: 8px;
-                padding: 16px;
-                margin-bottom: 16px;
-                box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            }
-            
-            .custom-query-title {
-                font-size: 1.1em;
-                font-weight: bold;
-                margin-bottom: 12px;
-                color: var(--text-normal);
-            }
-            
-            .custom-button-grid {
-                display: grid;
-                grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-                gap: 8px;
-            }
-            
-            .custom-button {
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                padding: 8px 16px;
-                border: none;
-                border-radius: 6px;
-                cursor: pointer;
-                font-size: 0.95em;
-                font-weight: 500;
-                transition: all 0.2s ease;
-                color: white;
-                gap: 8px;
-            }
-            
-            .custom-button:hover {
-                transform: translateY(-1px);
-                filter: brightness(1.1);
-            }
-            
-            .custom-button:active {
-                transform: translateY(0px);
-            }
-            
-            .button-today { background-color: #4CAF50; }
-            .button-overdue { background-color: #f44336; }
-            .button-upcoming { background-color: #2196F3; }
-            .button-start { background-color: #FF9800; }
-        `;
-        return style;
-    }
+    async renderTaskButtons(container: HTMLElement, options: any = {}) {
+        const buttonContainer = container.createEl('div', {
+            cls: 'task-buttons-container',
+            attr: { style: 'display: grid; grid-gap: 8px; padding: 16px; background: var(--background-secondary); border-radius: 8px;' }
+        });
 
-    renderTaskButtons(dv: any, container: HTMLElement) {
-        const gp = dv.app.plugins.plugins['obsidian-personal-management'];
-        if (!gp) {
-            dv.paragraph("⚠️ Plugin de Gestión Personal no encontrado");
-            return;
+        if (options.showTitle !== false) {
+            buttonContainer.createEl('h4', {
+                text: '📋 Gestión de Tareas',
+                attr: { style: 'margin: 0 0 12px 0;' }
+            });
         }
 
-        container.appendChild(this.createStyles());
-
-        const mainContainer = container.createEl('div', {
-            cls: 'custom-query-container'
-        });
-
-        mainContainer.createEl('div', {
-            text: '📋 Gestión de Tareas',
-            cls: 'custom-query-title'
-        });
-
-        const buttonGrid = mainContainer.createEl('div', {
-            cls: 'custom-button-grid'
-        });
-
         const buttons = [
-            {
-                text: 'Tareas de Hoy',
-                icon: '📅',
-                class: 'button-today',
-                action: () => gp.tareasAPI.mostrarTareasHoy()
+            { 
+                id: 'today', 
+                text: 'Tareas de Hoy', 
+                icon: '📅', 
+                color: '#4CAF50',
+                action: () => app.plugins.plugins['obsidian-personal-management'].tareasAPI.mostrarTareasHoy()
             },
-            {
-                text: 'Tareas Vencidas',
-                icon: '⚠️',
-                class: 'button-overdue',
-                action: () => gp.tareasAPI.mostrarTareasVencidas()
+            { 
+                id: 'overdue', 
+                text: 'Tareas Vencidas', 
+                icon: '⚠️', 
+                color: '#f44336',
+                action: () => app.plugins.plugins['obsidian-personal-management'].tareasAPI.mostrarTareasVencidas()
             },
-            {
-                text: 'Tareas Próximas',
-                icon: '🎯',
-                class: 'button-upcoming',
-                action: () => gp.tareasAPI.mostrarTareasProximas()
+            { 
+                id: 'upcoming', 
+                text: 'Tareas Próximas', 
+                icon: '🎯', 
+                color: '#2196F3',
+                action: () => app.plugins.plugins['obsidian-personal-management'].tareasAPI.mostrarTareasProximas()
             },
-            {
-                text: 'Por Iniciar',
-                icon: '🚀',
-                class: 'button-start',
-                action: () => gp.tareasAPI.mostrarTareasStartVencidas()
+            { 
+                id: 'start', 
+                text: 'Todas las Vencidas', 
+                icon: '🌓', 
+                color: '#FF9800',
+                action: () => app.plugins.plugins['obsidian-personal-management'].tareasAPI.mostrarTodasTareasVencidas()
             }
         ];
 
-        buttons.forEach(btn => this.createButton(buttonGrid, btn));
+        const buttonGrid = buttonContainer.createEl('div', {
+            attr: { style: 'display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 8px;' }
+        });
+
+        buttons.forEach(btn => {
+            const button = buttonGrid.createEl('button', {
+                attr: {
+                    style: `
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        gap: 8px;
+                        padding: 8px 16px;
+                        background-color: ${btn.color};
+                        color: white;
+                        border: none;
+                        border-radius: 6px;
+                        cursor: pointer;
+                        transition: all 0.2s ease;
+                    `
+                }
+            });
+
+            button.createEl('span', { text: btn.icon });
+            button.createEl('span', { text: btn.text });
+            
+            // Eventos de hover
+            button.addEventListener('mouseenter', () => {
+                button.style.filter = 'brightness(1.1)';
+                button.style.transform = 'translateY(-1px)';
+            });
+            
+            button.addEventListener('mouseleave', () => {
+                button.style.filter = 'brightness(1)';
+                button.style.transform = 'translateY(0)';
+            });
+
+            // Evento de click con feedback visual
+            button.addEventListener('click', async () => {
+                try {
+                    button.style.opacity = '0.7';
+                    new Notice('Actualizando vista...');
+                    await btn.action();
+                } catch (error) {
+                    console.error(`Error en acción ${btn.id}:`, error);
+                    new Notice(`Error: ${error.message}`);
+                } finally {
+                    button.style.opacity = '1';
+                }
+            });
+        });
+
+        // Agregar timestamp si está habilitado
+        if (options.showTimestamp) {
+            buttonContainer.createEl('div', {
+                text: `Última actualización: ${new Date().toLocaleTimeString()}`,
+                attr: { 
+                    style: 'margin-top: 8px; text-align: right; font-size: 0.8em; color: var(--text-muted);'
+                }
+            });
+        }
     }
 
-    private createButton(container: HTMLElement, config: ButtonStyle) {
-        const button = container.createEl('button', {
-            cls: `custom-button ${config.class}`
-        });
-
-        button.createEl('span', {
-            text: config.icon
-        });
-
-        button.createEl('span', {
-            text: config.text
-        });
-
-        button.addEventListener('click', async () => {
-            try {
-                button.style.opacity = '0.7';
-                new Notice('Actualizando vista...');
-                await config.action();
-            } catch (error) {
-                console.error('Error:', error);
-                new Notice('Error al actualizar tareas');
-            } finally {
-                button.style.opacity = '1';
-            }
-        });
+    async renderProjectHierarchy(container: HTMLElement, options: any = {}) {
+        // Implementar cuando sea necesario
     }
 }
