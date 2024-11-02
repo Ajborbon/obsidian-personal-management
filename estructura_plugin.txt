@@ -230,11 +230,12 @@
 |   |       |-- interfaces
 |   |       |   `-- taskInterfaces.ts
 |   |       `-- utils
-|   |           `-- taskUtils.ts
+|   |           |-- taskUtils.ts
+|   |           `-- taskWeightCalculator.ts
 |   |-- obsidian.d.ts
 |   |-- settings
 |   `-- settingsTab.ts
 |-- styles.css
 `-- tsconfig.json
 
-91 directories, 147 files
+91 directories, 148 files
