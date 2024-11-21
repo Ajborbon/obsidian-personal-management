@@ -14,34 +14,19 @@ export class TareasAPI {
         TaskWeightCalculator.setTaskUtils(this.taskUtils);
     }
 
-    // Actualizar el array de archivos a excluir
-    private readonly ARCHIVOS_RESULTADOS = [
-        'Tareas en Ejecución.md',
-        'Tareas Vencidas.md',
-        'Tareas Próximas.md',
-        'Tareas para Hoy.md',
-        'Tareas con Inicio Vencido.md',
-        'Tareas por Iniciar.md',
-        'Tareas Programadas.md',
-        'Tareas Scheduled Vencidas.md',
-        'Tareas Scheduled Próximas.md',
-        'Todas las Tareas Vencidas.md'
-    ];
-
     private debeExcluirArchivo(file: TFile): boolean {
-        // Excluir la carpeta Plantillas
-        if (file.path.startsWith('Plantillas/') || file.path.startsWith('Archivo/Plantillas/')) {
+        // Excluir la carpeta Plantillas y sus subcarpetas
+        if (file.path.startsWith('Plantillas/')) {
             return true;
         }
 
-        // Excluir archivos de resultados
-        const nombreArchivo = file.path.split('/').pop();
-        if (this.ARCHIVOS_RESULTADOS.includes(nombreArchivo || '')) {
-            return true;
-        }
-
-        // Excluir cualquier archivo en la carpeta de resultados del sistema GTD
+        // Excluir la carpeta del sistema GTD y sus subcarpetas
         if (file.path.startsWith(`${this.plugin.settings.folder_SistemaGTD}/`)) {
+            return true;
+        }
+
+        // Excluir carpeta de archivos (si existe)
+        if (file.path.startsWith('Archivo/')) {
             return true;
         }
 
@@ -121,6 +106,7 @@ export class TareasAPI {
                             tarea.isBlocked = !estadoDependencia.completada;
                             tarea.dependencyLocation = estadoDependencia.rutaArchivo;
                             tarea.dependencyTitle = estadoDependencia.tituloArchivo;
+                            tarea.dependencyTexto = estadoDependencia.textoTarea; // Agregar el texto de la tarea dependiente
                         }
 
                         // Aplicar filtro
@@ -1169,16 +1155,14 @@ btn.addEventListener('click', async () => {
                 contenido += `    🆔 ${tarea.taskId}\n`;
             }
             
-            // Mostrar dependencia, su estado y ubicación
+  
+            // Mostrar detalles de la dependencia
             if (tarea.dependencyId) {
-                contenido += `    ⛔ ${tarea.dependencyId}`;
-                contenido += esEjecutable ? ' ✅' : ' ⏳';
-                
-                // Agregar link a la ubicación de la tarea dependiente si existe
-                if (tarea.dependencyLocation && tarea.dependencyTitle) {
-                    contenido += `    [[${tarea.dependencyLocation}|${tarea.dependencyTitle}]]`;
+                contenido += `    ↳ Depende de: ${tarea.dependencyTitle ? `[[${tarea.dependencyLocation}|${tarea.dependencyTitle}]]` : 'No encontrada'}`;
+                if (tarea.dependencyTexto) {
+                    contenido += `: "${tarea.dependencyTexto}"`;
                 }
-                
+                contenido += esEjecutable ? ' ✅' : ' ⏳';
                 contenido += '\n';
             }
         
@@ -1227,84 +1211,6 @@ btn.addEventListener('click', async () => {
         }
         
         
-        private renderizarTareaCompleta(tarea: Task): string {
-            let contenido = `- [ ] ${tarea.texto}\n`;
-            
-            // Mostrar IDs y dependencias
-            if (tarea.taskId) {
-                contenido += `    🆔 ${tarea.taskId}\n`;
-            }
-            if (tarea.dependencyId) {
-                contenido += `    ⛔ ${tarea.dependencyId}`;
-                if (tarea.isBlocked !== undefined) {
-                    contenido += tarea.isBlocked ? ' ⏳' : ' ✅';
-                }
-                if (tarea.dependencyLocation && tarea.dependencyTitle) {
-                    contenido += `    [[${tarea.dependencyLocation}|${tarea.dependencyTitle}]]`;
-                }
-                contenido += '\n';
-            }
-        
-            // Mostrar fechas
-            if (tarea.fechaVencimiento) {
-                contenido += `    📅 ${this.formatearFechaConContexto(tarea.fechaVencimiento, 'due')}\n`;
-            }
-            if (tarea.fechaScheduled) {
-                contenido += `    ⏳ ${this.formatearFechaConContexto(tarea.fechaScheduled, 'scheduled')}\n`;
-            }
-            if (tarea.fechaStart) {
-                contenido += `    🛫 ${this.formatearFechaConContexto(tarea.fechaStart, 'start')}\n`;
-            }
-        
-            // Mostrar contextos
-            if (tarea.etiquetas.contextos?.length > 0) {
-                contenido += `    🗂️ ${tarea.etiquetas.contextos.join(' | ')}\n`;
-            }
-        
-            return contenido;
-        }
-        
-        private renderizarTareasPersona(persona: string, tareas: Task[]): string {
-            const nombreFormateado = this.formatearNombrePersona(persona);
-            const tagNormalizado = persona.toLowerCase().replace(/_/g, ' ');
-            let contenido = `### ${nombreFormateado}\n`;
-            
-            // Separar tareas por prioridad
-            const tareasAlta = tareas.filter(t => 
-                t.texto.includes('🔺') || t.texto.includes('⏫'));
-            const tareaMedia = tareas.filter(t => 
-                t.texto.includes('🔼') && !tareasAlta.includes(t));
-            const tareasBaja = tareas.filter(t => 
-                !tareasAlta.includes(t) && !tareaMedia.includes(t));
-        
-            // Renderizar tareas de alta prioridad
-            if (tareasAlta.length > 0) {
-                contenido += `#### Prioridad Alta 🔺\n`;
-                tareasAlta.forEach(tarea => {
-                    contenido += this.renderizarTareaCompleta(tarea);
-                });
-            }
-        
-            // Renderizar tareas de prioridad media
-            if (tareaMedia.length > 0) {
-                contenido += `#### Prioridad Media\n`;
-                tareaMedia.forEach(tarea => {
-                    contenido += this.renderizarTareaCompleta(tarea);
-                });
-            }
-        
-            // Renderizar otras tareas
-            if (tareasBaja.length > 0) {
-                contenido += `#### Otras Tareas\n`;
-                tareasBaja.forEach(tarea => {
-                    contenido += this.renderizarTareaCompleta(tarea);
-                });
-            }
-        
-            return contenido + '\n';
-        }
-        
-
         public async getTareasPersonas(): Promise<{
             personasConTareas: Map<string, Task[]>,
             totalPersonas: number,
@@ -1384,7 +1290,7 @@ btn.addEventListener('click', async () => {
             Array.from(personasConTareas.entries())
                 .sort(([, tareasA], [, tareasB]) => tareasB.length - tareasA.length)
                 .forEach(([persona, tareas]) => {
-                    contenido += `### ${this.formatearNombrePersona(persona)}\n\n`;
+                    contenido += `### ${this.formatearNombrePersona(persona)}\n[[#Resumen de Asignaciones|⬆️]]\n`;
                     
                     // Ordenar tareas por peso y mostrarlas directamente
                     const tareasOrdenadas = TaskWeightCalculator.sortTasks(tareas);
@@ -1446,5 +1352,230 @@ btn.addEventListener('click', async () => {
                      .split(' ')
                      .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
                      .join(' ');
+        }
+
+        public async getTareasContextos(): Promise<{
+            contextosConTareas: Map<string, Task[]>,
+            totalContextos: number,
+            totalTareas: number
+        }> {
+            console.log("\n=== INICIANDO BÚSQUEDA DE TAREAS POR CONTEXTO ===");
+            
+            const contextosConTareas = new Map<string, Task[]>();
+            
+            const tareas = await this.procesarTareas(
+                this.plugin.app.vault.getMarkdownFiles(),
+                async (tarea) => {
+                    console.log("\nAnalizando tarea:", tarea.texto);
+                    if (!tarea.etiquetas.contextos || tarea.etiquetas.contextos.length === 0) {
+                        return false;
+                    }
+                    
+                    // Procesar cada contexto encontrado
+                    tarea.etiquetas.contextos.forEach(contexto => {
+                        const contextoNormalizado = this.normalizarContexto(contexto);
+                        if (!contextosConTareas.has(contextoNormalizado)) {
+                            contextosConTareas.set(contextoNormalizado, []);
+                        }
+                        contextosConTareas.get(contextoNormalizado)!.push(tarea);
+                    });
+                    
+                    return true;
+                }
+            );
+    
+            // Ordenar las tareas de cada contexto usando TaskWeightCalculator
+            contextosConTareas.forEach((tareas, contexto) => {
+                const tareasOrdenadas = TaskWeightCalculator.sortTasks(tareas);
+                contextosConTareas.set(contexto, tareasOrdenadas);
+            });
+    
+            return {
+                contextosConTareas,
+                totalContextos: contextosConTareas.size,
+                totalTareas: Array.from(contextosConTareas.values())
+                    .reduce((sum, tareas) => sum + tareas.length, 0)
+            };
+        }
+    
+        private normalizarContexto(contexto: string): string {
+            // Normalizar tanto formatos #cx-contexto como #cx/contexto
+            return contexto.replace(/[/-]/g, ' → ').trim();
+        }
+    
+        public async mostrarTareasContextos(): Promise<void> {
+            try {
+                const { contextosConTareas, totalContextos, totalTareas } = await this.getTareasContextos();
+                
+                if (totalContextos === 0) {
+                    new Notice('No se encontraron tareas con contextos asignados.');
+                    return;
+                }
+    
+                const contenido = this.generarVistaContextos(contextosConTareas, totalContextos, totalTareas);
+    
+                await this.guardarYAbrirArchivo(
+                    `${this.plugin.settings.folder_SistemaGTD}/Tareas por Contexto.md`,
+                    contenido
+                );
+                
+                new Notice(`Se encontraron ${totalTareas} tareas en ${totalContextos} contextos`);
+            } catch (error) {
+                console.error("Error en mostrarTareasContextos:", error);
+                new Notice(`Error: ${error.message}`);
+            }
+        }
+    
+        private generarVistaContextos(
+            contextosConTareas: Map<string, Task[]>,
+            totalContextos: number,
+            totalTareas: number
+        ): string {
+            const hoy = this.taskUtils.obtenerFechaLocal();
+            let contenido = `# Tareas por Contexto\n\n`;
+            
+            // Cabecera y resumen
+            contenido += this.generarBotonActualizacion("mostrarTareasContextos");
+            contenido += `> [!info] Actualizado: ${hoy.toLocaleDateString()} ${new Date().toLocaleTimeString()}\n`;
+            contenido += `> Total de contextos con tareas: ${totalContextos}\n`;
+            contenido += `> Total de tareas encontradas: ${totalTareas}\n\n`;
+    
+            // Construir árbol de contextos
+            const arbolContextos = this.construirArbolContextos(contextosConTareas);
+            
+            // Resumen de contextos
+            contenido += `## Resumen de Contextos\n`;
+            this.generarResumenContextos(arbolContextos, 0).forEach(linea => {
+                contenido += linea + '\n';
+            });
+            contenido += '\n';
+    
+            // Detalle de tareas por contexto
+            contenido += `## Tareas por Contexto\n\n`;
+            this.generarDetalleContextos(arbolContextos, contextosConTareas).forEach(bloque => {
+                contenido += bloque;
+            });
+    
+            return contenido;
+        }
+    
+        private construirArbolContextos(contextosConTareas: Map<string, Task[]>): Map<string, any> {
+            const arbol = new Map<string, any>();
+    
+            Array.from(contextosConTareas.keys()).forEach(contexto => {
+                const niveles = contexto.split(' → ');
+                let nodoActual = arbol;
+    
+                niveles.forEach((nivel, index) => {
+                    if (!nodoActual.has(nivel)) {
+                        nodoActual.set(nivel, {
+                            tareas: index === niveles.length - 1 ? contextosConTareas.get(contexto) : [],
+                            subcontextos: new Map(),
+                            rutaCompleta: niveles.slice(0, index + 1).join(' → ')
+                        });
+                    }
+                    nodoActual = nodoActual.get(nivel).subcontextos;
+                });
+            });
+    
+            return arbol;
+        }
+    
+        private generarResumenContextos(arbol: Map<string, any>, nivel: number): string[] {
+            const lineas: string[] = [];
+            
+            arbol.forEach((nodo, contexto) => {
+                const indentacion = '  '.repeat(nivel);
+                const rutaContexto = nodo.rutaCompleta;
+                const cantidadTareas = nodo.tareas.length;
+                
+                if (cantidadTareas > 0) {
+                    lineas.push(`${indentacion}- [[#${rutaContexto}|${contexto}]] (${cantidadTareas} tareas)`);
+                } else {
+                    lineas.push(`${indentacion}- ${contexto}`);
+                }
+    
+                // Procesar subcontextos
+                if (nodo.subcontextos.size > 0) {
+                    lineas.push(...this.generarResumenContextos(nodo.subcontextos, nivel + 1));
+                }
+            });
+    
+            return lineas;
+        }
+    
+        private generarDetalleContextos(
+            arbol: Map<string, any>, 
+            contextosConTareas: Map<string, Task[]>
+        ): string[] {
+            const bloques: string[] = [];
+    
+            const procesarNodo = (nodo: Map<string, any>, rutaActual: string[] = []) => {
+                nodo.forEach((info, contexto) => {
+                    const rutaCompleta = info.rutaCompleta;
+                    
+                    if (info.tareas.length > 0) {
+                        bloques.push(this.generarBloqueContexto(rutaCompleta, info.tareas));
+                    }
+    
+                    if (info.subcontextos.size > 0) {
+                        procesarNodo(info.subcontextos, [...rutaActual, contexto]);
+                    }
+                });
+            };
+    
+            procesarNodo(arbol);
+            return bloques;
+        }
+
+        private generarBloqueContexto(contexto: string, tareas: Task[]): string {
+            let bloque = `### ${contexto}\n[[#Resumen de Contextos|⬆️]]\n`;
+    
+            // Usar directamente las tareas ordenadas por el TaskWeightCalculator
+            tareas.forEach(tarea => {
+                bloque += this.renderizarTareaContexto(tarea);
+            });
+    
+            return bloque + '\n';
+        }
+    
+        private renderizarTareaContexto(tarea: Task): string {
+            let contenido = `- [ ] ${tarea.texto}\n`;
+            
+            // Añadir ubicación de la tarea
+            contenido += `    📍 [[${tarea.rutaArchivo}|${tarea.titulo}]]\n`;
+            
+            // Fechas
+            const fechas = [];
+            if (tarea.fechaVencimiento) {
+                fechas.push(`📅 ${this.formatearFechaConContexto(tarea.fechaVencimiento, 'due')}`);
+            }
+            if (tarea.fechaScheduled) {
+                fechas.push(`⏳ ${this.formatearFechaConContexto(tarea.fechaScheduled, 'scheduled')}`);
+            }
+            if (tarea.fechaStart) {
+                fechas.push(`🛫 ${this.formatearFechaConContexto(tarea.fechaStart, 'start')}`);
+            }
+            
+            if (fechas.length > 0) {
+                contenido += `    ⏰ Fechas:\n        ${fechas.join('\n        ')}\n`;
+            }
+    
+            // Horarios
+            if (tarea.horaInicio || tarea.horaFin) {
+                contenido += `    ⌚ Horario: ${tarea.horaInicio || '--:--'} - ${tarea.horaFin || '--:--'}\n`;
+            }
+    
+            // Personas asignadas
+            if (tarea.etiquetas.personas?.length > 0) {
+                contenido += `    👤 Asignado a: ${tarea.etiquetas.personas.map(p => this.formatearNombrePersona(p)).join(' | ')}\n`;
+            }
+    
+            // Mostrar el peso total para referencia (opcional, puedes quitar estas líneas)
+            if (tarea.weight) {
+                contenido += `    ⚖️ Peso: ${tarea.weight.totalWeight}\n`;
+            }
+    
+            return contenido;
         }
 }

@@ -27,6 +27,7 @@ export interface Task {
     isBlocked?: boolean;     // Estado de bloqueo calculado
     dependencyLocation?: string;  // Ruta del archivo donde está la tarea dependiente
     dependencyTitle?: string;     // Título de la nota donde está la tarea dependiente
+    dependencyTexto?: string;  // Texto de la tarea de la que se depende.
     //Utilizado para tareas x personas
     peso?: number;
     prioridad?: string;

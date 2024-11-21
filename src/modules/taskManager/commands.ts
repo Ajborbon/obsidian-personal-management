@@ -318,6 +318,21 @@ export function registerTaskManagerCommands(plugin: Plugin): void {
     });
     commandIds.push(tareasPersonasCommand.id);
 
+
+        // Añadir nuevo comando para tareas por contexto
+        const tareasContextosCommand = plugin.addCommand({
+            id: "mostrar-tareas-contextos",
+            name: "Mostrar Tareas por Contexto",
+            callback: async () => {
+                if (managementPlugin.tareasAPI) {
+                    await managementPlugin.tareasAPI.mostrarTareasContextos();
+                } else {
+                    new Notice("El módulo de tareas no está disponible.");
+                }
+            }
+        });
+        commandIds.push(tareasContextosCommand.id);
+
     // Guardar los IDs de los comandos en el plugin
     (plugin as any).registeredTaskManagerCommandIds = commandIds;
 }

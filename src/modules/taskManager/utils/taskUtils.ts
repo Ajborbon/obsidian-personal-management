@@ -168,33 +168,6 @@ export class TaskUtils {
         return jerarquia;
     }
 
-   
-    private formatearEtiquetasParaVista(categorias: {
-        todoist: string[],
-        contextos: string[],
-        personas: string[],
-        otras: string[]
-    }): string {
-        let resultado = '';
-
-        if (categorias.todoist.length > 0) {
-            resultado += `    - Todoist: ${categorias.todoist.join(' ')}\n`;
-        }
-
-        if (categorias.contextos.length > 0) {
-            resultado += `    - Contextos: ${categorias.contextos.join(' | ')}\n`;
-        }
-
-        if (categorias.personas.length > 0) {
-            resultado += `    - Personas: ${categorias.personas.join(' | ')}\n`;
-        }
-
-        if (categorias.otras.length > 0) {
-            resultado += `    - Otras: ${categorias.otras.join(' ')}\n`;
-        }
-
-        return resultado;
-    }
 
     public obtenerFechaLocal(): Date {
         const ahora = new Date();
@@ -260,36 +233,49 @@ export class TaskUtils {
         completada: boolean;
         rutaArchivo?: string;
         tituloArchivo?: string;
+        textoTarea?: string;
     }> {
         console.log("\nVerificando estado de tarea:", taskId);
         
-        const files = this.plugin.app.vault.getMarkdownFiles();
+        // Obtener todos los archivos y filtrar los excluidos
+        const todosLosArchivos = this.plugin.app.vault.getMarkdownFiles();
+        const filesParaProcesar = todosLosArchivos.filter(file => !this.debeExcluirArchivo(file));
         
-        for (const file of files) {
-            const contenido = await this.plugin.app.vault.cachedRead(file);
-            const lineas = contenido.split('\n');
-            
-            for (const linea of lineas) {
-                if (linea.includes(`🆔 ${taskId}`)) {
-                    const estaCompletada = linea.trim().startsWith('- [x]');
-                    const tituloArchivo = this.obtenerTituloNota(file);
-                    console.log("Tarea encontrada en:", file.path);
-                    console.log("Estado completada:", estaCompletada);
-                    
-                    return {
-                        completada: estaCompletada,
-                        rutaArchivo: file.path,
-                        tituloArchivo: tituloArchivo
-                    };
+        console.log(`Buscando en ${filesParaProcesar.length} archivos (excluidos: ${todosLosArchivos.length - filesParaProcesar.length})`);
+        
+        for (const file of filesParaProcesar) {
+            try {
+                const contenido = await this.plugin.app.vault.cachedRead(file);
+                const lineas = contenido.split('\n');
+                
+                for (const linea of lineas) {
+                    if (linea.includes(`🆔 ${taskId}`)) {
+                        const estaCompletada = linea.trim().startsWith('- [x]');
+                        const tituloArchivo = this.obtenerTituloNota(file);
+                        const textoTarea = this.limpiarTextoTarea(linea);
+                        console.log("Tarea encontrada en:", file.path);
+                        console.log("Estado completada:", estaCompletada);
+                        console.log("Texto de la tarea:", textoTarea);
+                        
+                        return {
+                            completada: estaCompletada,
+                            rutaArchivo: file.path,
+                            tituloArchivo: tituloArchivo,
+                            textoTarea: textoTarea
+                        };
+                    }
                 }
+            } catch (error) {
+                console.error(`Error procesando archivo ${file.path}:`, error);
             }
         }
         
-        console.log("Tarea no encontrada");
+        console.log("Tarea no encontrada en los archivos permitidos");
         return {
             completada: false
         };
     }
+
 
     // En la clase TaskUtils
 
@@ -380,6 +366,26 @@ private organizarEtiquetas(etiquetas: string[]): string[] {
         ...categoriasConocidas.px,
         ...categoriasConocidas.otras
     ];
+}
+
+// Agregar método para verificar exclusiones
+private debeExcluirArchivo(file: TFile): boolean {
+    // Excluir la carpeta Plantillas y sus subcarpetas
+    if (file.path.startsWith('Plantillas/')) {
+        return true;
+    }
+
+    // Excluir la carpeta del sistema GTD y sus subcarpetas
+    if (file.path.startsWith(`${this.plugin.settings.folder_SistemaGTD}/`)) {
+        return true;
+    }
+
+    // Excluir carpeta de archivos (si existe)
+    if (file.path.startsWith('Archivo/')) {
+        return true;
+    }
+
+    return false;
 }
 
 
