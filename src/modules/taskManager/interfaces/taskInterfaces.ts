@@ -35,9 +35,9 @@ export interface Task {
         archivo: string;
         titulo: string;
     };
+    lineInfo?: LineInfo;    // Opcional para mantener compatibilidad
 }
 
-// src/modules/taskManager/interfaces/taskInterfaces.ts
 
 export interface TaskWeight {
     baseWeight: number;
@@ -54,4 +54,9 @@ export enum EstadoTarea {
     Programada = 'programada',
     Diferida = 'diferida',
     EnEjecucion = 'en_ejecucion'  // Nuevo estado
+}
+
+export interface LineInfo {
+    numero: number;
+    texto: string;
 }

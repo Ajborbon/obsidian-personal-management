@@ -1209,57 +1209,6 @@ btn.addEventListener('click', async () => {
                 new Notice(`Error: ${error.message}`);
             }
         }
-        
-        
-        public async getTareasPersonas(): Promise<{
-            personasConTareas: Map<string, Task[]>,
-            totalPersonas: number,
-            totalTareas: number
-        }> {
-            console.log("\n=== INICIANDO BÚSQUEDA DE TAREAS ASIGNADAS A PERSONAS ===");
-            
-            const personasConTareas = new Map<string, Task[]>();
-            
-            const tareas = await this.procesarTareas(
-                this.plugin.app.vault.getMarkdownFiles(),
-                async (tarea) => {
-                    console.log("\nAnalizando tarea:", tarea.texto);
-                    if (!tarea.etiquetas.personas || tarea.etiquetas.personas.length === 0) {
-                        return false;
-                    }
-                    
-                    // Agregar información de ubicación a la tarea
-                    tarea.ubicacion = {
-                        archivo: tarea.rutaArchivo,
-                        titulo: tarea.titulo
-                    };
-                    
-                    // Procesar cada etiqueta de persona encontrada
-                    tarea.etiquetas.personas.forEach(tag => {
-                        const personaTag = `#px-${tag}`;
-                        if (!personasConTareas.has(personaTag)) {
-                            personasConTareas.set(personaTag, []);
-                        }
-                        personasConTareas.get(personaTag)!.push(tarea);
-                    });
-                    
-                    return true;
-                }
-            );
-    
-            // Ordenar las tareas de cada persona usando TaskWeightCalculator
-            personasConTareas.forEach((tareas, persona) => {
-                const tareasOrdenadas = TaskWeightCalculator.sortTasks(tareas);
-                personasConTareas.set(persona, tareasOrdenadas);
-            });
-    
-            return {
-                personasConTareas,
-                totalPersonas: personasConTareas.size,
-                totalTareas: Array.from(personasConTareas.values())
-                    .reduce((sum, tareas) => sum + tareas.length, 0)
-            };
-        }
 
         private generarVistaPersonas(
             personasConTareas: Map<string, Task[]>,
@@ -1304,11 +1253,15 @@ btn.addEventListener('click', async () => {
         }
         
         private renderizarTareaPersona(tarea: Task): string {
+            
             let contenido = `- [ ] ${tarea.texto}\n`;
-            
-            // Añadir ubicación de la tarea
-            contenido += `    📍 [[${tarea.rutaArchivo}|${tarea.titulo}]]\n`;
-            
+        
+            // Añadir ubicación de la tarea con número de línea si está disponible
+            contenido += `    📍 [[${tarea.rutaArchivo}|${tarea.titulo}]]`;
+            if (tarea.lineInfo?.numero) {
+                contenido += ` (línea ${tarea.lineInfo.numero})`;
+            }
+            contenido += '\n'; 
             // Fechas
             const fechas = [];
             if (tarea.fechaVencimiento) {
@@ -1354,49 +1307,6 @@ btn.addEventListener('click', async () => {
                      .join(' ');
         }
 
-        public async getTareasContextos(): Promise<{
-            contextosConTareas: Map<string, Task[]>,
-            totalContextos: number,
-            totalTareas: number
-        }> {
-            console.log("\n=== INICIANDO BÚSQUEDA DE TAREAS POR CONTEXTO ===");
-            
-            const contextosConTareas = new Map<string, Task[]>();
-            
-            const tareas = await this.procesarTareas(
-                this.plugin.app.vault.getMarkdownFiles(),
-                async (tarea) => {
-                    console.log("\nAnalizando tarea:", tarea.texto);
-                    if (!tarea.etiquetas.contextos || tarea.etiquetas.contextos.length === 0) {
-                        return false;
-                    }
-                    
-                    // Procesar cada contexto encontrado
-                    tarea.etiquetas.contextos.forEach(contexto => {
-                        const contextoNormalizado = this.normalizarContexto(contexto);
-                        if (!contextosConTareas.has(contextoNormalizado)) {
-                            contextosConTareas.set(contextoNormalizado, []);
-                        }
-                        contextosConTareas.get(contextoNormalizado)!.push(tarea);
-                    });
-                    
-                    return true;
-                }
-            );
-    
-            // Ordenar las tareas de cada contexto usando TaskWeightCalculator
-            contextosConTareas.forEach((tareas, contexto) => {
-                const tareasOrdenadas = TaskWeightCalculator.sortTasks(tareas);
-                contextosConTareas.set(contexto, tareasOrdenadas);
-            });
-    
-            return {
-                contextosConTareas,
-                totalContextos: contextosConTareas.size,
-                totalTareas: Array.from(contextosConTareas.values())
-                    .reduce((sum, tareas) => sum + tareas.length, 0)
-            };
-        }
     
         private normalizarContexto(contexto: string): string {
             // Normalizar tanto formatos #cx-contexto como #cx/contexto
@@ -1504,29 +1414,6 @@ btn.addEventListener('click', async () => {
             return lineas;
         }
     
-        private generarDetalleContextos(
-            arbol: Map<string, any>, 
-            contextosConTareas: Map<string, Task[]>
-        ): string[] {
-            const bloques: string[] = [];
-    
-            const procesarNodo = (nodo: Map<string, any>, rutaActual: string[] = []) => {
-                nodo.forEach((info, contexto) => {
-                    const rutaCompleta = info.rutaCompleta;
-                    
-                    if (info.tareas.length > 0) {
-                        bloques.push(this.generarBloqueContexto(rutaCompleta, info.tareas));
-                    }
-    
-                    if (info.subcontextos.size > 0) {
-                        procesarNodo(info.subcontextos, [...rutaActual, contexto]);
-                    }
-                });
-            };
-    
-            procesarNodo(arbol);
-            return bloques;
-        }
 
         private generarBloqueContexto(contexto: string, tareas: Task[]): string {
             let bloque = `### ${contexto}\n[[#Resumen de Contextos|⬆️]]\n`;
@@ -1539,13 +1426,182 @@ btn.addEventListener('click', async () => {
             return bloque + '\n';
         }
     
+
+        public async getTareasPersonas(): Promise<{
+            personasConTareas: Map<string, Task[]>,
+            totalPersonas: number,
+            totalTareas: number
+        }> {
+            console.log("\n=== INICIANDO BÚSQUEDA DE TAREAS ASIGNADAS A PERSONAS ===");
+            
+            const personasConTareas = new Map<string, Task[]>();
+            const lineasPorArchivo = new Map<string, Map<string, LineInfo>>();
+            
+            const tareas = await this.procesarTareas(
+                this.plugin.app.vault.getMarkdownFiles(),
+                async (tarea) => {
+                    if (!tarea.etiquetas.personas || tarea.etiquetas.personas.length === 0) {
+                        return false;
+                    }
+                    
+                    // Obtener información de líneas solo cuando sea necesario
+                    if (!lineasPorArchivo.has(tarea.rutaArchivo)) {
+                        lineasPorArchivo.set(
+                            tarea.rutaArchivo,
+                            await this.taskUtils.encontrarLineasTarea(
+                                this.plugin.app.vault.getAbstractFileByPath(tarea.rutaArchivo) as TFile
+                            )
+                        );
+                    }
+                    
+                    // Agregar información de línea a la tarea
+                    const lineasArchivo = lineasPorArchivo.get(tarea.rutaArchivo);
+                    if (lineasArchivo) {
+                        const lineInfo = lineasArchivo.get(tarea.texto);
+                        if (lineInfo) {
+                            tarea.lineInfo = lineInfo;
+                        }
+                    }
+                    
+                    tarea.etiquetas.personas.forEach(tag => {
+                        const personaTag = `#px-${tag}`;
+                        if (!personasConTareas.has(personaTag)) {
+                            personasConTareas.set(personaTag, []);
+                        }
+                        personasConTareas.get(personaTag)!.push(tarea);
+                    });
+                    
+                    return true;
+                }
+            );
+    
+            // Ordenar las tareas de cada persona
+            personasConTareas.forEach((tareas, persona) => {
+                const tareasOrdenadas = TaskWeightCalculator.sortTasks(tareas);
+                personasConTareas.set(persona, tareasOrdenadas);
+            });
+    
+            return {
+                personasConTareas,
+                totalPersonas: personasConTareas.size,
+                totalTareas: Array.from(personasConTareas.values())
+                    .reduce((sum, tareas) => sum + tareas.length, 0)
+            };
+        }
+
+        public async getTareasContextos(): Promise<{
+            contextosConTareas: Map<string, Task[]>,
+            totalContextos: number,
+            totalTareas: number
+        }> {
+            console.log("\n=== INICIANDO BÚSQUEDA DE TAREAS POR CONTEXTO ===");
+            
+            const contextosConTareas = new Map<string, Task[]>();
+            const lineasPorArchivo = new Map<string, Map<string, LineInfo>>();
+            
+            const tareas = await this.procesarTareas(
+                this.plugin.app.vault.getMarkdownFiles(),
+                async (tarea) => {
+                    console.log("\nAnalizando tarea:", tarea.texto);
+                    if (!tarea.etiquetas.contextos || tarea.etiquetas.contextos.length === 0) {
+                        return false;
+                    }
+                    
+                    // Obtener información de líneas manteniendo la lógica existente
+                    if (!lineasPorArchivo.has(tarea.rutaArchivo)) {
+                        lineasPorArchivo.set(
+                            tarea.rutaArchivo,
+                            await this.taskUtils.encontrarLineasTarea(
+                                this.plugin.app.vault.getAbstractFileByPath(tarea.rutaArchivo) as TFile
+                            )
+                        );
+                    }
+                    
+                    const lineasArchivo = lineasPorArchivo.get(tarea.rutaArchivo);
+                    if (lineasArchivo) {
+                        const lineInfo = lineasArchivo.get(tarea.texto);
+                        if (lineInfo) {
+                            tarea.lineInfo = lineInfo;
+                        }
+                    }
+                    
+                    // Mantener la lógica existente de procesamiento de contextos
+                    tarea.etiquetas.contextos.forEach(contexto => {
+                        const contextoNormalizado = this.normalizarContexto(contexto);
+                        if (!contextosConTareas.has(contextoNormalizado)) {
+                            contextosConTareas.set(contextoNormalizado, []);
+                        }
+                        contextosConTareas.get(contextoNormalizado)!.push(tarea);
+                    });
+                    
+                    return true;
+                }
+            );
+    
+            // Mantener la organización y peso existentes
+            contextosConTareas.forEach((tareas, contexto) => {
+                // Usar el sistema de pesos existente
+                const tareasOrdenadas = TaskWeightCalculator.sortTasks(tareas);
+                contextosConTareas.set(contexto, tareasOrdenadas);
+            });
+    
+            return {
+                contextosConTareas,
+                totalContextos: contextosConTareas.size,
+                totalTareas: Array.from(contextosConTareas.values())
+                    .reduce((sum, tareas) => sum + tareas.length, 0)
+            };
+        }
+    
+        private generarDetalleContextos(
+            arbol: Map<string, any>, 
+            contextosConTareas: Map<string, Task[]>
+        ): string[] {
+            const bloques: string[] = [];
+        
+            const procesarNodo = (nodo: Map<string, any>, rutaActual: string[] = []) => {
+                nodo.forEach((info, contexto) => {
+                    const rutaCompleta = info.rutaCompleta;
+                    
+                    if (info.tareas.length > 0) {
+                        // Asegurar que las tareas estén ordenadas por el sistema de pesos
+                        const tareasOrdenadas = TaskWeightCalculator.sortTasks(info.tareas);
+                        bloques.push(this.generarBloqueContexto(rutaCompleta, tareasOrdenadas));
+                    }
+        
+                    if (info.subcontextos.size > 0) {
+                        procesarNodo(info.subcontextos, [...rutaActual, contexto]);
+                    }
+                });
+            };
+        
+            procesarNodo(arbol);
+            return bloques;
+        }
+    
         private renderizarTareaContexto(tarea: Task): string {
             let contenido = `- [ ] ${tarea.texto}\n`;
             
-            // Añadir ubicación de la tarea
-            contenido += `    📍 [[${tarea.rutaArchivo}|${tarea.titulo}]]\n`;
+            // Añadir ubicación con número de línea
+            contenido += `    📍 [[${tarea.rutaArchivo}|${tarea.titulo}]]`;
+            if (tarea.lineInfo?.numero) {
+                contenido += ` (línea ${tarea.lineInfo.numero})`;
+            }
+            contenido += '\n';
+    
+            // Mostrar el peso y prioridad primero (manteniendo el sistema existente)
+            const prioridad = this.obtenerPrioridadTarea(tarea.texto);
+            if (prioridad) {
+                contenido += `    ${prioridad.emoji} Prioridad: ${prioridad.nombre}\n`;
+            }
+            if (tarea.weight) {
+                const { baseWeight, timeWeight, priorityWeight } = tarea.weight;
+                if (baseWeight + timeWeight + priorityWeight > 0) {
+                    contenido += `    ⚖️ Peso total: ${tarea.weight.totalWeight}\n`;
+                }
+            }
             
-            // Fechas
+            // Fechas (manteniendo el formato existente)
             const fechas = [];
             if (tarea.fechaVencimiento) {
                 fechas.push(`📅 ${this.formatearFechaConContexto(tarea.fechaVencimiento, 'due')}`);
@@ -1568,14 +1624,25 @@ btn.addEventListener('click', async () => {
     
             // Personas asignadas
             if (tarea.etiquetas.personas?.length > 0) {
-                contenido += `    👤 Asignado a: ${tarea.etiquetas.personas.map(p => this.formatearNombrePersona(p)).join(' | ')}\n`;
+                contenido += `    👤 Asignado a: ${tarea.etiquetas.personas.map(p => 
+                    this.formatearNombrePersona(`#px-${p}`)
+                ).join(' | ')}\n`;
             }
     
-            // Mostrar el peso total para referencia (opcional, puedes quitar estas líneas)
-            if (tarea.weight) {
-                contenido += `    ⚖️ Peso: ${tarea.weight.totalWeight}\n`;
+            // Dependencias
+            if (tarea.dependencyId) {
+                contenido += `    ↳ Depende de: `;
+                if (tarea.dependencyTitle) {
+                    contenido += `[[${tarea.dependencyLocation}|${tarea.dependencyTitle}]]`;
+                    if (tarea.dependencyTexto) {
+                        contenido += `: "${tarea.dependencyTexto}"`;
+                    }
+                }
+                contenido += tarea.isBlocked ? ' ⏳' : ' ✅';
+                contenido += '\n';
             }
     
             return contenido;
         }
+     
 }

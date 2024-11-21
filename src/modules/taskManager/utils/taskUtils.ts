@@ -388,5 +388,26 @@ private debeExcluirArchivo(file: TFile): boolean {
     return false;
 }
 
+public async encontrarLineasTarea(file: TFile): Promise<Map<string, LineInfo>> {
+    const lineasTareas = new Map<string, LineInfo>();
+    try {
+        const contenido = await this.plugin.app.vault.cachedRead(file);
+        const lineas = contenido.split('\n');
+        
+        lineas.forEach((linea, index) => {
+            // Crear una clave única basada en el texto de la tarea
+            const textoLimpio = this.limpiarTextoTarea(linea);
+            if (textoLimpio && linea.trim().startsWith('- [')) {
+                lineasTareas.set(textoLimpio, {
+                    numero: index + 1,
+                    texto: linea.trim()
+                });
+            }
+        });
+    } catch (error) {
+        console.error(`Error procesando líneas en ${file.path}:`, error);
+    }
+    return lineasTareas;
+}
 
 }
