@@ -74,84 +74,46 @@ export class TaskUtils {
     }
  
 
-    public extraerEtiquetas(linea: string): string[] {
-        const etiquetas: string[] = [];
-        
-        // Patrón para identificar diferentes formatos de etiquetas
-        const patronesEtiquetas = [
-            // Etiquetas simples: #todoist
-            /#[\w-]+\b/g,
-            
-            // Etiquetas con jerarquía usando "/": #cx/alguna/cosa
-            /#[\w-]+(?:\/[\w-]+)+\b/g,
-            
-            // Etiquetas con jerarquía usando "-": #cx-alguna-cosa
-            /#[\w-]+(?:-[\w-]+)+\b/g
-        ];
 
-        // Procesar cada patrón
-        patronesEtiquetas.forEach(patron => {
-            const coincidencias = linea.match(patron);
-            if (coincidencias) {
-                coincidencias.forEach(etiqueta => {
-                    // Evitar duplicados y asegurar que sea una etiqueta válida
-                    if (!etiquetas.includes(etiqueta) && this.esEtiquetaValida(etiqueta)) {
-                        etiquetas.push(etiqueta);
-                    }
-                });
-            }
-        });
-
-        return this.organizarEtiquetas(etiquetas);
-    }
-
-    private esEtiquetaValida(etiqueta: string): boolean {
-        // Verificar que la etiqueta cumpla con el formato básico
-        if (!etiqueta.startsWith('#')) return false;
-
-        // Verificar que no contenga caracteres inválidos
-        const caracteresInvalidos = /[!@$%^&*()+={}\[\]:;"'<>,.?~\\|]/;
-        if (caracteresInvalidos.test(etiqueta)) return false;
-
-        // Verificar estructura para etiquetas con jerarquía
-        const partesEtiqueta = etiqueta.slice(1).split(/[/-]/);
-        return partesEtiqueta.every(parte => parte.length > 0);
-    }
-
-    private organizarEtiquetas(etiquetas: string[]): string[] {
-        // Ordenar etiquetas por categorías conocidas y luego alfabéticamente
-        const categoriasConocidas = {
-            todoist: [] as string[],
-            cx: [] as string[],
-            px: [] as string[],
-            otras: [] as string[]
+    public categorizarEtiquetas(etiquetas: string[]): {
+        todoist: string[],
+        contextos: string[],
+        personas: string[],
+        otras: string[]
+    } {
+        return {
+            todoist: etiquetas.filter(e => e.startsWith('#todoist')),
+            contextos: etiquetas
+                .filter(e => e.match(/#cx(?:[/-].+)$/))
+                .map(e => this.limpiarPrefijo(e, 'cx')),
+            personas: etiquetas
+                .filter(e => e.startsWith('#px-'))
+                .map(e => this.formatearEtiquetaPersona(e)),
+            otras: etiquetas.filter(e => 
+                !e.startsWith('#todoist') && 
+                !e.match(/#cx(?:[/-]|$)/) && 
+                !e.startsWith('#px-')
+            )
         };
-
-        etiquetas.forEach(etiqueta => {
-            if (etiqueta.startsWith('#todoist')) {
-                categoriasConocidas.todoist.push(etiqueta);
-            } else if (etiqueta.match(/#cx(?:[/-]|$)/)) {
-                categoriasConocidas.cx.push(etiqueta);
-            } else if (etiqueta.match(/#px(?:[/-]|$)/)) {
-                categoriasConocidas.px.push(etiqueta);
-            } else {
-                categoriasConocidas.otras.push(etiqueta);
-            }
-        });
-
-        // Ordenar cada categoría alfabéticamente
-        Object.values(categoriasConocidas).forEach(categoria => {
-            categoria.sort((a, b) => a.localeCompare(b));
-        });
-
-        // Combinar todas las categorías en el orden deseado
-        return [
-            ...categoriasConocidas.todoist,
-            ...categoriasConocidas.cx,
-            ...categoriasConocidas.px,
-            ...categoriasConocidas.otras
-        ];
     }
+
+    // Nuevo método para formatear etiquetas de personas
+    private formatearEtiquetaPersona(etiqueta: string): string {
+        // Eliminar el prefijo #px-
+        const nombre = etiqueta.replace('#px-', '');
+        // Reemplazar guiones bajos con espacios para mejor legibilidad
+        return nombre.replace(/_/g, ' ');
+    }
+
+    private limpiarPrefijo(etiqueta: string, prefijo: string): string {
+        const sinPrefijo = etiqueta.replace(new RegExp(`#${prefijo}[/-]`), '');
+        return sinPrefijo
+            .replace(/-/g, ' → ')
+            .replace(/\//g, ' → ');
+    }
+
+
+
 
     public limpiarTextoTarea(linea: string): string {
         let textoLimpio = linea
@@ -183,26 +145,7 @@ export class TaskUtils {
         return textoLimpio;
     }
 
-    public categorizarEtiquetas(etiquetas: string[]): {
-        todoist: string[],
-        contextos: string[],
-        personas: string[],
-        otras: string[]
-    } {
-        return {
-            todoist: etiquetas.filter(e => e.startsWith('#todoist')),
-            // Filtrar #cx solo y transformar el formato
-            contextos: etiquetas
-                .filter(e => e.match(/#cx(?:[/-].+)$/))
-                .map(e => this.limpiarPrefijo(e, 'cx')),
-            // Filtrar #px solo y transformar el formato
-            personas: etiquetas
-                .filter(e => e.match(/#px(?:[/-].+)$/))
-                .map(e => this.limpiarPrefijo(e, 'px')),
-            otras: etiquetas.filter(e => !e.match(/#(todoist|cx|px)(?:[/-]|$)/))
-        };
-    }
-
+   
     // Método de utilidad para obtener una representación jerárquica de las etiquetas
     public obtenerJerarquiaEtiquetas(etiquetas: string[]): Map<string, Set<string>> {
         const jerarquia = new Map<string, Set<string>>();
@@ -225,16 +168,7 @@ export class TaskUtils {
         return jerarquia;
     }
 
-    private limpiarPrefijo(etiqueta: string, prefijo: string): string {
-        // Remover el prefijo (#cx o #px) y el separador (/ o -)
-        const sinPrefijo = etiqueta.replace(new RegExp(`#${prefijo}[/-]`), '');
-        
-        // Convertir separadores restantes a formato legible
-        return sinPrefijo
-            .replace(/-/g, ' → ')  // Reemplazar guiones con flechas
-            .replace(/\//g, ' → '); // Reemplazar slashes con flechas
-    }
-
+   
     private formatearEtiquetasParaVista(categorias: {
         todoist: string[],
         contextos: string[],
@@ -296,5 +230,157 @@ export class TaskUtils {
         const dia = String(fecha.getDate()).padStart(2, '0');
         return `${año}-${mes}-${dia}`;
     }
+
+    public extraerDependenciasYIds(linea: string): { taskId?: string; dependencyId?: string } {
+        console.log("Analizando línea para IDs:", linea);
+        
+        const resultado = {
+            taskId: undefined as string | undefined,
+            dependencyId: undefined as string | undefined
+        };
+    
+        // Extraer ID propio de la tarea
+        const taskIdMatch = linea.match(/🆔\s*([a-z0-9]{5,7})/);
+        if (taskIdMatch) {
+            resultado.taskId = taskIdMatch[1];
+            console.log("ID encontrado:", resultado.taskId);
+        }
+    
+        // Extraer ID de dependencia
+        const dependencyMatch = linea.match(/⛔\s*([a-z0-9]{5,7})/);
+        if (dependencyMatch) {
+            resultado.dependencyId = dependencyMatch[1];
+            console.log("Dependencia encontrada:", resultado.dependencyId);
+        }
+    
+        return resultado;
+    }
+    
+    public async verificarEstadoTarea(taskId: string): Promise<{
+        completada: boolean;
+        rutaArchivo?: string;
+        tituloArchivo?: string;
+    }> {
+        console.log("\nVerificando estado de tarea:", taskId);
+        
+        const files = this.plugin.app.vault.getMarkdownFiles();
+        
+        for (const file of files) {
+            const contenido = await this.plugin.app.vault.cachedRead(file);
+            const lineas = contenido.split('\n');
+            
+            for (const linea of lineas) {
+                if (linea.includes(`🆔 ${taskId}`)) {
+                    const estaCompletada = linea.trim().startsWith('- [x]');
+                    const tituloArchivo = this.obtenerTituloNota(file);
+                    console.log("Tarea encontrada en:", file.path);
+                    console.log("Estado completada:", estaCompletada);
+                    
+                    return {
+                        completada: estaCompletada,
+                        rutaArchivo: file.path,
+                        tituloArchivo: tituloArchivo
+                    };
+                }
+            }
+        }
+        
+        console.log("Tarea no encontrada");
+        return {
+            completada: false
+        };
+    }
+
+    // En la clase TaskUtils
+
+public extraerEtiquetas(linea: string): string[] {
+    const etiquetas: string[] = [];
+    
+    // Patrones para identificar diferentes formatos de etiquetas
+    const patronesEtiquetas = [
+        // Etiquetas de personas con formato #px-Nombre_Apellido 
+        /#px-[A-Za-z]+(?:_[A-Za-z]+)*(?:_[A-Za-z]+)?\b/g,
+        
+        // Etiquetas simples: #todoist
+        /#[\w-]+\b/g,
+        
+        // Etiquetas con jerarquía usando "/": #cx/alguna/cosa
+        /#[\w-]+(?:\/[\w-]+)+\b/g,
+        
+        // Etiquetas con jerarquía usando "-": #cx-alguna-cosa
+        /#[\w-]+(?:-[\w-]+)+\b/g
+    ];
+
+    // Procesar cada patrón
+    patronesEtiquetas.forEach(patron => {
+        const coincidencias = linea.match(patron);
+        if (coincidencias) {
+            coincidencias.forEach(etiqueta => {
+                // Evitar duplicados y asegurar que sea una etiqueta válida
+                if (!etiquetas.includes(etiqueta) && this.esEtiquetaValida(etiqueta)) {
+                    etiquetas.push(etiqueta);
+                }
+            });
+        }
+    });
+
+    return this.organizarEtiquetas(etiquetas);
+}
+
+private esEtiquetaValida(etiqueta: string): boolean {
+    // Verificar que la etiqueta cumpla con el formato básico
+    if (!etiqueta.startsWith('#')) return false;
+
+    // Validación específica para etiquetas de personas
+    if (etiqueta.startsWith('#px-')) {
+        const nombreCompleto = etiqueta.slice(4); // Remover '#px-'
+        // Verificar formato Nombre_Apellido(_Empresa)?
+        return /^[A-Za-z]+(?:_[A-Za-z]+)*$/.test(nombreCompleto);
+    }
+
+    // Verificar que no contenga caracteres inválidos
+    const caracteresInvalidos = /[!@$%^&*()+={}\[\]:;"'<>,.?~\\|]/;
+    if (caracteresInvalidos.test(etiqueta)) return false;
+
+    // Verificar estructura para etiquetas con jerarquía
+    const partesEtiqueta = etiqueta.slice(1).split(/[/-]/);
+    return partesEtiqueta.every(parte => parte.length > 0);
+}
+
+private organizarEtiquetas(etiquetas: string[]): string[] {
+    // Ordenar etiquetas por categorías conocidas y luego alfabéticamente
+    const categoriasConocidas = {
+        todoist: [] as string[],
+        cx: [] as string[],
+        px: [] as string[],
+        otras: [] as string[]
+    };
+
+    etiquetas.forEach(etiqueta => {
+        if (etiqueta.startsWith('#px-')) {
+            categoriasConocidas.px.push(etiqueta);
+        } else if (etiqueta.startsWith('#todoist')) {
+            categoriasConocidas.todoist.push(etiqueta);
+        } else if (etiqueta.match(/#cx(?:[/-]|$)/)) {
+            categoriasConocidas.cx.push(etiqueta);
+        } else {
+            categoriasConocidas.otras.push(etiqueta);
+        }
+    });
+
+    // Ordenar cada categoría alfabéticamente
+    Object.values(categoriasConocidas).forEach(categoria => {
+        categoria.sort((a, b) => a.localeCompare(b));
+    });
+
+    // Combinar todas las categorías en el orden deseado
+    return [
+        ...categoriasConocidas.todoist,
+        ...categoriasConocidas.cx,
+        ...categoriasConocidas.px,
+        ...categoriasConocidas.otras
+    ];
+}
+
 
 }

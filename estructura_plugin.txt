@@ -114,6 +114,13 @@
 |   |   |   |   `-- ribbonButton.ts
 |   |   |   `-- utils
 |   |   |       `-- searchUtils.ts
+|   |   |-- dataviewQueries
+|   |   |   |-- DataviewQueryManager.ts
+|   |   |   |-- QueryRenderer.ts
+|   |   |   |-- commands.ts
+|   |   |   |-- index.ts
+|   |   |   `-- interfaces
+|   |   |       `-- ButtonStyle.ts
 |   |   |-- modales
 |   |   |   |-- fuzzySelectOrCreate.ts
 |   |   |   |-- inboxModal.ts
@@ -240,4 +247,4 @@
 |-- styles.css
 `-- tsconfig.json
 
-91 directories, 150 files
+93 directories, 155 files

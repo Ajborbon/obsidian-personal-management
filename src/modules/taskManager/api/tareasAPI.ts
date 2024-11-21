@@ -50,17 +50,15 @@ export class TareasAPI {
 
     private async procesarTareas(
         files: TFile[], 
-        filtro: (task: Task) => boolean,
+        filtro: (task: Task) => boolean | Promise<boolean>,
         buscarEnEjecucion: boolean = false
     ): Promise<Task[]> {
         const tareas: Task[] = [];
         const errores: string[] = [];
-
+        
         try {
-            // Filtrar archivos excluyendo plantillas y archivos de resultados
             const filesParaProcesar = files.filter(file => !this.debeExcluirArchivo(file));
-
-            // Agregar log para depuración
+            console.log(`\n=== INICIANDO PROCESAMIENTO DE TAREAS ===`);
             console.log(`Procesando ${filesParaProcesar.length} archivos de ${files.length} totales`);
 
             for (const file of filesParaProcesar) {
@@ -69,22 +67,40 @@ export class TareasAPI {
                     const lineas = contenido.split('\n');
                     const tituloNota = this.taskUtils.obtenerTituloNota(file);
 
+                    console.log(`\nProcesando archivo: ${file.path}`);
+
                     for (const linea of lineas) {
+                        // Detectar el tipo de tarea basado en el checkbox
                         const esEnEjecucion = linea.trim().startsWith('- [/]');
                         const esAbierta = linea.trim().startsWith('- [ ]');
+                        const esCompletada = linea.trim().startsWith('- [x]');
+
+                        // Saltar líneas que no son tareas
+                        if (!linea.trim().startsWith('- [')) continue;
                         
-                        if ((!buscarEnEjecucion && !esAbierta) || 
-                            (buscarEnEjecucion && !esEnEjecucion)) {
-                            continue;
+                        // Implementar lógica separada para tareas en ejecución
+                        if (buscarEnEjecucion) {
+                            if (!esEnEjecucion) continue; // Solo procesar tareas en ejecución
+                        } else {
+                            // Para otras búsquedas, ignorar tareas completadas y en ejecución
+                            if (esCompletada || esEnEjecucion) continue;
+                            if (!esAbierta) continue;
                         }
 
+                        // Extraer el texto limpio de la tarea
+                        const textoLimpio = this.taskUtils.limpiarTextoTarea(linea);
+                        const textoOriginal = linea.trim();
+
+                        // Extraer metadatos
                         const fechasYHoras = this.taskUtils.extraerFechasYHoras(linea);
                         const etiquetasExtraidas = this.taskUtils.extraerEtiquetas(linea);
                         const etiquetasCategorizadas = this.taskUtils.categorizarEtiquetas(etiquetasExtraidas);
-                        const textoTarea = this.taskUtils.limpiarTextoTarea(linea);
+                        const { taskId, dependencyId } = this.taskUtils.extraerDependenciasYIds(linea);
 
+                        // Crear objeto de tarea
                         const tarea: Task = {
-                            texto: textoTarea,
+                            texto: textoLimpio,
+                            textoOriginal: textoOriginal,
                             rutaArchivo: file.path,
                             nombreArchivo: file.basename,
                             titulo: tituloNota,
@@ -93,12 +109,24 @@ export class TareasAPI {
                             etiquetas: {
                                 todas: etiquetasExtraidas,
                                 ...etiquetasCategorizadas
-                            }
+                            },
+                            taskId,
+                            dependencyId
                         };
 
+                        // Calcular peso y verificar dependencias
                         tarea.weight = TaskWeightCalculator.calculateWeight(tarea);
+                        if (dependencyId) {
+                            const estadoDependencia = await this.taskUtils.verificarEstadoTarea(dependencyId);
+                            tarea.isBlocked = !estadoDependencia.completada;
+                            tarea.dependencyLocation = estadoDependencia.rutaArchivo;
+                            tarea.dependencyTitle = estadoDependencia.tituloArchivo;
+                        }
 
-                        if (filtro(tarea)) {
+                        // Aplicar filtro
+                        const cumpleFiltro = await Promise.resolve(filtro(tarea));
+                        if (cumpleFiltro) {
+                            console.log(`-> Tarea agregada: ${textoLimpio.substring(0, 50)}...`);
                             tareas.push(tarea);
                         }
                     }
@@ -113,10 +141,16 @@ export class TareasAPI {
         }
 
         if (errores.length > 0) {
-            console.warn('Errores encontrados durante el procesamiento:', errores);
+            console.warn('\nErrores encontrados durante el procesamiento:', errores);
         }
 
-        return this.organizarTareasEnEjecucion(TaskWeightCalculator.sortTasks(tareas));
+        console.log(`\n=== PROCESAMIENTO COMPLETADO ===`);
+        console.log(`Total de tareas encontradas: ${tareas.length}`);
+        
+        // Ordenar las tareas según corresponda
+        return buscarEnEjecucion ? 
+            this.organizarTareasEnEjecucion(tareas) : 
+            TaskWeightCalculator.sortTasks(tareas);
     }
 
     private guardarYAbrirArchivo(
@@ -573,18 +607,25 @@ btn.addEventListener('click', async () => {
     // Añadir método para mostrar tareas en ejecución
     public async mostrarTareasEnEjecucion(): Promise<void> {
         try {
-            const tareas = await this.getTareasEnEjecucion();
+            // Obtener tareas en ejecución
+            const tareas = await this.procesarTareas(
+                this.plugin.app.vault.getMarkdownFiles(),
+                (tarea) => true, // No aplicamos filtro adicional porque ya filtramos por estado en procesarTareas
+                true // Indicar que buscamos tareas en ejecución
+            );
+
             if (tareas.length === 0) {
-                new Notice('No hay tareas en ejecución.');
+                new Notice('No se encontraron tareas en ejecución');
                 return;
             }
 
+            // Generar vista y guardar archivo
             const contenido = this.generarVistaEnEjecucion(tareas);
-
             await this.guardarYAbrirArchivo(
                 `${this.plugin.settings.folder_SistemaGTD}/Tareas en Ejecución.md`,
                 contenido
             );
+
             new Notice(`Se encontraron ${tareas.length} tareas en ejecución`);
         } catch (error) {
             console.error("Error en mostrarTareasEnEjecucion:", error);
@@ -609,27 +650,44 @@ btn.addEventListener('click', async () => {
         const tareasConInicio = tareas.filter(t => !t.fechaVencimiento && !t.fechaScheduled && t.fechaStart);
         const tareasSinFecha = tareas.filter(t => !t.fechaVencimiento && !t.fechaScheduled && !t.fechaStart);
 
-        // Renderizar cada sección
+           // Renderizar cada sección
         if (tareasConVencimiento.length > 0) {
             contenido += `## Con fecha de vencimiento (${tareasConVencimiento.length})\n\n`;
-            contenido += this.renderizarGrupoTareas(tareasConVencimiento);
+            contenido += this.renderizarGrupoTareasEnEjecucion(tareasConVencimiento);
         }
 
         if (tareasProgramadas.length > 0) {
             contenido += `## Programadas (${tareasProgramadas.length})\n\n`;
-            contenido += this.renderizarGrupoTareas(tareasProgramadas);
+            contenido += this.renderizarGrupoTareasEnEjecucion(tareasProgramadas);
         }
 
         if (tareasConInicio.length > 0) {
             contenido += `## Con fecha de inicio (${tareasConInicio.length})\n\n`;
-            contenido += this.renderizarGrupoTareas(tareasConInicio);
+            contenido += this.renderizarGrupoTareasEnEjecucion(tareasConInicio);
         }
 
         if (tareasSinFecha.length > 0) {
             contenido += `## Sin fecha asignada (${tareasSinFecha.length})\n\n`;
-            contenido += this.renderizarGrupoTareas(tareasSinFecha);
-        }
+            contenido += this.renderizarGrupoTareasEnEjecucion(tareasSinFecha);
 
+        return contenido;
+    }
+}
+
+
+        // Añadir método específico para renderizar grupos de tareas en ejecución
+    private renderizarGrupoTareasEnEjecucion(tareas: Task[]): string {
+        const tareasPorArchivo = this.agruparTareasPorArchivo(tareas);
+        let contenido = '';
+        
+        for (const [rutaArchivo, info] of Object.entries(tareasPorArchivo)) {
+            contenido += `### [[${rutaArchivo}|${info.titulo}]]\n\n`;
+            info.tareas.forEach(tarea => {
+                contenido += this.renderizarTareaEnEjecucion(tarea);
+            });
+            contenido += '\n';
+        }
+        
         return contenido;
     }
 
@@ -998,4 +1056,395 @@ btn.addEventListener('click', async () => {
 
         return contenido;
     }
+
+        // Método principal para obtener tareas con dependencias
+        public async getTareasDependientes(): Promise<{
+            ejecutables: Task[],
+            bloqueadas: Task[]
+        }> {
+            console.log("=== Iniciando búsqueda de tareas con dependencias ===");
+            
+            const tareas = await this.procesarTareas(
+                this.plugin.app.vault.getMarkdownFiles(),
+                async (tarea) => {
+                    console.log("\nAnalizando tarea:", tarea.texto);
+                    console.log("DependencyId:", tarea.dependencyId);
+                    
+                    if (!tarea.dependencyId) {
+                        console.log("-> Ignorada: No tiene dependencia");
+                        return false;
+                    }
+                    
+                    const resultado = await this.taskUtils.verificarEstadoTarea(tarea.dependencyId);
+                    console.log(`-> Dependencia ${tarea.dependencyId} completada:`, resultado.completada);
+                    
+                    tarea.isBlocked = !resultado.completada;
+                    // Agregar información de la ubicación de la tarea dependiente
+                    tarea.dependencyLocation = resultado.rutaArchivo;
+                    tarea.dependencyTitle = resultado.tituloArchivo;
+                    
+                    return true;
+                }
+            );
+        
+            return {
+                ejecutables: tareas.filter(t => !t.isBlocked),
+                bloqueadas: tareas.filter(t => t.isBlocked)
+            };
+        }
+    
+        // Método para mostrar las tareas dependientes
+        public async mostrarTareasDependientes(): Promise<void> {
+            try {
+                const { ejecutables, bloqueadas } = await this.getTareasDependientes();
+                
+                if (ejecutables.length === 0 && bloqueadas.length === 0) {
+                    new Notice('No se encontraron tareas con dependencias.');
+                    return;
+                }
+    
+                const contenido = this.generarVistaDependencias(ejecutables, bloqueadas);
+    
+                await this.guardarYAbrirArchivo(
+                    `${this.plugin.settings.folder_SistemaGTD}/Tareas con Dependencias.md`,
+                    contenido
+                );
+                
+                new Notice(`Se encontraron ${ejecutables.length + bloqueadas.length} tareas con dependencias`);
+            } catch (error) {
+                console.error("Error en mostrarTareasDependientes:", error);
+                new Notice(`Error: ${error.message}`);
+            }
+        }
+    
+        // Método para generar la vista de dependencias
+        private generarVistaDependencias(ejecutables: Task[], bloqueadas: Task[]): string {
+            const hoy = this.taskUtils.obtenerFechaLocal();
+            let contenido = `# Tareas con Dependencias\n\n`;
+            
+            contenido += this.generarBotonActualizacion("mostrarTareasDependientes");
+            contenido += `> [!info] Actualizado: ${hoy.toLocaleDateString()} ${new Date().toLocaleTimeString()}\n`;
+            contenido += `> Total de tareas con dependencias: ${ejecutables.length + bloqueadas.length}\n\n`;
+    
+            if (ejecutables.length > 0) {
+                contenido += `## Tareas Ejecutables (${ejecutables.length})\n`;
+                contenido += `> [!success] Estas tareas ya pueden ser ejecutadas porque sus dependencias están completadas\n\n`;
+                contenido += this.renderizarGrupoDependencias(ejecutables, true);
+            }
+    
+            if (bloqueadas.length > 0) {
+                contenido += `\n## Tareas Bloqueadas (${bloqueadas.length})\n`;
+                contenido += `> [!warning] Estas tareas están esperando que se completen otras tareas\n\n`;
+                contenido += this.renderizarGrupoDependencias(bloqueadas, false);
+            }
+    
+            return contenido;
+        }
+    
+        // Método para renderizar grupos de tareas con dependencias
+        private renderizarGrupoDependencias(tareas: Task[], ejecutables: boolean): string {
+            const tareasPorArchivo = this.agruparTareasPorArchivo(tareas);
+            let contenido = '';
+            
+            for (const [rutaArchivo, info] of Object.entries(tareasPorArchivo)) {
+                contenido += `### [[${rutaArchivo}|${info.titulo}]]\n\n`;
+                info.tareas.forEach(tarea => {
+                    contenido += this.renderizarTareaConDependencia(tarea, ejecutables);
+                });
+                contenido += '\n';
+            }
+            
+            return contenido;
+        }
+    
+        // Método para renderizar una tarea individual con dependencia
+        private renderizarTareaConDependencia(tarea: Task, esEjecutable: boolean): string {
+            console.log("\nRenderizando tarea:", tarea.texto);
+            console.log("Es ejecutable:", esEjecutable);
+            
+            let contenido = `- [ ] ${tarea.texto}\n`;
+            
+            // Mostrar ID de la tarea si existe
+            if (tarea.taskId) {
+                contenido += `    🆔 ${tarea.taskId}\n`;
+            }
+            
+            // Mostrar dependencia, su estado y ubicación
+            if (tarea.dependencyId) {
+                contenido += `    ⛔ ${tarea.dependencyId}`;
+                contenido += esEjecutable ? ' ✅' : ' ⏳';
+                
+                // Agregar link a la ubicación de la tarea dependiente si existe
+                if (tarea.dependencyLocation && tarea.dependencyTitle) {
+                    contenido += `    [[${tarea.dependencyLocation}|${tarea.dependencyTitle}]]`;
+                }
+                
+                contenido += '\n';
+            }
+        
+            // Resto del contenido...
+            if (tarea.fechaVencimiento) {
+                contenido += `    📅 ${this.formatearFechaConContexto(tarea.fechaVencimiento, 'due')}\n`;
+            }
+            if (tarea.fechaScheduled) {
+                contenido += `    ⏳ ${this.formatearFechaConContexto(tarea.fechaScheduled, 'scheduled')}\n`;
+            }
+            if (tarea.fechaStart) {
+                contenido += `    🛫 ${this.formatearFechaConContexto(tarea.fechaStart, 'start')}\n`;
+            }
+        
+            if (tarea.etiquetas.contextos?.length > 0) {
+                contenido += `    🗂️ ${tarea.etiquetas.contextos.join(' | ')}\n`;
+            }
+            if (tarea.etiquetas.personas?.length > 0) {
+                contenido += `    👤 ${tarea.etiquetas.personas.join(' | ')}\n`;
+            }
+        
+            return contenido;
+        }
+        
+        public async mostrarTareasPersonas(): Promise<void> {
+            try {
+                const { personasConTareas, totalPersonas, totalTareas } = await this.getTareasPersonas();
+                
+                if (totalPersonas === 0) {
+                    new Notice('No se encontraron tareas asignadas a personas.');
+                    return;
+                }
+        
+                const contenido = this.generarVistaPersonas(personasConTareas, totalPersonas, totalTareas);
+        
+                await this.guardarYAbrirArchivo(
+                    `${this.plugin.settings.folder_SistemaGTD}/Tareas por Persona.md`,
+                    contenido
+                );
+                
+                new Notice(`Se encontraron ${totalTareas} tareas asignadas a ${totalPersonas} personas`);
+            } catch (error) {
+                console.error("Error en mostrarTareasPersonas:", error);
+                new Notice(`Error: ${error.message}`);
+            }
+        }
+        
+        
+        private renderizarTareaCompleta(tarea: Task): string {
+            let contenido = `- [ ] ${tarea.texto}\n`;
+            
+            // Mostrar IDs y dependencias
+            if (tarea.taskId) {
+                contenido += `    🆔 ${tarea.taskId}\n`;
+            }
+            if (tarea.dependencyId) {
+                contenido += `    ⛔ ${tarea.dependencyId}`;
+                if (tarea.isBlocked !== undefined) {
+                    contenido += tarea.isBlocked ? ' ⏳' : ' ✅';
+                }
+                if (tarea.dependencyLocation && tarea.dependencyTitle) {
+                    contenido += `    [[${tarea.dependencyLocation}|${tarea.dependencyTitle}]]`;
+                }
+                contenido += '\n';
+            }
+        
+            // Mostrar fechas
+            if (tarea.fechaVencimiento) {
+                contenido += `    📅 ${this.formatearFechaConContexto(tarea.fechaVencimiento, 'due')}\n`;
+            }
+            if (tarea.fechaScheduled) {
+                contenido += `    ⏳ ${this.formatearFechaConContexto(tarea.fechaScheduled, 'scheduled')}\n`;
+            }
+            if (tarea.fechaStart) {
+                contenido += `    🛫 ${this.formatearFechaConContexto(tarea.fechaStart, 'start')}\n`;
+            }
+        
+            // Mostrar contextos
+            if (tarea.etiquetas.contextos?.length > 0) {
+                contenido += `    🗂️ ${tarea.etiquetas.contextos.join(' | ')}\n`;
+            }
+        
+            return contenido;
+        }
+        
+        private renderizarTareasPersona(persona: string, tareas: Task[]): string {
+            const nombreFormateado = this.formatearNombrePersona(persona);
+            const tagNormalizado = persona.toLowerCase().replace(/_/g, ' ');
+            let contenido = `### ${nombreFormateado}\n`;
+            
+            // Separar tareas por prioridad
+            const tareasAlta = tareas.filter(t => 
+                t.texto.includes('🔺') || t.texto.includes('⏫'));
+            const tareaMedia = tareas.filter(t => 
+                t.texto.includes('🔼') && !tareasAlta.includes(t));
+            const tareasBaja = tareas.filter(t => 
+                !tareasAlta.includes(t) && !tareaMedia.includes(t));
+        
+            // Renderizar tareas de alta prioridad
+            if (tareasAlta.length > 0) {
+                contenido += `#### Prioridad Alta 🔺\n`;
+                tareasAlta.forEach(tarea => {
+                    contenido += this.renderizarTareaCompleta(tarea);
+                });
+            }
+        
+            // Renderizar tareas de prioridad media
+            if (tareaMedia.length > 0) {
+                contenido += `#### Prioridad Media\n`;
+                tareaMedia.forEach(tarea => {
+                    contenido += this.renderizarTareaCompleta(tarea);
+                });
+            }
+        
+            // Renderizar otras tareas
+            if (tareasBaja.length > 0) {
+                contenido += `#### Otras Tareas\n`;
+                tareasBaja.forEach(tarea => {
+                    contenido += this.renderizarTareaCompleta(tarea);
+                });
+            }
+        
+            return contenido + '\n';
+        }
+        
+
+        public async getTareasPersonas(): Promise<{
+            personasConTareas: Map<string, Task[]>,
+            totalPersonas: number,
+            totalTareas: number
+        }> {
+            console.log("\n=== INICIANDO BÚSQUEDA DE TAREAS ASIGNADAS A PERSONAS ===");
+            
+            const personasConTareas = new Map<string, Task[]>();
+            
+            const tareas = await this.procesarTareas(
+                this.plugin.app.vault.getMarkdownFiles(),
+                async (tarea) => {
+                    console.log("\nAnalizando tarea:", tarea.texto);
+                    if (!tarea.etiquetas.personas || tarea.etiquetas.personas.length === 0) {
+                        return false;
+                    }
+                    
+                    // Agregar información de ubicación a la tarea
+                    tarea.ubicacion = {
+                        archivo: tarea.rutaArchivo,
+                        titulo: tarea.titulo
+                    };
+                    
+                    // Procesar cada etiqueta de persona encontrada
+                    tarea.etiquetas.personas.forEach(tag => {
+                        const personaTag = `#px-${tag}`;
+                        if (!personasConTareas.has(personaTag)) {
+                            personasConTareas.set(personaTag, []);
+                        }
+                        personasConTareas.get(personaTag)!.push(tarea);
+                    });
+                    
+                    return true;
+                }
+            );
+    
+            // Ordenar las tareas de cada persona usando TaskWeightCalculator
+            personasConTareas.forEach((tareas, persona) => {
+                const tareasOrdenadas = TaskWeightCalculator.sortTasks(tareas);
+                personasConTareas.set(persona, tareasOrdenadas);
+            });
+    
+            return {
+                personasConTareas,
+                totalPersonas: personasConTareas.size,
+                totalTareas: Array.from(personasConTareas.values())
+                    .reduce((sum, tareas) => sum + tareas.length, 0)
+            };
+        }
+
+        private generarVistaPersonas(
+            personasConTareas: Map<string, Task[]>,
+            totalPersonas: number,
+            totalTareas: number
+        ): string {
+            const hoy = this.taskUtils.obtenerFechaLocal();
+            let contenido = `# Tareas Asignadas por Persona\n\n`;
+            
+            // Cabecera y resumen
+            contenido += this.generarBotonActualizacion("mostrarTareasPersonas");
+            contenido += `> [!info] Actualizado: ${hoy.toLocaleDateString()} ${new Date().toLocaleTimeString()}\n`;
+            contenido += `> Total de personas con tareas: ${totalPersonas}\n`;
+            contenido += `> Total de tareas asignadas: ${totalTareas}\n\n`;
+        
+            // Resumen de asignaciones
+            contenido += `## Resumen de Asignaciones\n`;
+            Array.from(personasConTareas.entries())
+                .sort(([, tareasA], [, tareasB]) => tareasB.length - tareasA.length)
+                .forEach(([persona, tareas]) => {
+                    const nombreFormateado = this.formatearNombrePersona(persona);
+                    contenido += `- [[#${nombreFormateado}|${nombreFormateado}]] (${tareas.length} tareas)\n`;
+                });
+            contenido += '\n';
+        
+            // Detalle de tareas por persona
+            contenido += `## Tareas por Persona\n\n`;
+            Array.from(personasConTareas.entries())
+                .sort(([, tareasA], [, tareasB]) => tareasB.length - tareasA.length)
+                .forEach(([persona, tareas]) => {
+                    contenido += `### ${this.formatearNombrePersona(persona)}\n\n`;
+                    
+                    // Ordenar tareas por peso y mostrarlas directamente
+                    const tareasOrdenadas = TaskWeightCalculator.sortTasks(tareas);
+                    tareasOrdenadas.forEach(tarea => {
+                        contenido += this.renderizarTareaPersona(tarea);
+                    });
+                    contenido += '\n';
+                });
+        
+            return contenido;
+        }
+        
+        private renderizarTareaPersona(tarea: Task): string {
+            let contenido = `- [ ] ${tarea.texto}\n`;
+            
+            // Añadir ubicación de la tarea
+            contenido += `    📍 [[${tarea.rutaArchivo}|${tarea.titulo}]]\n`;
+            
+            // Fechas
+            const fechas = [];
+            if (tarea.fechaVencimiento) {
+                fechas.push(`📅 ${this.formatearFechaConContexto(tarea.fechaVencimiento, 'due')}`);
+            }
+            if (tarea.fechaScheduled) {
+                fechas.push(`⏳ ${this.formatearFechaConContexto(tarea.fechaScheduled, 'scheduled')}`);
+            }
+            if (tarea.fechaStart) {
+                fechas.push(`🛫 ${this.formatearFechaConContexto(tarea.fechaStart, 'start')}`);
+            }
+            
+            if (fechas.length > 0) {
+                contenido += `    ⏰ Fechas:\n        ${fechas.join('\n        ')}\n`;
+            }
+        
+            // Horarios
+            if (tarea.horaInicio || tarea.horaFin) {
+                contenido += `    ⌚ Horario: ${tarea.horaInicio || '--:--'} - ${tarea.horaFin || '--:--'}\n`;
+            }
+        
+            // Contextos
+            if (tarea.etiquetas.contextos?.length > 0) {
+                contenido += `    🗂️ Contextos: ${tarea.etiquetas.contextos.join(' | ')}\n`;
+            }
+        
+            // Peso y prioridad
+            if (tarea.weight) {
+                const prioridad = this.obtenerPrioridadTarea(tarea.texto);
+                if (prioridad) {
+                    contenido += `    ${prioridad.emoji} Prioridad: ${prioridad.nombre}\n`;
+                }
+            }
+        
+            return contenido;
+        }
+        
+        private formatearNombrePersona(tag: string): string {
+            return tag.replace('#px-', '')
+                     .replace(/_/g, ' ')
+                     .split(' ')
+                     .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+                     .join(' ');
+        }
 }

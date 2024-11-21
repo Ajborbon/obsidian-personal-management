@@ -291,6 +291,33 @@ export function registerTaskManagerCommands(plugin: Plugin): void {
     });
     commandIds.push(todasTareasVencidasCommand.id);
 
+      // Comando para mostrar tareas con dependencias
+      const tareasDependientesCommand = plugin.addCommand({
+        id: "mostrar-tareas-dependientes",
+        name: "Mostrar Tareas con Dependencias",
+        callback: async () => {
+            if (managementPlugin.tareasAPI) {
+                await managementPlugin.tareasAPI.mostrarTareasDependientes();
+            } else {
+                new Notice("El módulo de tareas no está disponible.");
+            }
+        }
+    });
+    commandIds.push(tareasDependientesCommand.id);
+
+    const tareasPersonasCommand = plugin.addCommand({
+        id: "mostrar-tareas-personas",
+        name: "Mostrar Tareas por Persona",
+        callback: async () => {
+            if (managementPlugin.tareasAPI) {
+                await managementPlugin.tareasAPI.mostrarTareasPersonas();
+            } else {
+                new Notice("El módulo de tareas no está disponible.");
+            }
+        }
+    });
+    commandIds.push(tareasPersonasCommand.id);
+
     // Guardar los IDs de los comandos en el plugin
     (plugin as any).registeredTaskManagerCommandIds = commandIds;
 }

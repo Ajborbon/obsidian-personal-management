@@ -1,7 +1,8 @@
 // src/modules/taskManager/interfaces/taskInterfaces.ts
 
 export interface Task {
-    texto: string;
+    texto: string;           // Texto limpio de la tarea (sin metadatos)
+    textoOriginal: string;   // Texto completo original de la tarea incluyendo checkbox y metadatos
     rutaArchivo: string;
     nombreArchivo: string;
     titulo: string;
@@ -21,6 +22,18 @@ export interface Task {
     };
     weight?: TaskWeight;
     tipoVencimiento?: string[];  // Nueva propiedad para indicar el tipo de vencimiento
+    dependencyId?: string;    // ID de la tarea de la que depende (⛔)
+    taskId?: string;         // ID propio de la tarea (🆔)
+    isBlocked?: boolean;     // Estado de bloqueo calculado
+    dependencyLocation?: string;  // Ruta del archivo donde está la tarea dependiente
+    dependencyTitle?: string;     // Título de la nota donde está la tarea dependiente
+    //Utilizado para tareas x personas
+    peso?: number;
+    prioridad?: string;
+    ubicacion?: {
+        archivo: string;
+        titulo: string;
+    };
 }
 
 // src/modules/taskManager/interfaces/taskInterfaces.ts
