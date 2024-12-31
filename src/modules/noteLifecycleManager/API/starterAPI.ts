@@ -19,6 +19,7 @@ import { ObjCompassAnualFieldHandler} from '../fieldHandlers/ObjCompassAnualFiel
 import { CompassPlaneacionAnual_FH } from '../fieldHandlers/CompassPlaneacionAnual_FH';
 import { RepositorioLibros_FH } from '../fieldHandlers/FH Subsistemas/RepositorioLibros_FH';
 import { Biblioteca_FH } from '../fieldHandlers/FH Subsistemas/Biblioteca_FH';
+import { Anual_FH } from '../fieldHandlers/FH Journals/Anual_FH';
 // obsidian
 
 export class starterAPI {
@@ -97,6 +98,11 @@ export class starterAPI {
               break;
           case "Rx":
             fieldHandler = new ReflexionesFieldHandler(this.tp, this.infoSubsistema, this.plugin);
+            break;
+          
+          case "AY":
+            debugger;
+            fieldHandler = new Anual_FH(this.tp, this.infoSubsistema, this.plugin);
             break;
           default:
             throw new Error(`No se ha definido un manejador de campos para el tipo ${this.infoSubsistema.type}`);
@@ -296,4 +302,3 @@ export class starterAPI {
     }
     
 }
-  
