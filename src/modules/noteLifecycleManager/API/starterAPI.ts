@@ -20,6 +20,8 @@ import { CompassPlaneacionAnual_FH } from '../fieldHandlers/CompassPlaneacionAnu
 import { RepositorioLibros_FH } from '../fieldHandlers/FH Subsistemas/RepositorioLibros_FH';
 import { Biblioteca_FH } from '../fieldHandlers/FH Subsistemas/Biblioteca_FH';
 import { Anual_FH } from '../fieldHandlers/FH Journals/Anual_FH';
+import { TrimestralFieldHandler } from '../fieldHandlers/FH Journals/TrimestralFieldHandler';
+
 // obsidian
 
 export class starterAPI {
@@ -99,10 +101,13 @@ export class starterAPI {
           case "Rx":
             fieldHandler = new ReflexionesFieldHandler(this.tp, this.infoSubsistema, this.plugin);
             break;
-          
           case "AY":
             debugger;
             fieldHandler = new Anual_FH(this.tp, this.infoSubsistema, this.plugin);
+            break;
+          // Agrega el nuevo caso para notas trimestrales:
+          case "TQ":
+            fieldHandler = new TrimestralFieldHandler(this.tp, this.infoSubsistema, this.plugin);
             break;
           default:
             throw new Error(`No se ha definido un manejador de campos para el tipo ${this.infoSubsistema.type}`);

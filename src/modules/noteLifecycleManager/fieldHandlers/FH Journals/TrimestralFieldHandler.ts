@@ -2,7 +2,7 @@ import { TFile, Notice } from 'obsidian';
 import { DateTime } from 'luxon';
 import { NoteFieldHandlerBase } from '../FH Base/NoteFieldHandlerBase';
 
-export class Anual_FH extends NoteFieldHandlerBase {
+export class TrimestralFieldHandler extends NoteFieldHandlerBase {
     constructor(tp: any, infoSubsistema: any, plugin: any) {
         super(tp, infoSubsistema, plugin);
     }
@@ -12,37 +12,45 @@ export class Anual_FH extends NoteFieldHandlerBase {
         return this.nota.id;
     }
 
-
     async getFecha() {
         this.nota.fecha = DateTime.now().toISODate();
         return this.nota.fecha;
     }
 
-    async getAño() {
-        const currentYear = DateTime.now().year;
-        const years = Array.from({ length: 7 }, (_, i) => currentYear - 3 + i);
-        const existingYears = await this.getExistingYears();
-        const availableYears = years.filter(year => !existingYears.includes(year.toString()));
-
-        const year = await this.suggester(availableYears.map(String), availableYears.map(String), false, "Selecciona el año:");
-        if (year === null) {
-            new Notice("Selección de año cancelada por el usuario.");
+    async getTrimestre() {
+        // Opciones predefinidas para trimestres
+        const trimestres = ["Q1", "Q2", "Q3", "Q4"];
+        // Obtiene los trimestres ya existentes en la carpeta definida
+        const existingTrimestres = await this.getExistingTrimestres();
+        // Filtra para dejar solo las opciones que no se han usado
+        const availableTrimestres = trimestres.filter(q => !existingTrimestres.includes(q));
+        if (availableTrimestres.length === 0) {
+            new Notice("Todos los trimestres ya han sido creados en esta carpeta.");
             return;
         }
-        this.nota.año = year;
-        return year;
+        const trimestre = await this.suggester(
+            availableTrimestres,
+            availableTrimestres,
+            false,
+            "Selecciona el trimestre:"
+        );
+        if (trimestre === null) {
+            new Notice("Selección de trimestre cancelada por el usuario.");
+            return;
+        }
+        this.nota.trimestre = trimestre;
+        return trimestre;
     }
-     
-    
+
     async getEstado() {
         this.nota.estado = "🟢";
         return this.nota.estado;
     }
 
     async getRename() {
-        const newName = `${this.infoSubsistema.folder}/${this.nota.año}.md`;
+        // Construye el nuevo nombre usando el folder y el trimestre seleccionado
+        const newName = `${this.infoSubsistema.folder}/${this.nota.trimestre}.md`;
         const file = this.tp.file.config.target_file;
-
         const exists = app.vault.getAbstractFileByPath(newName);
         if (exists instanceof TFile) {
             const overwrite = await this.suggester(
@@ -75,10 +83,11 @@ export class Anual_FH extends NoteFieldHandlerBase {
         return this.nota;
     }
 
-    private async getExistingYears(): Promise<string[]> {
+    private async getExistingTrimestres(): Promise<string[]> {
         const files = app.vault.getMarkdownFiles();
-        const yearFiles = files.filter(file => file.path.startsWith(this.infoSubsistema.folder));
-        const years = yearFiles.map(file => file.basename);
-        return years;
+        // Se filtran los archivos que se encuentran en la carpeta definida para notas trimestrales
+        const trimestreFiles = files.filter(file => file.path.startsWith(this.infoSubsistema.folder));
+        const trimestres = trimestreFiles.map(file => file.basename);
+        return trimestres;
     }
 }
