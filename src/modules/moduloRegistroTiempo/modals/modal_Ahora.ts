@@ -1,3 +1,16 @@
+/*
+ * Filename: /src/modules/moduloRegistroTiempo/modals/modal_Ahora.ts
+ * Path: /src/modules/moduloRegistroTiempo/modals
+ * Created Date: 2024-03-04 17:58:30
+ * Author: Andrés Julián Borbón
+ * -----
+ * Last Modified: 2025-02-23 17:46:33
+ * Modified By: Andrés Julián Borbón
+ * -----
+ * Copyright (c) 2025 - Andrés Julián Borbón
+ */
+
+
 import { Modal, App, TFile, Notice } from 'obsidian';
 
 export class modal_Ahora extends Modal {

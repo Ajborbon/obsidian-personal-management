@@ -1,3 +1,16 @@
+/*
+ * Filename: /src/modules/moduloRegistroTiempo/utils.ts
+ * Path: /src/modules/moduloRegistroTiempo
+ * Created Date: 2024-03-04 18:01:02
+ * Author: Andrés Julián Borbón
+ * -----
+ * Last Modified: 2025-02-23 17:47:29
+ * Modified By: Andrés Julián Borbón
+ * -----
+ * Copyright (c) 2025 - Andrés Julián Borbón
+ */
+
+
 
 // LÓGICA PARA ACCEDER A LAS FUNCIONES DESDE LOS BOTONES PROPIOS DE LA INTERFAZ DE OBSIDIAN -> RIBBON, ETC
 import { App, TFile, TFolder, Modal, FuzzySuggestModal, FuzzyMatch, Notice } from "obsidian";

@@ -1,3 +1,17 @@
+/*
+ * Filename: /src/modules/moduloRegistroTiempo/API/menuOtro.ts
+ * Path: /src/modules/moduloRegistroTiempo/API
+ * Created Date: 2024-03-05 14:43:09
+ * Author: Andrés Julián Borbón
+ * -----
+ * Last Modified: 2025-02-23 17:42:31
+ * Modified By: Andrés Julián Borbón
+ * -----
+ * Copyright (c) 2025 - Andrés Julián Borbón
+ */
+
+
+
 import { App, TFile, TFolder, Modal, FuzzySuggestModal, FuzzyMatch, Notice } from "obsidian";
 import {SeleccionModal} from "../../modales/seleccionModal";
 import {fuzzySelectOrCreate} from "../../modales/fuzzySelectOrCreate";

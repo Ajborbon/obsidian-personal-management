@@ -1,3 +1,16 @@
+/*
+ * Filename: /src/modules/moduloRegistroTiempo/views/vistaRTActivo.ts
+ * Path: /src/modules/moduloRegistroTiempo/views
+ * Created Date: 2024-03-14 10:41:55
+ * Author: Andrés Julián Borbón
+ * -----
+ * Last Modified: 2025-02-23 17:47:48
+ * Modified By: Andrés Julián Borbón
+ * -----
+ * Copyright (c) 2025 - Andrés Julián Borbón
+ */
+
+
 import { ItemView, WorkspaceLeaf, Plugin, TFile } from "obsidian";
 import { DateTime, Duration } from "luxon"; // Asegúrate de tener Luxon disponible para manipular fechas y horas
 import { registroTiempoAPI } from "../API/registroTiempoAPI";
@@ -56,7 +69,7 @@ export class VistaRegistroActivo extends ItemView {
         if (registrosActivos.length === 0) {
             this.containerEl.createEl('p', { text: 'No hay ningún registro de tiempo ejecutandose.' });
             const botonCrear = this.containerEl.createEl('button');
-            botonCrear.textContent = 'Nuevo Registro Tiempo';
+            botonCrear.textContent = '+ Registro Tiempo';
             botonCrear.onclick = async () => {
                 const starterAPInstance = new starterAPI(this.plugin)
                 await starterAPInstance.createNote("RegistroTiempo");

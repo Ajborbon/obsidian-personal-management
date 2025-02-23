@@ -1,3 +1,16 @@
+/*
+ * Filename: /src/modules/noteLifecycleManager/API/menuDiarioAPI.ts
+ * Path: /src/modules/noteLifecycleManager/API
+ * Created Date: 2024-03-07 16:09:16
+ * Author: Andrés Julián Borbón
+ * -----
+ * Last Modified: 2025-02-23 17:48:50
+ * Modified By: Andrés Julián Borbón
+ * -----
+ * Copyright (c) 2025 - Andrés Julián Borbón
+ */
+
+
 import {Notice, TFile} from 'obsidian'
 import {DateTime, Duration} from 'luxon'
 import { starterAPI } from './starterAPI';

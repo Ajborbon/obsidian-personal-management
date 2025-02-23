@@ -217,6 +217,9 @@
 |   |   |   |   |   |-- PGTDFieldHandler.ts
 |   |   |   |   |   |-- PQFieldHandler.ts
 |   |   |   |   |   `-- nodoAreaVidaFieldHandler.ts
+|   |   |   |   |-- FH Journals
+|   |   |   |   |   |-- Anual_FH.ts
+|   |   |   |   |   `-- TrimestralFieldHandler.ts
 |   |   |   |   |-- FH Subsistemas
 |   |   |   |   |   |-- AgradecimientosFieldHandler.ts
 |   |   |   |   |   |-- AnotacionesFieldHandler.ts
@@ -247,4 +250,4 @@
 |-- styles.css
 `-- tsconfig.json
 
-93 directories, 155 files
+94 directories, 157 files

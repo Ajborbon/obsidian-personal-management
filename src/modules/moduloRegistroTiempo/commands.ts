@@ -1,3 +1,15 @@
+/*
+ * Filename: /src/modules/moduloRegistroTiempo/commands.ts
+ * Path: /src/modules/moduloRegistroTiempo
+ * Created Date: 2024-03-05 17:02:34
+ * Author: Andrés Julián Borbón
+ * -----
+ * Last Modified: 2025-02-23 17:40:24
+ * Modified By: Andrés Julián Borbón
+ * -----
+ * Copyright (c) 2025 - Andrés Julián Borbón
+ */
+
 import { Plugin, Notice, Modal, TFile, TFolder } from "obsidian";
 import { buscarRegistrosActivos, crearObjetoRegistro, verificarTareasActivas, definirTipoRegistro } from "./utils"
 import {modal_Ahora} from "./modals/modal_Ahora"

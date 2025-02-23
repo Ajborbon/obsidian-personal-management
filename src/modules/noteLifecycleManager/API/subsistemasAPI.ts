@@ -1,3 +1,15 @@
+/*
+ * Filename: /src/modules/noteLifecycleManager/API/subsistemasAPI.ts
+ * Path: /src/modules/noteLifecycleManager/API
+ * Created Date: 2024-03-19 13:11:26
+ * Author: Andrés Julián Borbón
+ * -----
+ * Last Modified: 2025-02-23 17:49:33
+ * Modified By: Andrés Julián Borbón
+ * -----
+ * Copyright (c) 2025 - Andrés Julián Borbón
+ */
+
 import { TFile, TFolder } from "obsidian";
 
 interface GrupoAV {
