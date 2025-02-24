@@ -262,6 +262,10 @@
 
 /* Contenedor del registro activo */
 .active-time-container {
+  width: 100%;              /* Ocupa el ancho completo del contenedor padre */
+  box-sizing: border-box;   /* Incluye padding y border en el ancho */
+  
+  /* Resto de estilos */
   background-color: #ffeb3b; /* Amarillo suave */
   padding: 15px;
   border-radius: 10px;
@@ -338,7 +342,7 @@
 .registro-tiempo-container {
   display: flex;
   flex-direction: column;
-  align-items: center;
+  align-items: stretch; /* Permite que los hijos ocupen todo el ancho */
   width: 100% !important;  /* Forzar uso del 100% */
   max-width: 100% !important;
   min-width: auto !important;
