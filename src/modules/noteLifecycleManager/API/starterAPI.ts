@@ -173,7 +173,6 @@ export class starterAPI {
      // Crear Nota desde template
      async createNote(subsistema: string) {
         try {
-            debugger
             const templatePath = `Plantillas/${this.plugin.settings[`folder_${subsistema}`]}/Plt - ${subsistema}.md`;
             
               // Intentar obtener el archivo por path

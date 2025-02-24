@@ -52,35 +52,34 @@ export class utilsAPI {
       );
       return null;
     }
-
+  
     const folder = plugin.settings.folder_RegistroTiempo;
     const indice = plugin.settings.indice_RegistroTiempo;
-
+  
     let maxId = 0;
-
-    // Obtén todos los archivos Markdown
-    const files = app.vault.getMarkdownFiles();
-
-    // Filtra por los archivos en la carpeta deseada
+    const files = plugin.app.vault.getMarkdownFiles();
     const registrosExistentes = files.filter((file: { path: string }) =>
       file.path.startsWith(folder)
     );
-
-    // Usa metadataCache para buscar los IDs en el frontmatter
+  
     registrosExistentes.forEach((file: any) => {
-      const metadata = app.metadataCache.getFileCache(file)?.frontmatter;
+      const metadata = plugin.app.metadataCache.getFileCache(file)?.frontmatter;
       if (metadata && metadata.id && !isNaN(metadata.id)) {
         const id = parseInt(metadata.id);
         if (id > maxId) maxId = id;
       }
     });
-
-    // El próximo ID disponible
+  
     const nextId = maxId + 1;
-
-    // Formatear la fecha actual
     const fechaCompleta = this.formatearFecha(new Date());
-
+  
+    // Obtener los metadatos del archivo activo para extraer aliases
+    const metadataActivo = plugin.app.metadataCache.getFileCache(activo);
+    const aliases =
+      metadataActivo && metadataActivo.frontmatter && metadataActivo.frontmatter.aliases
+        ? metadataActivo.frontmatter.aliases
+        : [];
+  
     return {
       activo,
       nombre: activo.basename,
@@ -89,6 +88,7 @@ export class utilsAPI {
       id: nextId,
       fecha: fechaCompleta,
       indice_DVJS: `"${indice}"`,
+      aliases, // Se agrega el campo aliases al registro
     };
   }
 
@@ -222,9 +222,23 @@ export class utilsAPI {
   async definirTipoRegistro(registro: any, app: App) {
     const totTareas = await this.encontrarTareasPendientes(app); // Paso `app` como argumento
 
+    // Declarar la variable para el valor a mostrar
+    let valorMostrar: string;
+    
+    // Si existen al menos dos alias, asignar el segundo como valor a mostrar
+    if (registro.aliases && registro.aliases.length >= 2) {
+      valorMostrar = registro.aliases[1];
+    // Si existe al menos un alias, asignar el primero como valor a mostrar
+    } else if (registro.aliases && registro.aliases.length >= 1) {
+      valorMostrar = registro.aliases[0];
+    // Si no hay alias, asignar el nombre del registro como valor a mostrar
+    } else {
+      valorMostrar = registro.nombre;
+    }
+    
     let opcionesTitulo, valoresOpcion;
     if (totTareas.length > 0) {
-      opcionesTitulo = [registro.nombre, "Alguna tarea en Ejecución", "Otro"];
+      opcionesTitulo = [valorMostrar, "Alguna tarea en Ejecución", "Otro"];
       valoresOpcion = ["Nota", "Tarea", "Otro"];
     } else {
       opcionesTitulo = [registro.nombre, "Otro"];
