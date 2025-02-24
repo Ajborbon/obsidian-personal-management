@@ -4,12 +4,11 @@
  * Created Date: 2025-02-23 15:57:40
  * Author: Andrés Julián Borbón
  * -----
- * Last Modified: 2025-02-23 17:49:22
+ * Last Modified: 2025-02-24 01:18:38
  * Modified By: Andrés Julián Borbón
  * -----
  * Copyright (c) 2025 - Andrés Julián Borbón
  */
-
 
 /* src/modules/noteLifecycleManager/API/starterAPI.ts */
 import { TFile, Notice, TFolder } from 'obsidian';
@@ -34,7 +33,6 @@ import { RepositorioLibros_FH } from '../fieldHandlers/FH Subsistemas/Repositori
 import { Biblioteca_FH } from '../fieldHandlers/FH Subsistemas/Biblioteca_FH';
 import { Anual_FH } from '../fieldHandlers/FH Journals/Anual_FH';
 import { TrimestralFieldHandler } from '../fieldHandlers/FH Journals/TrimestralFieldHandler';
-
 // obsidian
 
 export class starterAPI {
@@ -113,14 +111,6 @@ export class starterAPI {
               break;
           case "Rx":
             fieldHandler = new ReflexionesFieldHandler(this.tp, this.infoSubsistema, this.plugin);
-            break;
-          case "AY":
-            debugger;
-            fieldHandler = new Anual_FH(this.tp, this.infoSubsistema, this.plugin);
-            break;
-          // Agrega el nuevo caso para notas trimestrales:
-          case "TQ":
-            fieldHandler = new TrimestralFieldHandler(this.tp, this.infoSubsistema, this.plugin);
             break;
           default:
             throw new Error(`No se ha definido un manejador de campos para el tipo ${this.infoSubsistema.type}`);
@@ -320,3 +310,4 @@ export class starterAPI {
     }
     
 }
+  

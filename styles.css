@@ -322,6 +322,11 @@
   margin-top: 10px;
 }
 
+.tiempo-ejecucion.tiempo-rojo {
+  color: red !important;
+}
+
+
 /* Botón de cambiar descripción */
 .change-desc-btn {
   background-color: #0078D4;

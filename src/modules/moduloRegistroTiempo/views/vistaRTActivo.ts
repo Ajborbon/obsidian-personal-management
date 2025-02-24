@@ -1,16 +1,16 @@
 /*
  * Filename: /src/modules/moduloRegistroTiempo/views/vistaRTActivo.ts
  * Path: /src/modules/moduloRegistroTiempo/views
- * Created Date: 2024-03-14 10:41:55
+ * Created Date: 2025-02-23 21:01:25
  * Author: Andrés Julián Borbón
  * -----
- * Last Modified: 2025-02-23 17:47:48
+ * Last Modified: 2025-02-23 23:58:34
  * Modified By: Andrés Julián Borbón
  * -----
  * Copyright (c) 2025 - Andrés Julián Borbón
  */
 
-
+// import breakAudio from "../../../../Recursos/Break.mp3";
 import { ItemView, WorkspaceLeaf, Plugin, TFile } from "obsidian";
 import { DateTime, Duration } from "luxon"; // Asegúrate de tener Luxon disponible para manipular fechas y horas
 import { registroTiempoAPI } from "../API/registroTiempoAPI";
@@ -108,11 +108,8 @@ export class VistaRegistroActivo extends ItemView {
          
                         // Crear botón para cambiar la descripción
             const changeDescButton = document.createElement("button");
-            changeDescButton.innerHTML = "✏️ <span class='button-text'> Cambiar Descripción</span>";
-            changeDescButton.classList.add("change-desc-btn");
-
             // Botón Cambiar Descripción
-            changeDescButton.innerHTML = "✏️ <span class='button-text'>Cambiar Descripción</span>";
+            changeDescButton.innerHTML = "✏️ <span class='button-text'>  Descripción</span>";
             changeDescButton.classList.add("change-desc-btn");
 
             changeDescButton.addEventListener("click", async () => {
@@ -237,11 +234,13 @@ export class VistaRegistroActivo extends ItemView {
 /**
  * Función para actualizar dinámicamente el tiempo en ejecución
  */
+alertaEjecutada25: boolean = false;
+
 actualizarTiempoEnEjecucion(element: HTMLElement, horaInicio: string) {
     const extraerHora = (fechaStr: string): Date | null => {
         const match = fechaStr.match(/(\d{4}-\d{2}-\d{2})\s+\w+\s+(\d{2}:\d{2})/);
         if (match) {
-            return new Date(`${match[1]}T${match[2]}:00`); // Convierte a formato YYYY-MM-DDTHH:MM:SS
+            return new Date(`${match[1]}T${match[2]}:00`);
         }
         return null;
     };
@@ -255,22 +254,26 @@ actualizarTiempoEnEjecucion(element: HTMLElement, horaInicio: string) {
     const calcularTiempo = () => {
         const ahora = new Date();
         const diferencia = Math.floor((ahora.getTime() - inicio.getTime()) / 1000);
-
         const horas = Math.floor(diferencia / 3600);
         const minutos = Math.floor((diferencia % 3600) / 60);
         const segundos = diferencia % 60;
 
         element.textContent = `Tiempo transcurrido: ${horas}h ${minutos}m ${segundos}s`;
+
+        // Cuando se alcanza o supera 25 minutos (1500 segundos)
+        if (diferencia >= 1500) {
+            element.classList.add("tiempo-rojo");            
+        } else {
+            element.classList.remove("tiempo-rojo");
+  
+        }
     };
 
-    // Calcular inmediatamente y actualizar cada segundo
+    // Actualiza inmediatamente y luego cada segundo
     calcularTiempo();
     setInterval(calcularTiempo, 1000);
 }
     
-    /**
-     * Función para mostrar un prompt y obtener un nuevo valor
-     */
 /**
  * Función para mostrar un prompt y obtener un nuevo valor
  */
