@@ -108,11 +108,13 @@ export class VistaRegistroActivo extends ItemView {
          
                         // Crear botón para cambiar la descripción
             const changeDescButton = document.createElement("button");
+            changeDescButton.innerHTML = "✏️ <span class='button-text'> Cambiar Descripción</span>";
+            changeDescButton.classList.add("change-desc-btn");
+
+            // Botón Cambiar Descripción
             changeDescButton.innerHTML = "✏️ <span class='button-text'>Cambiar Descripción</span>";
             changeDescButton.classList.add("change-desc-btn");
 
-            changeDescButton.textContent = "✏️ Cambiar Descripción";
-            changeDescButton.classList.add("change-desc-btn");
             changeDescButton.addEventListener("click", async () => {
                 const nuevaDescripcion = await this.mostrarPrompt("Nueva Descripción:", registroEnEjecucion.descripcion || "");
                 if (nuevaDescripcion !== null) {
@@ -138,7 +140,8 @@ export class VistaRegistroActivo extends ItemView {
 
             // Crear botón para detener el registro
             const stopButton = document.createElement("button");
-            stopButton.innerHTML = "🛑 <span class='button-text'>Detener Registro</span>";
+            // Botón Detener Registro
+            stopButton.innerHTML = "✋🏼 <span class='button-text'> Detener Registro</span>";
             stopButton.classList.add("stop-time-btn");
 
             stopButton.addEventListener("click", async () => {

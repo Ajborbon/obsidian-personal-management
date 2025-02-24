@@ -243,21 +243,33 @@
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  background: white;
+  background: white;      /* Modo claro */
+  color: #000;
   padding: 20px;
   border-radius: 8px;
   box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.3);
   text-align: center;
+  /* Añade un ancho mínimo o máximo si quieres limitar el tamaño */
 }
 
 .prompt-modal input {
   width: 90%;
   padding: 5px;
   margin-top: 10px;
+  background: #fff;       /* Modo claro */
+  color: #000;
+  border: 1px solid #ccc;
+  border-radius: 4px;
 }
 
 .prompt-modal button {
   margin: 5px;
+  background: #ccc;       /* Modo claro */
+  color: #000;
+  border: none;
+  border-radius: 4px;
+  padding: 6px 12px;
+  cursor: pointer;
 }
 
 /* Contenedor del registro activo */
@@ -331,11 +343,27 @@
 /* Contenedor de botones alineados en una fila */
 /* Contenedor de botones alineados */
 .registro-botones-container {
+  container-type: inline-size; /* o size */
+  container-name: registroBotones;
   display: flex;
   justify-content: center; /* Centrar los botones */
   align-items: center;
   gap: 10px; /* Espaciado entre botones */
   margin-top: 10px;
+}
+
+@container registroBotones (max-width: 300px) {
+  .change-desc-btn .button-text,
+  .stop-time-btn .button-text {
+    display: none;
+  }
+}
+
+@container registroBotones (min-width: 301px) {
+  .change-desc-btn .button-text,
+  .stop-time-btn .button-text {
+    display: inline;
+  }
 }
 
 /* Asegurar que el contenedor respete el ancho disponible */
@@ -370,13 +398,7 @@
   text-align: center;
 }
 
-/* Ocultar el texto y dejar solo el icono si el ancho es muy pequeño */
-@media (max-width: 250px) {
-  .change-desc-btn .button-text,
-  .stop-time-btn .button-text {
-      display: none;
-  }
-}
+
 
 .stop-time-btn:hover {
   background-color: #b71c1c;
@@ -486,6 +508,23 @@
 /* Ajustar el color del texto en las filas */
 .styled-table tr:hover {
   background-color: #666; /* Resalta la fila activa */
+}
+
+.prompt-modal {
+  background: #333;     /* Ajusta a tu preferencia */
+  color: #fff;
+}
+.prompt-modal input {
+  background: #444;     /* Un gris oscuro para el input */
+  color: #fff;
+  border: 1px solid #666;
+}
+.prompt-modal button {
+  background: #555;
+  color: #fff;
+}
+.prompt-modal button:hover {
+  background: #666;
 }
 
 }
