@@ -48,141 +48,260 @@ export class VistaRegistroActivo extends ItemView {
         clearInterval(this.intervalId); // Limpia el intervalo al cerrar la vista
     }
 
-    async actualizarVista() {
-        this.containerEl.empty(); // Limpia el contenido existente antes de actualizar
 
-        const folder = this.plugin.settings.folder_RegistroTiempo; // Ajusta esto al directorio donde guardas tus registros
+    async actualizarVista() {
+        this.containerEl.empty();
+        this.containerEl.classList.add("registro-tiempo-container");
+    
+        const folder = this.plugin.settings.folder_RegistroTiempo;
         const files = app.vault.getMarkdownFiles().filter(file => file.path.includes(folder));
         let registrosActivos = [];
-
+    
+        // Buscar registros activos (estado 🟢)
         for (let file of files) {
             let metadata = app.metadataCache.getFileCache(file)?.frontmatter;
-
             if (metadata?.estado === "🟢") {
-                let registroActivo = {file}; // Asumiendo que quieres guardar el path del archivo
-                Object.assign(registroActivo, metadata); // Agrega el metadata al objeto registroActivo
-                registrosActivos.push(registroActivo); // Añade el registro activo al array              
+                let registroActivo = { file };
+                Object.assign(registroActivo, metadata);
+                registrosActivos.push(registroActivo);
             }
         }
+    
+        if (registrosActivos.length > 0) {
+            const registroEnEjecucion = registrosActivos[0];
+        
+            const activeContainer = this.containerEl.createEl("div", { cls: "active-time-container" });
+        
+            // Título
+            activeContainer.createEl("h4", { text: "Registro de Tiempo en Ejecución", cls: "registro-tiempo-titulo" });
+        
+            // Alias
+            const aliasContainer = activeContainer.createEl("p", { cls: "registro-alias" });
+            aliasContainer.innerHTML = `<strong>Alias:</strong> ${registroEnEjecucion.aliases ? registroEnEjecucion.aliases[0] : "Sin alias"}`;
+        
+            // Descripción (Visible en la Vista)
+            const descripcionContainer = activeContainer.createEl("p", { cls: "registro-descripcion" });
+            descripcionContainer.innerHTML = `<strong>Descripción:</strong> ${registroEnEjecucion.descripcion || "Sin descripción"}`;
+        
+            // Tiempo en ejecución
+            const tiempoContainer = activeContainer.createEl("p", { cls: "tiempo-ejecucion", text: "Tiempo transcurrido: Calculando..." });
+            this.actualizarTiempoEnEjecucion(tiempoContainer, registroEnEjecucion.horaInicio);
+        
+            // Contenedor de botones alineados
+            const botonesContainer = activeContainer.createEl("div", { cls: "registro-botones-container" });
 
-        // Crea la tabla HTML para mostrar la información
-        if (registrosActivos.length === 0) {
-            this.containerEl.createEl('p', { text: 'No hay ningún registro de tiempo ejecutandose.' });
-            const botonCrear = this.containerEl.createEl('button');
-            botonCrear.textContent = '+ Registro Tiempo';
-            botonCrear.onclick = async () => {
-                const starterAPInstance = new starterAPI(this.plugin)
-                await starterAPInstance.createNote("RegistroTiempo");
-            };
-            this.containerEl.createEl('div', {cls: 'separador'});
-            // Logica para crear tabla sencilla de 5 ultimos RT
-            let registrosFinalizados = [];
-            for (let file of files) {
-                let metadata = app.metadataCache.getFileCache(file)?.frontmatter;
+         
+                        // Crear botón para cambiar la descripción
+            const changeDescButton = document.createElement("button");
+            changeDescButton.innerHTML = "✏️ <span class='button-text'>Cambiar Descripción</span>";
+            changeDescButton.classList.add("change-desc-btn");
 
-                if (metadata?.estado === "🔵") {
-                    let registroFinalizado = {file}; // Asumiendo que quieres guardar el path del archivo
-                    Object.assign(registroFinalizado, metadata); // Agrega el metadata al objeto registroActivo
-                    registrosFinalizados.push(registroFinalizado); // Añade el registro activo al array              
-                }
-            }
-            // Ordena los registros activos por el campo 'id' de manera descendente
-            registrosFinalizados.sort((a, b) => b.id - a.id);
-            // Selecciona los primeros 5 registros después de ordenar
+            changeDescButton.textContent = "✏️ Cambiar Descripción";
+            changeDescButton.classList.add("change-desc-btn");
+            changeDescButton.addEventListener("click", async () => {
+                const nuevaDescripcion = await this.mostrarPrompt("Nueva Descripción:", registroEnEjecucion.descripcion || "");
+                if (nuevaDescripcion !== null) {
+                    // Obtener el archivo en ejecución
+                    const file = registroEnEjecucion.file;
+                    if (!file) return;
             
-            let top5RegistrosActivos = registrosFinalizados.slice(0, 8);
-            // Ahora top5RegistrosActivos contiene los 5 archivos con los ID más altos
-
-
-            if (top5RegistrosActivos.length > 0) {
-                this.containerEl.classList.add("table-container");
-                const table = this.containerEl.createEl('table', {cls: 'table-small'});
-                table.style.width = '100%';
-                const header = table.createEl('tr');
-                ["Alias", "Descripción", "Retomar"].forEach(text => header.createEl('th', {text: text}));
-                
-                top5RegistrosActivos.forEach(registro => {
-                    
-                    const row = table.createEl('tr');
-                    /* Sin Link
-                    row.createEl('td', {text: registro.aliases[0]});
-                    */
-                   // Con link
-                   // Crea una celda para el alias
-                          // Crea una celda para el alias
-                    const aliasCell = row.createEl('td');
-                    // Crea un elemento span para contener el alias como texto
-                    const aliasLink = aliasCell.createEl('span', {
-                        text: registro.aliases[0],
-                        cls: 'clickable-alias' // Una clase para estilizar, si es necesario
-                    });
-                    
-                    // Establece el comportamiento al hacer clic en el alias
-                    aliasLink.addEventListener('click', async () => {
-                        debugger;
-                        // Obtiene el archivo por su ruta
-                        let file = app.vault.getAbstractFileByPath(registro.file.path);
-                        if (file instanceof TFile) {
-                            // Abre el archivo
-                            await app.workspace.getLeaf(true).openFile(file);
-                        }
-                    });
-                    row.createEl('td', {text: registro.descripcion || "No Definida"});
-                   // Crea una nueva celda para el botón
-                   const buttonCell = row.createEl('td');
-                   // Crea el botón y añádelo a la nueva celda
-                   const button = this.createButtonTable('⏱️', () => {
-                        this.registroTiempoAPI.retomarTarea(registro.id);
-                   });
-                       buttonCell.appendChild(button);
-                   });
-                    
-            } else {
-                this.containerEl.createEl('p', {text: 'No hay registros finalizados.'});
-            }
-
-        }else if (registrosActivos.length === 1){
-            this.containerEl.classList.add("vista-RT");
-            let alias = registrosActivos[0].aliases ? registrosActivos[0].aliases[0] : 'Sin alias';
-            let descripcion = registrosActivos[0].descripcion ? registrosActivos[0].descripcion : 'Sin descripcion';
-            let partes = registrosActivos[0].horaInicio.split(' ');
-            let fechaHoraISO = `${partes[0]}T${partes[2]}`;
-            let inicio = DateTime.fromISO(fechaHoraISO);
-            let ahora = DateTime.now();
-            let diferencia = ahora.diff(inicio);
-            let tiempo = Duration.fromMillis(diferencia.toMillis()).toFormat('h:mm')
-            this.containerEl.createEl('h5', { text: 'Tarea Actual'});
-
-            this.containerEl.createEl('span', { text: 'Nombre: '});
-            // Modificado para crear un elemento span clickeable para el alias
-            const aliasSpan = this.containerEl.createEl('span', {
-                text: alias,
-                cls: 'clickable-alias' // Asegúrate de tener esta clase para estilizar el span como un link
-            });
-            aliasSpan.addEventListener('click', async () => {
-                let file = app.vault.getAbstractFileByPath(registrosActivos[0].file.path);
-                if (file instanceof TFile) {
-                    await app.workspace.getLeaf(true).openFile(file);
+                    // Leer el contenido actual del archivo
+                    const fileContent = await this.app.vault.read(file);
+                    let frontmatter = this.app.metadataCache.getFileCache(file)?.frontmatter || {};
+            
+                    // Actualizar el campo descripción en el frontmatter
+                    frontmatter.descripcion = nuevaDescripcion;
+            
+                    // Escribir los cambios de nuevo en el archivo
+                    const newContent = this.reescribirFrontmatter(fileContent, frontmatter);
+                    await this.app.vault.modify(file, newContent);
+            
+                    // Forzar actualización de la vista
+                    this.actualizarVista();
                 }
             });
 
-            this.containerEl.createEl('span', { text: '\n' + descripcion });
-            this.containerEl.createEl('p', { text: 'Esta tarea lleva: ' + tiempo });
-            const botonera = this.containerEl.createEl('div');
-            const botonCerrar = botonera.createEl('button');
-            botonCerrar.textContent = 'Cerrar Tarea';
-            botonCerrar.onclick = async () => {
-                await this.registroTiempoAPI.cerrarRegistro(registrosActivos[0].file); // Restablecer a la vista del botón de menú inicial
-            };
-            const botonDetalle = botonera.createEl('button');
-            botonDetalle.textContent = 'Cambiar Descripción';
-            botonDetalle.onclick = async () => {
-                await this.registroTiempoAPI.detalleRegistro(registrosActivos[0].file); // Restablecer a la vista del botón de menú inicial
-            };
+            // Crear botón para detener el registro
+            const stopButton = document.createElement("button");
+            stopButton.innerHTML = "🛑 <span class='button-text'>Detener Registro</span>";
+            stopButton.classList.add("stop-time-btn");
+
+            stopButton.addEventListener("click", async () => {
+                try {
+                    console.log("Botón 'Cerrar Tarea' presionado."); // Debug
+            
+                    if (!registroEnEjecucion.file || !(registroEnEjecucion.file instanceof TFile)) {
+                        console.error("No se encontró el archivo del registro en ejecución.");
+                        return;
+                    }
+            
+                    await this.registroTiempoAPI.cerrarRegistro(registroEnEjecucion.file);
+                    console.log("Registro cerrado correctamente.");
+                    this.actualizarVista(); // Refrescar la vista para reflejar el cambio
+            
+                } catch (error) {
+                    console.error("Error al cerrar la tarea:", error);
+                }
+            });
+
+            // Agregar botones al contenedor
+            botonesContainer.appendChild(changeDescButton);
+            botonesContainer.appendChild(stopButton);
+
+            // Agregar el contenedor de botones al activeContainer
+            activeContainer.appendChild(botonesContainer);
+        
+            activeContainer.appendChild(aliasContainer);
+            activeContainer.appendChild(descripcionContainer);
+            activeContainer.appendChild(tiempoContainer);
+            this.containerEl.appendChild(activeContainer);
+        }
+    
+        // Mostrar registros finalizados
+        let registrosFinalizados = [];
+        for (let file of files) {
+            let metadata = app.metadataCache.getFileCache(file)?.frontmatter;
+            if (metadata?.estado === "🔵") {
+                let registroFinalizado = { file };
+                Object.assign(registroFinalizado, metadata);
+                registrosFinalizados.push(registroFinalizado);
+            }
+        }
+    
+        registrosFinalizados.sort((a, b) => b.id - a.id);
+        let top5RegistrosActivos = registrosFinalizados.slice(0, 8);
+    
+        if (top5RegistrosActivos.length > 0) {
+            const tableWrapper = this.containerEl.createEl("div", { cls: "table-wrapper" });
+            const table = tableWrapper.createEl("table", { cls: "styled-table" });
+    
+            const header = table.createEl("tr");
+            ["Alias", "Descripción", "Retomar"].forEach(text => header.createEl("th", { text: text }));
+    
+            top5RegistrosActivos.forEach(registro => {
+                const row = table.createEl("tr");
+    
+                // Alias con enlace
+                const aliasCell = row.createEl("td");
+                const aliasLink = aliasCell.createEl("a", {
+                    text: registro.aliases ? registro.aliases[0] : "Sin alias",
+                    cls: "clickable-alias",
+                    href: "#"
+                });
+                aliasLink.addEventListener("click", async () => {
+                    let file = app.vault.getAbstractFileByPath(registro.file.path);
+                    if (file instanceof TFile) {
+                        await app.workspace.getLeaf(true).openFile(file);
+                    }
+                });
+    
+                row.createEl("td", { text: registro.descripcion || "No Definida" });
+    
+                // Botón "Retomar"
+                const buttonCell = row.createEl("td");
+                const button = this.createButtonTable("⏱️", () => {
+                    this.registroTiempoAPI.retomarTarea(registro.id);
+                });
+                button.classList.add("retomar-btn");
+                button.setAttribute("aria-label", "Retomar");
+                buttonCell.appendChild(button);
+            });
+    
+            this.containerEl.appendChild(tableWrapper);
         } else {
-            this.containerEl.createEl('p', {text: ' Hay un error con la cantidad de registros activos.'});
+            this.containerEl.createEl("p", { text: "No hay registros finalizados." });
         }
     }
+    
+    /**
+     * Función para actualizar dinámicamente el tiempo en ejecución
+     */
+/**
+ * Función para actualizar dinámicamente el tiempo en ejecución
+ */
+actualizarTiempoEnEjecucion(element: HTMLElement, horaInicio: string) {
+    const extraerHora = (fechaStr: string): Date | null => {
+        const match = fechaStr.match(/(\d{4}-\d{2}-\d{2})\s+\w+\s+(\d{2}:\d{2})/);
+        if (match) {
+            return new Date(`${match[1]}T${match[2]}:00`); // Convierte a formato YYYY-MM-DDTHH:MM:SS
+        }
+        return null;
+    };
+
+    const inicio = extraerHora(horaInicio);
+    if (!inicio) {
+        element.textContent = "Tiempo transcurrido: No disponible";
+        return;
+    }
+
+    const calcularTiempo = () => {
+        const ahora = new Date();
+        const diferencia = Math.floor((ahora.getTime() - inicio.getTime()) / 1000);
+
+        const horas = Math.floor(diferencia / 3600);
+        const minutos = Math.floor((diferencia % 3600) / 60);
+        const segundos = diferencia % 60;
+
+        element.textContent = `Tiempo transcurrido: ${horas}h ${minutos}m ${segundos}s`;
+    };
+
+    // Calcular inmediatamente y actualizar cada segundo
+    calcularTiempo();
+    setInterval(calcularTiempo, 1000);
+}
+    
+    /**
+     * Función para mostrar un prompt y obtener un nuevo valor
+     */
+/**
+ * Función para mostrar un prompt y obtener un nuevo valor
+ */
+async mostrarPrompt(mensaje: string, valorActual: string): Promise<string | null> {
+    return new Promise((resolve) => {
+        const modal = document.createElement("div");
+        modal.classList.add("prompt-modal");
+
+        const label = document.createElement("label");
+        label.textContent = mensaje;
+
+        const input = document.createElement("input");
+        input.type = "text";
+        input.value = valorActual; // Prellenar con la descripción actual
+
+        const buttonContainer = document.createElement("div");
+
+        const aceptar = document.createElement("button");
+        aceptar.textContent = "Aceptar";
+        aceptar.addEventListener("click", () => {
+            resolve(input.value.trim() || null); // Retorna el texto escrito
+            modal.remove();
+        });
+
+        const cancelar = document.createElement("button");
+        cancelar.textContent = "Cancelar";
+        cancelar.addEventListener("click", () => {
+            resolve(null); // Cancelar sin cambios
+            modal.remove();
+        });
+
+        // Permitir confirmar con "Enter"
+        input.addEventListener("keydown", (event) => {
+            if (event.key === "Enter") {
+                event.preventDefault();
+                aceptar.click();
+            }
+        });
+
+        buttonContainer.appendChild(aceptar);
+        buttonContainer.appendChild(cancelar);
+        modal.appendChild(label);
+        modal.appendChild(input);
+        modal.appendChild(buttonContainer);
+        document.body.appendChild(modal);
+
+        input.focus(); // Enfocar el input automáticamente
+    });
+}
 
     createButtonTable(buttonText, onClickCallback) {
         
@@ -197,5 +316,35 @@ export class VistaRegistroActivo extends ItemView {
         return button;
     }
     
+ /**
+ * Reescribe el frontmatter en un archivo Markdown, preservando la estructura original.
+ */
+reescribirFrontmatter(content: string, frontmatter: Record<string, any>): string {
+    const yamlStart = content.indexOf('---');
+    const yamlEnd = content.indexOf('---', yamlStart + 3);
+
+    if (yamlStart === -1 || yamlEnd === -1) {
+        return content; // Si no hay frontmatter, no modificar nada.
+    }
+
+    // Convertir el frontmatter en YAML formateado correctamente
+    let nuevoFrontmatter = '---\n';
+    for (const key in frontmatter) {
+        if (Array.isArray(frontmatter[key])) {
+            // Si el campo es una lista (ej. aliases), mantener el formato de lista en YAML
+            nuevoFrontmatter += `${key}:\n`;
+            frontmatter[key].forEach(item => {
+                nuevoFrontmatter += `  - ${item}\n`;
+            });
+        } else {
+            // Si es un campo de texto o número, guardarlo en línea
+            nuevoFrontmatter += `${key}: ${frontmatter[key]}\n`;
+        }
+    }
+    nuevoFrontmatter += '---\n';
+
+    // Reemplazar el frontmatter en el contenido original
+    return nuevoFrontmatter + content.slice(yamlEnd + 3);
+}
     
 }
