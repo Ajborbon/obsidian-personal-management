@@ -379,5 +379,112 @@
   color: white; /* Texto blanco en hover */
 }
 
+/* Ajustes de modo oscuro */
+@media (prefers-color-scheme: dark) {
+  .active-time-container {
+      background-color: #444444; /* Un gris más oscuro para contraste */
+      color: #ffffff; /* Texto blanco para mejor visibilidad */
+  }
+
+  .registro-descripcion {
+      background-color: #666666; /* Un gris más oscuro */
+      color: #ffffff; /* Texto blanco */
+  }
+
+  .tiempo-ejecucion {
+      color: #f5f5f5 !important; /* Texto más claro */
+      font-weight: bold;
+  }
+
+  .registro-tiempo-btn {
+      background-color: #005a9e !important; /* Azul más oscuro para más contraste */
+      color: white !important;
+  }
+
+  .change-desc-btn,
+  .stop-time-btn {
+      background-color: #0078D4; /* Un azul más claro */
+      color: #ffffff; /* Texto blanco */
+      border: 1px solid #ffffff; /* Agregar un borde blanco */
+  }
+
+  .change-desc-btn:hover,
+  .stop-time-btn:hover {
+      background-color: #005a9e; /* Azul oscuro en hover */
+  }
+
+  .registro-tiempo-titulo {
+    color: #ffffff !important; /* Blanco brillante */
+    font-size: 18px;
+    font-weight: bold;
+    text-align: center;
+}
+.registro-tiempo-btn {
+  background-color: #1E3A8A !important; /* Azul oscuro */
+  color: #ffffff !important; /* Texto blanco */
+  border: 1px solid #ffffff; /* Borde blanco para resaltar */
+  font-weight: bold;
+  padding: 10px 16px;
+  border-radius: 6px;
+  transition: background-color 0.3s ease-in-out;
+}
+
+.registro-tiempo-btn:hover {
+  background-color: #2C5282 !important; /* Azul más claro al pasar el mouse */
+  color: #f8f8f8 !important;
+}
+
+.registro-tiempo-btn:active {
+  background-color: #4A5568 !important; /* Gris azulado al hacer clic */
+}
+
+.styled-table {
+  width: 100%;
+  border-collapse: collapse;
+  background-color: #333; /* Fondo oscuro */
+  color: #ffffff; /* Texto blanco */
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.styled-table th {
+  background-color: #1E3A8A; /* Azul oscuro para el encabezado */
+  color: #ffffff;
+  padding: 10px;
+  text-align: left;
+  font-weight: bold;
+}
+
+.styled-table td {
+  padding: 8px;
+  border-bottom: 1px solid #555; /* Separador más tenue */
+}
+
+/* Alternar colores de las filas para mejorar la lectura */
+.styled-table tr:nth-child(odd) {
+  background-color: #444; /* Gris oscuro */
+}
+
+.styled-table tr:nth-child(even) {
+  background-color: #555; /* Gris más claro */
+}
+
+/* Mejorar la visibilidad de los enlaces */
+.styled-table a {
+  color: #4EA8DE !important; /* Azul brillante */
+  text-decoration: none;
+}
+
+.styled-table a:hover {
+  text-decoration: underline;
+}
+
+/* Ajustar el color del texto en las filas */
+.styled-table tr:hover {
+  background-color: #666; /* Resalta la fila activa */
+}
+
+}
+
 
 
