@@ -504,20 +504,22 @@ export class utilsAPI {
   }
 
   async construirNombreyAlias(registro: any, app: App) {
+    // Construir la ruta base para el nombre del archivo
     let nombreBase = `${registro.folder}/RT - ${registro.id}`;
-
-    let aliasLimpio = this.limpiarAlias(registro.titulo);
-    aliasLimpio =
-      aliasLimpio.length > 195 ? aliasLimpio.slice(0, 195) : aliasLimpio;
-
+  
+    // Limpiar y recortar el título para formar el alias base
+    let aliasBase = this.limpiarAlias(registro.titulo);
+    aliasBase = aliasBase.length > 195 ? aliasBase.slice(0, 195) : aliasBase;
+  
+    // Variable que usaremos para construir el alias actual
+    let aliasLimpio = aliasBase;
+    
+    // Buscar en todos los archivos de la bóveda aquellos que pertenezcan a la carpeta y tengan el mismo título
     const archivos = app.vault.getFiles();
     let registrosConMismoTitulo = [];
-
     for (const archivo of archivos) {
       if (archivo.path.startsWith(registro.folder)) {
-        // Usamos metadataCache para obtener los metadatos de la nota
         const metadatos = app.metadataCache.getFileCache(archivo);
-        // Aseguramos que metadatos.frontmatter contenga los campos necesarios
         if (
           metadatos &&
           metadatos.frontmatter &&
@@ -530,52 +532,70 @@ export class utilsAPI {
         }
       }
     }
-    debugger;
-    // Ordenamos los resultados por idSec en orden descendente
-    registrosConMismoTitulo.sort((b) => b.idSec, "desc");
-
+  
+    // Ordenar los registros encontrados por idSec en orden descendente
+    registrosConMismoTitulo.sort((a, b) => b.idSec - a.idSec);
+  
+    // Calcular el idSec para el registro actual
     registro.idSec =
       registrosConMismoTitulo.length > 0
         ? parseInt(registrosConMismoTitulo[0].idSec) + 1
         : 1;
-
+    
+    // Si hay más de una sesión, se añade el idSec al alias
     if (registro.idSec > 1) {
       aliasLimpio += ` - ${registro.idSec}`;
     }
-
-    // Inicializa registro.aliases como un arreglo vacío
-    registro.aliases = [];
-
-    // Agrega el alias limpio con el prefijo
-    registro.aliases.push(`RT - ${aliasLimpio}`);
-
+    
+    const nuevoAlias = `RT - ${aliasLimpio}`;
+  
+    // Si ya existen aliases en el registro, se conservan; si no, se inicializa el arreglo.
+    if (!Array.isArray(registro.aliases)) {
+      registro.aliases = [];
+    }
+  
+    // Cuando hay sesión anterior, eliminamos de registro.aliases cualquier alias
+    // que sea del mismo "alias base" con una sesión anterior (por ejemplo, "RT - PGTD - 47 - 2")
+    // usando una comprobación que filtre los que comiencen con "RT - {aliasBase} - " y sean distintos al nuevoAlias.
+    if (registro.idSec > 1) {
+      registro.aliases = registro.aliases.filter(a => {
+        if (a.startsWith(`RT - ${aliasBase} - `) && a !== nuevoAlias) {
+          return false;
+        }
+        return true;
+      });
+    }
+  
+    // Agregar el alias para la sesión actual si no está ya presente, colocándolo al inicio.
+    if (!registro.aliases.includes(nuevoAlias)) {
+      registro.aliases.unshift(nuevoAlias);
+    }
+  
+    // Si el tipo de registro es "Nota", intentar obtener los aliases del archivo activo
+    // y agregarlos (con prefijo) sin duplicar lo que ya existe.
     if (registro.tipoRegistro === "Nota") {
-      // Obtén el archivo activo
       const archivoActivo = app.workspace.getActiveFile();
-      if (!archivoActivo) return; // Asegúrate de que haya un archivo activo
-
-      // Obtén los metadatos del archivo activo
-      const metadatosActivo = app.metadataCache.getFileCache(archivoActivo);
-
-      // Extrae aliases del frontmatter, asegurándote de que existan y accediendo correctamente
-      const aliasesActivo =
-        metadatosActivo && metadatosActivo.frontmatter
-          ? metadatosActivo.frontmatter.aliases
-          : undefined;
-
-      // Verifica si aliasesActivo existe y determina si es un arreglo o una cadena
-      if (aliasesActivo) {
-        const additionalAliases = Array.isArray(aliasesActivo)
-          ? aliasesActivo
-          : [aliasesActivo]; // Convierte a arreglo si es una cadena
-
-        // Añade cada alias adicional con el prefijo "RT - "
-        additionalAliases.forEach((alias) => {
-          registro.aliases.push(`RT - ${alias}`);
-        });
+      if (archivoActivo) {
+        const metadatosActivo = app.metadataCache.getFileCache(archivoActivo);
+        const aliasesActivo =
+          metadatosActivo && metadatosActivo.frontmatter
+            ? metadatosActivo.frontmatter.aliases
+            : undefined;
+        if (aliasesActivo) {
+          const additionalAliases = Array.isArray(aliasesActivo)
+            ? aliasesActivo
+            : [aliasesActivo];
+          additionalAliases.forEach((alias) => {
+            const aliasConPrefijo = `RT - ${alias}`;
+            if (!registro.aliases.includes(aliasConPrefijo)) {
+              registro.aliases.push(aliasConPrefijo);
+            }
+          });
+        }
       }
     }
-
+  
+    // Asigna el nombre base (ruta) para el archivo
     registro.nameFile = nombreBase;
   }
 
