@@ -47,10 +47,17 @@ export class utilsAPI {
   async crearObjetoRegistro(plugin: Plugin) {
     const activo = plugin.app.workspace.getActiveFile();
     if (!activo) {
-      console.error(
-        "No hay un archivo activo para la creación de registro de tiempo. Se descarta para la creación de registro de tiempo."
-      );
-      return null;
+      // Retornar un objeto registro predeterminado sin archivo activo
+      return {
+        activo: null,
+        nombre: "Registro sin archivo activo",
+        folder: plugin.settings.folder_RegistroTiempo,
+        indice: plugin.settings.indice_RegistroTiempo,
+        id: null,
+        fecha: this.formatearFecha(new Date()),
+        indice_DVJS: `"${plugin.settings.indice_RegistroTiempo}"`,
+        aliases: [] // o incluso podrías asignar algún alias por defecto si lo deseas
+      };
     }
   
     const folder = plugin.settings.folder_RegistroTiempo;
@@ -220,68 +227,67 @@ export class utilsAPI {
   }
 
   async definirTipoRegistro(registro: any, app: App) {
-    const totTareas = await this.encontrarTareasPendientes(app); // Paso `app` como argumento
-
-    // Declarar la variable para el valor a mostrar
-    let valorMostrar: string;
-    
-    // Si existen al menos dos alias, asignar el segundo como valor a mostrar
-    if (registro.aliases && registro.aliases.length >= 2) {
-      valorMostrar = registro.aliases[1];
-    // Si existe al menos un alias, asignar el primero como valor a mostrar
-    } else if (registro.aliases && registro.aliases.length >= 1) {
-      valorMostrar = registro.aliases[0];
-    // Si no hay alias, asignar el nombre del registro como valor a mostrar
+    const totTareas = await this.encontrarTareasPendientes(app);
+    let opcionesTitulo: string[];
+    let valoresOpcion: string[];
+  
+    if (registro.activo) {
+      // Si hay archivo activo, se determina el valorMostrar basado en aliases o nombre.
+      let valorMostrar: string;
+      if (registro.aliases && registro.aliases.length >= 2) {
+        valorMostrar = registro.aliases[1];
+      } else if (registro.aliases && registro.aliases.length >= 1) {
+        valorMostrar = registro.aliases[0];
+      } else {
+        valorMostrar = registro.nombre;
+      }
+      if (totTareas.length > 0) {
+        opcionesTitulo = [valorMostrar, "Alguna tarea en Ejecución", "Otro"];
+        valoresOpcion = ["Nota", "Tarea", "Otro"];
+      } else {
+        opcionesTitulo = [valorMostrar, "Otro"];
+        valoresOpcion = ["Nota", "Otro"];
+      }
     } else {
-      valorMostrar = registro.nombre;
+      // Si no hay archivo activo, se omite valorMostrar.
+      if (totTareas.length > 0) {
+        opcionesTitulo = ["Alguna tarea en Ejecución", "Otro"];
+        valoresOpcion = ["Tarea", "Otro"];
+      } else {
+        opcionesTitulo = ["Otro"];
+        valoresOpcion = ["Otro"];
+      }
     }
-    
-    let opcionesTitulo, valoresOpcion;
-    if (totTareas.length > 0) {
-      opcionesTitulo = [valorMostrar, "Alguna tarea en Ejecución", "Otro"];
-      valoresOpcion = ["Nota", "Tarea", "Otro"];
-    } else {
-      opcionesTitulo = [registro.nombre, "Otro"];
-      valoresOpcion = ["Nota", "Otro"];
-    }
+  
     const placeholder = "¿Sobre qué es el registro de tiempo?";
-
-    const modalMenu1 = new SeleccionModal(
-      app,
-      opcionesTitulo,
-      valoresOpcion,
-      placeholder
-    );
-
-    // Espera asincrónicamente la selección del usuario antes de continuar.
+    const modalMenu1 = new SeleccionModal(app, opcionesTitulo, valoresOpcion, placeholder);
+  
     try {
       const selection = await modalMenu1.openAndAwaitSelection();
       registro.tipoRegistro = selection;
-      // Procesar la selección del usuario aquí.
-      // El código subsiguiente depende del tipo de registro seleccionado.
+  
       switch (registro.tipoRegistro) {
         case "Nota":
-          registro.titulo = registro.nombre; // El título es el nombre de la nota actual.
-          registro.siAsunto = true;
-          debugger;
-          registro = this.copiarCampos(registro);
+          if (registro.activo) {
+            registro.titulo = registro.nombre;
+            registro.siAsunto = true;
+            registro = this.copiarCampos(registro);
+          } else {
+            new Notice("No hay nota activa para asignar");
+            registro.tipoRegistro = "Otro";
+          }
           break;
         case "Tarea":
-          // Lógica para permitir al usuario elegir una tarea específica.
-
           await this.elegirTareaParaRegistro(app, registro, totTareas);
           break;
         default:
-          // Si el usuario elige "Otro" o cualquier otra opción.
           let respuesta = await this.menuOtro.menuOtro(app, registro);
-          debugger;
-          Object.assign(registro, respuesta); // titulo, siAsunto, nombre
+          Object.assign(registro, respuesta);
           break;
       }
     } catch (error) {
       console.error("Error o modal cerrado sin selección:", error);
-      // Manejo de errores o cierre del modal sin selección.
-      // Por ejemplo, podrías establecer un valor predeterminado para registro.detener aquí.
+      // Aquí se podría manejar el caso de cierre sin selección, por ejemplo, estableciendo registro.detener.
     }
   }
 
