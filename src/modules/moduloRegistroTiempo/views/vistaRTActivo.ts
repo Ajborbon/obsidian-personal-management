@@ -289,8 +289,13 @@ actualizarTiempoEnEjecucion(element: HTMLElement, horaInicio: string) {
  */
 async mostrarPrompt(mensaje: string, valorActual: string): Promise<string | null> {
     return new Promise((resolve) => {
-        const modal = document.createElement("div");
-        modal.classList.add("prompt-modal");
+      // Crea el fondo oscuro
+      const backdrop = document.createElement("div");
+      backdrop.classList.add("prompt-modal-backdrop");
+  
+      // Crea el modal
+      const modal = document.createElement("div");
+      modal.classList.add("prompt-modal");
 
         const label = document.createElement("label");
         label.textContent = mensaje;
@@ -306,6 +311,7 @@ async mostrarPrompt(mensaje: string, valorActual: string): Promise<string | null
         aceptar.addEventListener("click", () => {
             resolve(input.value.trim() || null); // Retorna el texto escrito
             modal.remove();
+            backdrop.remove();
         });
 
         const cancelar = document.createElement("button");
@@ -313,6 +319,7 @@ async mostrarPrompt(mensaje: string, valorActual: string): Promise<string | null
         cancelar.addEventListener("click", () => {
             resolve(null); // Cancelar sin cambios
             modal.remove();
+            backdrop.remove();
         });
 
         // Permitir confirmar con "Enter"
@@ -328,6 +335,7 @@ async mostrarPrompt(mensaje: string, valorActual: string): Promise<string | null
         modal.appendChild(label);
         modal.appendChild(input);
         modal.appendChild(buttonContainer);
+        document.body.appendChild(backdrop);
         document.body.appendChild(modal);
 
         input.focus(); // Enfocar el input automáticamente
