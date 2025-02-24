@@ -66,8 +66,23 @@ export class VistaRegistroActivo extends ItemView {
                 registrosActivos.push(registroActivo);
             }
         }
-    
-        if (registrosActivos.length > 0) {
+
+        if (registrosActivos.length == 0) {
+            // Contenedor para el mensaje y el botón
+        const messageContainer = this.containerEl.createEl('div', { cls: 'message-container' });
+        messageContainer.createEl('p', { text: 'No hay ningún registro de tiempo ejecutándose.' });
+
+        const botonCrear = messageContainer.createEl('button', { cls: 'registro-tiempo-btn' });
+        botonCrear.textContent = '+ Registro Tiempo';
+        botonCrear.onclick = async () => {
+            const starterAPInstance = new starterAPI(this.plugin);
+            await starterAPInstance.createNote("RegistroTiempo");
+        };
+
+        this.containerEl.appendChild(messageContainer);
+        this.containerEl.createEl('div', { cls: 'separador' });
+
+        }else if (registrosActivos.length > 0) {
             const registroEnEjecucion = registrosActivos[0];
         
             const activeContainer = this.containerEl.createEl("div", { cls: "active-time-container" });
@@ -316,7 +331,7 @@ async mostrarPrompt(mensaje: string, valorActual: string): Promise<string | null
         return button;
     }
     
- /**
+/**
  * Reescribe el frontmatter en un archivo Markdown, preservando la estructura original.
  */
 reescribirFrontmatter(content: string, frontmatter: Record<string, any>): string {
@@ -329,22 +344,38 @@ reescribirFrontmatter(content: string, frontmatter: Record<string, any>): string
 
     // Convertir el frontmatter en YAML formateado correctamente
     let nuevoFrontmatter = '---\n';
+
     for (const key in frontmatter) {
-        if (Array.isArray(frontmatter[key])) {
-            // Si el campo es una lista (ej. aliases), mantener el formato de lista en YAML
+        const value = frontmatter[key];
+
+        if (Array.isArray(value)) {
+            // Si el campo es una lista, asegurarse de que cada elemento se formatee correctamente
             nuevoFrontmatter += `${key}:\n`;
-            frontmatter[key].forEach(item => {
-                nuevoFrontmatter += `  - ${item}\n`;
+            value.forEach(item => {
+                if (typeof item === "string" && item.match(/^\[\[.*\]\]$/)) {
+                    nuevoFrontmatter += `  - "${item}"\n`;
+                } else {
+                    nuevoFrontmatter += `  - ${JSON.stringify(item)}\n`;
+                }
             });
+        } else if (typeof value === "string") {
+            if (value.match(/^\[\[.*\]\]$/)) {
+                nuevoFrontmatter += `${key}: "${value}"\n`;
+            } else {
+                nuevoFrontmatter += `${key}: ${JSON.stringify(value)}\n`;
+            }
         } else {
-            // Si es un campo de texto o número, guardarlo en línea
-            nuevoFrontmatter += `${key}: ${frontmatter[key]}\n`;
+            nuevoFrontmatter += `${key}: ${value}\n`;
         }
     }
+
     nuevoFrontmatter += '---\n';
 
-    // Reemplazar el frontmatter en el contenido original
-    return nuevoFrontmatter + content.slice(yamlEnd + 3);
+    // Obtener el contenido posterior al frontmatter
+    let contenidoRestante = content.slice(yamlEnd + 3).trimStart(); // Eliminar saltos de línea extra
+
+    // Agregar una línea en blanco solo si hay contenido restante
+    return nuevoFrontmatter + (contenidoRestante ? '\n' + contenidoRestante : '');
 }
     
 }
