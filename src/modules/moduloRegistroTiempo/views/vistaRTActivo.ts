@@ -50,6 +50,16 @@ export class VistaRegistroActivo extends ItemView {
 
 
     async actualizarVista() {
+        // 1. Guardar la posición de scroll actual del contenedor de la tabla, si existe.
+        let scrollTop = 0;
+        let scrollLeft = 0;
+        const oldTableWrapper = this.containerEl.querySelector(".table-wrapper");
+        if (oldTableWrapper) {
+            scrollTop = oldTableWrapper.scrollTop;
+            scrollLeft = oldTableWrapper.scrollLeft;
+        }
+    
+        // 2. Vaciar el contenedor principal y configurar la clase base.
         this.containerEl.empty();
         this.containerEl.classList.add("registro-tiempo-container");
     
@@ -66,106 +76,90 @@ export class VistaRegistroActivo extends ItemView {
                 registrosActivos.push(registroActivo);
             }
         }
-
-        if (registrosActivos.length == 0) {
-            // Contenedor para el mensaje y el botón
-        const messageContainer = this.containerEl.createEl('div', { cls: 'message-container' });
-        messageContainer.createEl('p', { text: 'No hay ningún registro de tiempo ejecutándose.' });
-
-        const botonCrear = messageContainer.createEl('button', { cls: 'registro-tiempo-btn' });
-        botonCrear.textContent = '+ Registro Tiempo';
-        botonCrear.onclick = async () => {
-            const starterAPInstance = new starterAPI(this.plugin);
-            await starterAPInstance.createNote("RegistroTiempo");
-        };
-
-        this.containerEl.appendChild(messageContainer);
-        this.containerEl.createEl('div', { cls: 'separador' });
-
-        }else if (registrosActivos.length > 0) {
+    
+        if (registrosActivos.length === 0) {
+            // Contenedor para el mensaje y el botón si no hay registros activos.
+            const messageContainer = this.containerEl.createEl('div', { cls: 'message-container' });
+            messageContainer.createEl('p', { text: 'No hay ningún registro de tiempo ejecutándose.' });
+    
+            const botonCrear = messageContainer.createEl('button', { cls: 'registro-tiempo-btn' });
+            botonCrear.textContent = '+ Registro Tiempo';
+            botonCrear.onclick = async () => {
+                const starterAPInstance = new starterAPI(this.plugin);
+                await starterAPInstance.createNote("RegistroTiempo");
+            };
+    
+            this.containerEl.appendChild(messageContainer);
+            this.containerEl.createEl('div', { cls: 'separador' });
+        } else if (registrosActivos.length > 0) {
             const registroEnEjecucion = registrosActivos[0];
-        
+    
             const activeContainer = this.containerEl.createEl("div", { cls: "active-time-container" });
-        
+    
             // Título
             activeContainer.createEl("h4", { text: "Registro de Tiempo en Ejecución", cls: "registro-tiempo-titulo" });
-        
+    
             // Alias
             const aliasContainer = activeContainer.createEl("p", { cls: "registro-alias" });
             aliasContainer.innerHTML = `<strong>Alias:</strong> ${registroEnEjecucion.aliases ? registroEnEjecucion.aliases[0] : "Sin alias"}`;
-        
+    
             // Descripción (Visible en la Vista)
             const descripcionContainer = activeContainer.createEl("p", { cls: "registro-descripcion" });
             descripcionContainer.innerHTML = `<strong>Descripción:</strong> ${registroEnEjecucion.descripcion || "Sin descripción"}`;
-        
+    
             // Tiempo en ejecución
             const tiempoContainer = activeContainer.createEl("p", { cls: "tiempo-ejecucion", text: "Tiempo transcurrido: Calculando..." });
             this.actualizarTiempoEnEjecucion(tiempoContainer, registroEnEjecucion.horaInicio);
-        
+    
             // Contenedor de botones alineados
             const botonesContainer = activeContainer.createEl("div", { cls: "registro-botones-container" });
-
-         
-                        // Crear botón para cambiar la descripción
+    
+            // Botón para cambiar la descripción
             const changeDescButton = document.createElement("button");
-            // Botón Cambiar Descripción
             changeDescButton.innerHTML = "✏️ <span class='button-text'>  Descripción</span>";
             changeDescButton.classList.add("change-desc-btn");
-
             changeDescButton.addEventListener("click", async () => {
                 const nuevaDescripcion = await this.mostrarPrompt("Nueva Descripción:", registroEnEjecucion.descripcion || "");
                 if (nuevaDescripcion !== null) {
-                    // Obtener el archivo en ejecución
                     const file = registroEnEjecucion.file;
                     if (!file) return;
-            
-                    // Leer el contenido actual del archivo
+    
                     const fileContent = await this.app.vault.read(file);
                     let frontmatter = this.app.metadataCache.getFileCache(file)?.frontmatter || {};
-            
-                    // Actualizar el campo descripción en el frontmatter
+    
                     frontmatter.descripcion = nuevaDescripcion;
-            
-                    // Escribir los cambios de nuevo en el archivo
                     const newContent = this.reescribirFrontmatter(fileContent, frontmatter);
                     await this.app.vault.modify(file, newContent);
-            
-                    // Forzar actualización de la vista
+    
+                    // Actualizar la vista para reflejar el cambio
                     this.actualizarVista();
                 }
             });
-
-            // Crear botón para detener el registro
+    
+            // Botón para detener el registro
             const stopButton = document.createElement("button");
-            // Botón Detener Registro
             stopButton.innerHTML = "✋🏼 <span class='button-text'> Detener Registro</span>";
             stopButton.classList.add("stop-time-btn");
-
             stopButton.addEventListener("click", async () => {
                 try {
-                    console.log("Botón 'Cerrar Tarea' presionado."); // Debug
-            
+                    console.log("Botón 'Cerrar Tarea' presionado.");
                     if (!registroEnEjecucion.file || !(registroEnEjecucion.file instanceof TFile)) {
                         console.error("No se encontró el archivo del registro en ejecución.");
                         return;
                     }
-            
                     await this.registroTiempoAPI.cerrarRegistro(registroEnEjecucion.file);
                     console.log("Registro cerrado correctamente.");
-                    this.actualizarVista(); // Refrescar la vista para reflejar el cambio
-            
+                    this.actualizarVista();
                 } catch (error) {
                     console.error("Error al cerrar la tarea:", error);
                 }
             });
-
+    
             // Agregar botones al contenedor
             botonesContainer.appendChild(changeDescButton);
             botonesContainer.appendChild(stopButton);
-
-            // Agregar el contenedor de botones al activeContainer
+    
             activeContainer.appendChild(botonesContainer);
-        
             activeContainer.appendChild(aliasContainer);
             activeContainer.appendChild(descripcionContainer);
             activeContainer.appendChild(tiempoContainer);
@@ -184,12 +178,11 @@ export class VistaRegistroActivo extends ItemView {
         }
     
         registrosFinalizados.sort((a, b) => b.id - a.id);
-        let top5RegistrosActivos = registrosFinalizados.slice(0, 8);
+        let top5RegistrosActivos = registrosFinalizados.slice(0, 15);
     
         if (top5RegistrosActivos.length > 0) {
             const tableWrapper = this.containerEl.createEl("div", { cls: "table-wrapper" });
             const table = tableWrapper.createEl("table", { cls: "styled-table" });
-    
             const header = table.createEl("tr");
             ["Alias", "Descripción", "Retomar"].forEach(text => header.createEl("th", { text: text }));
     
@@ -198,8 +191,14 @@ export class VistaRegistroActivo extends ItemView {
     
                 // Alias con enlace
                 const aliasCell = row.createEl("td");
+                const aliasText = registro.aliases && registro.aliases[1]
+                    ? registro.aliases[1]
+                    : registro.aliases && registro.aliases[0]
+                        ? registro.aliases[0]
+                        : "Sin alias";
+    
                 const aliasLink = aliasCell.createEl("a", {
-                    text: registro.aliases ? registro.aliases[0] : "Sin alias",
+                    text: aliasText,
                     cls: "clickable-alias",
                     href: "#"
                 });
@@ -223,6 +222,10 @@ export class VistaRegistroActivo extends ItemView {
             });
     
             this.containerEl.appendChild(tableWrapper);
+    
+            // 3. Restaurar la posición de scroll en el nuevo contenedor de tabla.
+            tableWrapper.scrollTop = scrollTop;
+            tableWrapper.scrollLeft = scrollLeft;
         } else {
             this.containerEl.createEl("p", { text: "No hay registros finalizados." });
         }

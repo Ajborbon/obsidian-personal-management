@@ -201,15 +201,7 @@
   color: white; /* Texto blanco en hover */
 }
 
-/* Ajuste de la columna Alias */
-.styled-table td:first-child { /* Primera columna (Alias) */
-  max-width: 200px; /* Define un ancho máximo */
-  min-width: 150px; /* Define un ancho mínimo */
-  word-wrap: break-word; /* Permite el corte de palabras largas */
-  white-space: normal; /* Permite múltiples líneas */
-  overflow-wrap: break-word; /* Asegura que las palabras largas se dividan */
-  line-height: 1.2; /* Espaciado más cómodo entre líneas */
-}
+
 
 
 
@@ -410,6 +402,45 @@
   color: white; /* Texto blanco en hover */
 }
 
+
+/* Asegúrate de NO encerrar esto en la media query de modo oscuro */
+.styled-table {
+  width: 100%;
+  table-layout: fixed; /* Para que respete los anchos asignados */
+  border-collapse: collapse;
+}
+
+/* Columna 1: Alias (50%) */
+.styled-table th:nth-child(1),
+.styled-table td:nth-child(1) {
+  width: 45%;
+  max-width: 45%;
+  white-space: normal;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
+/* Columna 2: Descripción (40%) */
+.styled-table th:nth-child(2),
+.styled-table td:nth-child(2) {
+  width: 40%;
+  max-width: 40%;
+  white-space: normal;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
+/* Columna 3: Retomar (10%) */
+.styled-table th:nth-child(3),
+.styled-table td:nth-child(3) {
+  width: 15%;
+  max-width: 15%;
+  text-align: center;
+  white-space: nowrap;  /* Para que no se parta el texto/ícono */
+  overflow: hidden;     /* Trunca el contenido si excede el ancho */
+}
+
+
 /* Ajustes de modo oscuro */
 @media (prefers-color-scheme: dark) {
   .active-time-container {
@@ -469,15 +500,6 @@
   background-color: #4A5568 !important; /* Gris azulado al hacer clic */
 }
 
-.styled-table {
-  width: 100%;
-  border-collapse: collapse;
-  background-color: #333; /* Fondo oscuro */
-  color: #ffffff; /* Texto blanco */
-  border-radius: 6px;
-  overflow: hidden;
-}
-
 .styled-table th {
   background-color: #1E3A8A; /* Azul oscuro para el encabezado */
   color: #ffffff;
@@ -532,6 +554,42 @@
   background: #666;
 }
 
+}  
+
+  .styled-table {
+    width: 100%;
+    table-layout: fixed; /* Fuerza a que respete los anchos y permita el wrapping */
+    border-collapse: collapse;
+  }
+  
+  /* Asegura que el texto se corte y salte de línea */
+  .styled-table th,
+  .styled-table td {
+    white-space: normal;       /* Permite varias líneas */
+    word-wrap: break-word;     /* Rompe palabras largas */
+    overflow-wrap: break-word; /* Soporte adicional */
+    padding: 8px;              /* Ajusta el padding según tu preferencia */
+    vertical-align: top;       /* Alinea el texto arriba si hay varias líneas */
+  }
+    
+
+  /* Para pantallas pequeñas (por ejemplo, menos de 600px de ancho) */
+@media (max-width: 600px) {
+  /* Permitir que el texto se envuelva en celdas */
+  .styled-table td,
+  .styled-table th {
+    white-space: normal;     /* Permite el wrap */
+    word-wrap: break-word;   /* Para dividir palabras largas */
+    word-break: break-all;    /* Asegura que se divida el contenido si es muy largo */
+    font-size: 12px;
+    padding: 4px;
+  }
+  /* Reducir tamaño de fuente y padding, si fuera necesario */
+  .styled-table td,
+  .styled-table th {
+    font-size: 12px;
+    padding: 4px;
+  }
 }
 
 
