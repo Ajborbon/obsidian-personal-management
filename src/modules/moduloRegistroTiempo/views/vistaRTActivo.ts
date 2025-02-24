@@ -101,8 +101,15 @@ export class VistaRegistroActivo extends ItemView {
     
             // Alias
             const aliasContainer = activeContainer.createEl("p", { cls: "registro-alias" });
-            aliasContainer.innerHTML = `<strong>Alias:</strong> ${registroEnEjecucion.aliases ? registroEnEjecucion.aliases[0] : "Sin alias"}`;
-    
+
+            // Primero intenta aliases[1], si no existe, usa aliases[0], y si tampoco existe, "Sin alias"
+            const aliasText = registroEnEjecucion.aliases && registroEnEjecucion.aliases[1]
+            ? registroEnEjecucion.aliases[1]
+            : registroEnEjecucion.aliases && registroEnEjecucion.aliases[0]
+                ? registroEnEjecucion.aliases[0]
+                : "Sin alias";
+
+            aliasContainer.innerHTML = `<strong>Alias:</strong> ${aliasText}`;
             // Descripción (Visible en la Vista)
             const descripcionContainer = activeContainer.createEl("p", { cls: "registro-descripcion" });
             descripcionContainer.innerHTML = `<strong>Descripción:</strong> ${registroEnEjecucion.descripcion || "Sin descripción"}`;
