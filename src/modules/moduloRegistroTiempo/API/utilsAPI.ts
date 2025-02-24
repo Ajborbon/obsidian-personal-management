@@ -511,42 +511,15 @@ export class utilsAPI {
     let aliasBase = this.limpiarAlias(registro.titulo);
     aliasBase = aliasBase.length > 195 ? aliasBase.slice(0, 195) : aliasBase;
   
-    // Variable que usaremos para construir el alias actual
+    // Calcular el último idSec existente para este título en la carpeta
+    const maxIdSec = await this.calcularUltimoIdSec(registro.titulo, registro.folder, app);
+    registro.idSec = maxIdSec + 1;
+  
+    // Construir el alias actual agregando el idSec (si es mayor a 1)
     let aliasLimpio = aliasBase;
-    
-    // Buscar en todos los archivos de la bóveda aquellos que pertenezcan a la carpeta y tengan el mismo título
-    const archivos = app.vault.getFiles();
-    let registrosConMismoTitulo = [];
-    for (const archivo of archivos) {
-      if (archivo.path.startsWith(registro.folder)) {
-        const metadatos = app.metadataCache.getFileCache(archivo);
-        if (
-          metadatos &&
-          metadatos.frontmatter &&
-          metadatos.frontmatter.titulo === registro.titulo
-        ) {
-          const idSec = metadatos.frontmatter.idSec;
-          if (idSec !== undefined) {
-            registrosConMismoTitulo.push({ archivo, idSec });
-          }
-        }
-      }
-    }
-  
-    // Ordenar los registros encontrados por idSec en orden descendente
-    registrosConMismoTitulo.sort((a, b) => b.idSec - a.idSec);
-  
-    // Calcular el idSec para el registro actual
-    registro.idSec =
-      registrosConMismoTitulo.length > 0
-        ? parseInt(registrosConMismoTitulo[0].idSec) + 1
-        : 1;
-    
-    // Si hay más de una sesión, se añade el idSec al alias
     if (registro.idSec > 1) {
       aliasLimpio += ` - ${registro.idSec}`;
     }
-    
     const nuevoAlias = `RT - ${aliasLimpio}`;
   
     // Si ya existen aliases en el registro, se conservan; si no, se inicializa el arreglo.
@@ -554,11 +527,12 @@ export class utilsAPI {
       registro.aliases = [];
     }
   
-    // Cuando hay sesión anterior, eliminamos de registro.aliases cualquier alias
-    // que sea del mismo "alias base" con una sesión anterior (por ejemplo, "RT - PGTD - 47 - 2")
-    // usando una comprobación que filtre los que comiencen con "RT - {aliasBase} - " y sean distintos al nuevoAlias.
+    // Eliminar de registro.aliases cualquier alias que sea del mismo aliasBase con sesión anterior
+    // (por ejemplo, "RT - PGTD - 47 - 2") para evitar duplicados,
+    // dejando únicamente aquellos que no correspondan al mismo patrón.
     if (registro.idSec > 1) {
       registro.aliases = registro.aliases.filter(a => {
+        // Si el alias inicia con "RT - {aliasBase} - " y no es el nuevoAlias, lo eliminamos.
         if (a.startsWith(`RT - ${aliasBase} - `) && a !== nuevoAlias) {
           return false;
         }
@@ -598,6 +572,26 @@ export class utilsAPI {
     // Asigna el nombre base (ruta) para el archivo
     registro.nameFile = nombreBase;
   }
+
+/**
+ * Calcula el último idSec usado para registros con el mismo título en la carpeta especificada.
+ */
+async calcularUltimoIdSec(titulo: string, folder: string, app: App): Promise<number> {
+  const archivos = app.vault.getFiles();
+  let max = 0;
+  for (const archivo of archivos) {
+    if (archivo.path.startsWith(folder)) {
+      const metadatos = app.metadataCache.getFileCache(archivo);
+      if (metadatos && metadatos.frontmatter && metadatos.frontmatter.titulo === titulo) {
+        const idSec = metadatos.frontmatter.idSec;
+        if (idSec !== undefined && idSec > max) {
+          max = idSec;
+        }
+      }
+    }
+  }
+  return max;
+}
 
   limpiarAlias(titulo: string) {
     // Reemplaza caracteres no permitidos en nombres de archivo con un guion bajo o algún otro caracter seguro.
