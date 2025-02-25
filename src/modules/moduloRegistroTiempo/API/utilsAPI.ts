@@ -473,6 +473,7 @@ async elegirTareaParaRegistro(
       const seleccion = tareasPendientes[selectedIndex];
       registro.titulo = await this.limpiarTextoTarea(seleccion.tarea);
       registro.nombre = seleccion.archivo.basename;
+      registro.archivoTarea = seleccion.archivo;
       registro.siAsunto = true;
       registro.tarea = true;
       registro = this.copiarCampos(registro);
@@ -531,7 +532,6 @@ limpiarTextoTarea(titulo: string): Promise<string> {
 
 async construirNombreyAlias(registro: any, app: App) {
   // 1. Calcular el último idSec existente para este título
-  debugger;
   const maxIdSec = await this.calcularUltimoIdSec(registro.titulo, registro.folder, app);
   registro.idSec = maxIdSec + 1;
   
@@ -569,21 +569,35 @@ async construirNombreyAlias(registro: any, app: App) {
     registro.aliases = newAliases;
   } else {
     // CASO 2: Registro sobre una tarea
+    // 1. Obtener metadatos de la nota donde está la tarea
+    const metadataNota = app.metadataCache.getFileCache(registro.archivoTarea
+      // Este es el archivo donde está la tarea, lo tienes en `registro.nombre` o en alguna propiedad que guarde la referencia
+    );
     const taskText = cleanPrefix(registro.titulo || "");
     const noteName = cleanPrefix(registro.nombre || "");
-    
-    // Crear array de nuevos aliases
-    const newAliases = [
-      `RT - ${taskText}${suffix}`, // Alias 0: Texto de la tarea + sufijo
-      `RT - ${noteName} / ${taskText}${suffix}` // Alias 1: Nombre de la nota / Texto de la tarea + sufijo
-    ];
-    
-    // Si hay aliases originales, usar el primero para el tercer alias
-    if (originalAliases.length >= 1) {
-      newAliases.push(`RT - ${cleanPrefix(originalAliases[0])} / ${taskText}${suffix}`); // Alias 2: Primer alias original / Texto de la tarea + sufijo
+    debugger;
+    // 2. Extraer aliases del frontmatter de la nota
+    let noteAliases: string[] = [];
+    if (metadataNota?.frontmatter?.aliases) {
+      noteAliases = Array.isArray(metadataNota.frontmatter.aliases)
+        ? metadataNota.frontmatter.aliases
+        : [metadataNota.frontmatter.aliases];
     }
-    
+
+    // 3. Construir newAliases usando esos aliases como base
+    const newAliases = [
+      `RT - ${taskText}${suffix}`,
+      `RT - ${noteName} / ${taskText}${suffix}`,
+    ];
+
+    // Si la nota original tiene al menos un alias, lo usas para el tercer alias
+    if (noteAliases.length > 0) {
+      newAliases.push(`RT - ${cleanPrefix(noteAliases[0])} / ${taskText}${suffix}`);
+    }
+
+    // 4. Finalmente, asignas `registro.aliases = newAliases;`
     registro.aliases = newAliases;
+    registro.descripcion = taskText;
   }
   
   // 6. Definir el nombre final del archivo de registro (asegurarse de que id no sea null)
