@@ -12,7 +12,7 @@
 
 
 import { App, TFile, TFolder, Modal, FuzzySuggestModal, FuzzyMatch, Notice } from "obsidian";
-import {SeleccionModal} from "../../modales/seleccionModal"
+import {SeleccionModalTareas} from "../../modales/seleccionModalTareas"
 import {menuOtro} from './menuOtro'
 import { registroTiempoAPI } from "./registroTiempoAPI";
 
@@ -260,7 +260,7 @@ export class utilsAPI {
     }
   
     const placeholder = "¿Sobre qué es el registro de tiempo?";
-    const modalMenu1 = new SeleccionModal(app, opcionesTitulo, valoresOpcion, placeholder);
+    const modalMenu1 = new SeleccionModalTareas(app, opcionesTitulo, valoresOpcion, placeholder);
   
     try {
       const selection = await modalMenu1.openAndAwaitSelection();
@@ -396,20 +396,20 @@ export class utilsAPI {
           return registro;
   }
 
-  async encontrarTareasPendientes(
-    app: App
-  ): Promise<{ tarea: string; archivo: TFile }[]> {
+  async encontrarTareasPendientes(app: App): Promise<{ tarea: string; archivo: TFile }[]> {
     let tareasPendientes: { tarea: string; archivo: TFile }[] = [];
     const archivos = app.vault.getMarkdownFiles();
-    const archivosRelevantes = archivos.filter(
-      (archivo: { path: string }) => !archivo.path.includes("Plantillas")
-    );
-
+    
+    // Excluir archivos que están en carpetas indeseadas
+    const archivosRelevantes = archivos.filter((archivo: TFile) => {
+      return !archivo.path.includes("Plantillas") && !archivo.path.includes("Estructura/GTD/Sistema GTD/Sistema") && !archivo.path.includes("Archivo");
+    });
+  
     for (const archivo of archivosRelevantes) {
       const contenido = await app.vault.read(archivo);
       const coincidencias = contenido.match(/^ *- \[\/\] .*/gm) || [];
-
-      // Para cada tarea encontrada, crea un objeto con la tarea limpia y el archivo actual, y lo agrega al arreglo
+  
+      // Por cada tarea encontrada, se crea un objeto con la tarea limpia y el archivo actual.
       const tareasConArchivo = coincidencias.map((tarea: string) => {
         return { tarea: tarea.trim(), archivo: archivo };
       });
@@ -418,174 +418,206 @@ export class utilsAPI {
     return tareasPendientes;
   }
 
-  async elegirTareaParaRegistro(
-    app: App,
-    registro: any,
-    tareasPendientes: any
-  ) {
-    const placeholder = "Elige la tarea que vas a registrar.";
+async elegirTareaParaRegistro(
+  app: App,
+  registro: any,
+  tareasPendientes: { tarea: string; archivo: TFile }[]
+) {
+  const placeholder = "Elige la tarea que vas a registrar.";
 
-    // Map para extraer y limpiar solo las tareas
-    let promesasLimpias = tareasPendientes.map((tareaObj: { tarea: string }) =>
-      this.limpiarTextoTarea(tareaObj.tarea)
+  // Limpia el texto de cada tarea
+  const promesasLimpias = tareasPendientes.map((tareaObj) =>
+    this.limpiarTextoTarea(tareaObj.tarea)
+  );
+
+  try {
+    const tareasLimpias = await Promise.all(promesasLimpias);
+
+    // Construye el listado para el modal: cada opción es el alias (o nombre) concatenado con el texto limpio de la tarea
+    const displayOptions: string[] = [];
+    const values: number[] = []; // se usará el índice o algún valor identificador
+
+    for (let i = 0; i < tareasPendientes.length; i++) {
+      const { tarea, archivo } = tareasPendientes[i];
+      const textoTarea = tareasLimpias[i];
+
+      let aliasDisplay = "";
+      // Obtener la metadata del archivo para ver si tiene aliases en el frontmatter
+      const metadata = app.metadataCache.getFileCache(archivo);
+      if (metadata?.frontmatter?.aliases) {
+        let aliases = metadata.frontmatter.aliases;
+        if (!Array.isArray(aliases)) aliases = [aliases];
+        if (aliases.length >= 2) {
+          aliasDisplay = aliases[1];
+        } else if (aliases.length >= 1) {
+          aliasDisplay = aliases[0];
+        }
+      }
+      // Si no se encontró ningún alias, se usa el nombre del archivo
+      if (!aliasDisplay) {
+        aliasDisplay = archivo.basename;
+      }
+
+      // Concatenar el aliasDisplay (o nombre) con el texto de la tarea, separado por " / "
+      const displayText = `${aliasDisplay} / ${textoTarea}`;
+      displayOptions.push(displayText);
+      values.push(i);
+    }
+
+    // Crear el modal pasando las opciones concatenadas y usando los índices como valores de selección
+    const modalMenu = new SeleccionModalTareas(app, displayOptions, values, placeholder);
+    try {
+      const selectedIndex = await modalMenu.openAndAwaitSelection();
+      // Se obtiene la tarea correspondiente a la opción seleccionada
+      const seleccion = tareasPendientes[selectedIndex];
+      registro.titulo = await this.limpiarTextoTarea(seleccion.tarea);
+      registro.nombre = seleccion.archivo.basename;
+      registro.siAsunto = true;
+    } catch (error) {
+      registro.detener = true;
+      console.error("Error o modal cerrado sin selección:", error);
+    }
+  } catch (error) {
+    console.error("Hubo un error al limpiar las tareas:", error);
+  }
+}
+
+limpiarTextoTarea(titulo: string): Promise<string> {
+  return new Promise((resolve) => {
+    // Se toma solo la primera línea
+    let textoLimpio = titulo.split("\n")[0];
+
+    // Transforma las secciones que empiezan por "#":
+    // Por ejemplo: "#cx/GestiónPersonal/PlanSemanal" se transforma en "cx_GestionPersonal_PlanSemanal"
+    textoLimpio = textoLimpio.replace(/#([\w-/]+)/g, (match, p1) => {
+      let transformado = p1.replace(/\//g, "_");
+      // Elimina acentos usando normalización Unicode
+      transformado = transformado.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+      return transformado;
+    });
+
+    // Elimina los campos de estilo Dataview, por ejemplo [campo::valor]
+    textoLimpio = textoLimpio.replace(/\[\w+::[^\]]+\]/g, "");
+
+    // Elimina el patrón " - [/]" al inicio de la cadena, con posibles espacios
+    textoLimpio = textoLimpio.replace(/^\s*-\s*\[\/\]\s*/, "");
+
+    // Elimina los emojis de Tasks junto con la fecha que viene inmediatamente después.
+    // Se asume que la fecha tiene formato YYYY-MM-DD, opcionalmente seguida de hora.
+    textoLimpio = textoLimpio.replace(
+      /\p{Extended_Pictographic}\s*\d{4}-\d{2}-\d{2}(?:\s*\d{2}:\d{2}(?::\d{2})?)?/gu,
+      ""
     );
 
-    try {
-      // Espera a que todas las promesas en promesasLimpias se resuelvan
-      const tareasLimpias = await Promise.all(promesasLimpias);
+    // Elimina cualquier otro emoji que quede
+    textoLimpio = textoLimpio.replace(/\p{Extended_Pictographic}/gu, "");
 
-      // Reconstruir los objetos con las tareas limpias manteniendo la referencia al archivo
-      const tareasLimpiasConArchivo = tareasPendientes.map(
-        (tareaObj: { archivo: any }, index: string | number) => {
-          return {
-            tarea: tareasLimpias[index], // Tarea limpia
-            archivo: tareaObj.archivo, // Referencia al archivo original
-          };
-        }
-      );
+    // Elimina cualquier contenido que esté entre corchetes cuadrados (incluyendo los corchetes)
+    textoLimpio = textoLimpio.replace(/\[[^\]]*\]/g, "");
 
-      // Estas dos líneas me generan un arreglo de indices para suministrar el valor al modal.
-      const longitud = tareasLimpiasConArchivo.length;
-      const arregloDeIndices = Array.from(
-        { length: longitud },
-        (_, indice) => indice
-      );
+    // Reemplaza caracteres no permitidos en nombres de archivo con un guion bajo
+    const caracteresNoPermitidos = /[<>:"\/\\|?*\x00-\x1F]/g;
+    textoLimpio = textoLimpio.replace(caracteresNoPermitidos, "_");
 
-      const modalMenu = new SeleccionModal(
-        app,
-        tareasLimpiasConArchivo.map((b: { tarea: any }) => b.tarea),
-        arregloDeIndices,
-        placeholder
-      );
-      try {
-        // Espera a que el usuario haga una selección en el modal
-        const selectedIndex = await modalMenu.openAndAwaitSelection();
+    // Reemplaza espacios múltiples por un único espacio
+    textoLimpio = textoLimpio.replace(/\s+/g, " ");
 
-        // Asegúrate de que la selección corresponda al índice correcto en tareasLimpiasConArchivo
-        const seleccion = tareasLimpiasConArchivo[selectedIndex];
-        registro.titulo = seleccion.tarea; // o cómo hayas decidido manejar la selección limpia
-        registro.nombre = seleccion.archivo.basename;
-        registro.siAsunto = true;
-      } catch (error) {
-        // Este bloque catch maneja errores o cierre del modal sin selección
-        registro.detener = true;
-        console.error("Error o modal cerrado sin selección:", error);
-      }
-    } catch (error) {
-      // Este bloque catch maneja errores en la limpieza de tareas
-      console.error("Hubo un error al limpiar las tareas:", error);
-    }
+    resolve(textoLimpio.trim());
+  });
+}
+
+async construirNombreyAlias(registro: any, app: App) {
+  // 1. Calcular el último idSec existente.
+  // Para registros de tarea, usamos el parámetro siAsunto para filtrar solo esos registros.
+  const maxIdSec = await this.calcularUltimoIdSec(registro.titulo, registro.folder, app, registro.siAsunto);
+  registro.idSec = maxIdSec + 1;
+  
+  // 2. Definir el sufijo: para idSec > 1 se añade " - idSec", sino queda vacío.
+  const suffix = registro.idSec > 1 ? ` - ${registro.idSec}` : "";
+  
+  // 3. Función auxiliar para limpiar solo el prefijo "RT - " (no tocamos números internos)
+  function cleanRTPrefix(value: string): string {
+    if (!value) return "";
+    return value.replace(/^RT -\s*/, "").trim();
   }
-
-  limpiarTextoTarea(titulo: string): Promise<string> {
-    return new Promise((resolve) => {
-      // Elimina todo después del primer salto de línea.
-      let textoLimpio = titulo.split("\n")[0];
-
-      // Elimina los tags de estilo Markdown.
-      textoLimpio = textoLimpio.replace(/#[\w-/]+/g, "");
-
-      // Elimina los campos de estilo Dataview.
-      textoLimpio = textoLimpio.replace(/\[\w+::[^\]]+\]/g, "");
-
-      // Elimina el patrón " - [/]" al inicio de la cadena, incluyendo posibles espacios antes o después.
-      textoLimpio = textoLimpio.replace(/^\s*-\s*\[\/\]\s*/, "");
-
-      // Reemplaza caracteres no permitidos en nombres de archivo con un guion bajo o algún otro caracter seguro.
-      const caracteresNoPermitidos = /[<>:"\/\\|?*\x00-\x1F]/g;
-      textoLimpio = textoLimpio.replace(caracteresNoPermitidos, "_");
-
-      // Reemplaza espacios múltiples por un único espacio para evitar nombres de archivo excesivamente largos.
-      textoLimpio = textoLimpio.replace(/\s+/g, " ");
-
-      // Retorna el texto limpio, ahora envuelto en una promesa.
-      resolve(textoLimpio.trim());
-    });
+  
+  if (!registro.siAsunto) {
+    // CASO 1: Registro directo sobre la nota.
+    // Se asume que:
+    // - registro.nombre es el nombre original de la nota (ej. "PGTD - 47")
+    // - registro.aliases (del frontmatter) es un arreglo, por ejemplo:
+    //    registro.aliases[0] = "Podar el frente de la finca"
+    //    registro.aliases[1] = "PGTD/Podar el frente de la finca"
+    const noteName = registro.nombre || "";
+    let noteAlias0 = "";
+    let noteAlias1 = "";
+    if (Array.isArray(registro.aliases)) {
+      noteAlias0 = registro.aliases[0] || noteName;
+      noteAlias1 = registro.aliases[1] || noteName;
+    } else {
+      noteAlias0 = noteName;
+      noteAlias1 = noteName;
+    }
+    // No queremos alterar el "PGTD - 47" ya que ese es el nombre original.
+    registro.aliases = [
+      `RT - ${noteName}${suffix}`,
+      `RT - ${noteAlias0}${suffix}`,
+      `RT - ${noteAlias1}${suffix}`
+    ];
+  } else {
+    // CASO 2: Registro sobre una tarea.
+    // Se asume que:
+    // - registro.titulo es el texto limpio de la tarea (ej. "Una segunda tarea")
+    // - registro.nombre es el nombre de la nota (ej. "PGTD - 47")
+    // - registro.aliases (del frontmatter) es un arreglo:
+    //      registro.aliases[0] = "Podar el frente de la finca"
+    //      registro.aliases[1] = "PGTD/Podar el frente de la finca"
+    const taskText = registro.titulo || "";
+    const noteName = registro.nombre || "";
+    let noteAlias0 = "";
+    if (Array.isArray(registro.aliases)) {
+      noteAlias0 = registro.aliases[0] || noteName;
+    } else {
+      noteAlias0 = noteName;
+    }
+    // Para registros sobre tareas, queremos:
+    // - Alias 0: RT - [taskText] + suffix
+    // - Alias 1: RT - [noteName] / [taskText] + suffix
+    // - Alias 2: RT - [noteAlias0] / [taskText] + suffix
+    registro.aliases = [
+      `RT - ${taskText}${suffix}`,
+      `RT - ${noteName} / ${taskText}${suffix}`,
+      `RT - ${noteAlias0} / ${taskText}${suffix}`
+    ];
   }
-
-  async construirNombreyAlias(registro: any, app: App) {
-    // Construir la ruta base para el nombre del archivo
-    let nombreBase = `${registro.folder}/RT - ${registro.id}`;
   
-    // Limpiar y recortar el título para formar el alias base
-    let aliasBase = this.limpiarAlias(registro.titulo);
-    aliasBase = aliasBase.length > 195 ? aliasBase.slice(0, 195) : aliasBase;
-  
-    // Calcular el último idSec existente para este título en la carpeta
-    const maxIdSec = await this.calcularUltimoIdSec(registro.titulo, registro.folder, app);
-    registro.idSec = maxIdSec + 1;
-  
-    // Construir el alias actual agregando el idSec (si es mayor a 1)
-    let aliasLimpio = aliasBase;
-    if (registro.idSec > 1) {
-      aliasLimpio += ` - ${registro.idSec}`;
-    }
-    const nuevoAlias = `RT - ${aliasLimpio}`;
-  
-    // Si ya existen aliases en el registro, se conservan; si no, se inicializa el arreglo.
-    if (!Array.isArray(registro.aliases)) {
-      registro.aliases = [];
-    }
-  
-    // Eliminar de registro.aliases cualquier alias que sea del mismo aliasBase con sesión anterior
-    // (por ejemplo, "RT - PGTD - 47 - 2") para evitar duplicados,
-    // dejando únicamente aquellos que no correspondan al mismo patrón.
-    if (registro.idSec > 1) {
-      registro.aliases = registro.aliases.filter(a => {
-        // Si el alias inicia con "RT - {aliasBase} - " y no es el nuevoAlias, lo eliminamos.
-        if (a.startsWith(`RT - ${aliasBase} - `) && a !== nuevoAlias) {
-          return false;
-        }
-        return true;
-      });
-    }
-  
-    // Agregar el alias para la sesión actual si no está ya presente, colocándolo al inicio.
-    if (!registro.aliases.includes(nuevoAlias)) {
-      registro.aliases.unshift(nuevoAlias);
-    }
-  
-    // Si el tipo de registro es "Nota", intentar obtener los aliases del archivo activo
-    // y agregarlos (con prefijo) sin duplicar lo que ya existe.
-    if (registro.tipoRegistro === "Nota") {
-      const archivoActivo = app.workspace.getActiveFile();
-      if (archivoActivo) {
-        const metadatosActivo = app.metadataCache.getFileCache(archivoActivo);
-        const aliasesActivo =
-          metadatosActivo && metadatosActivo.frontmatter
-            ? metadatosActivo.frontmatter.aliases
-            : undefined;
-        if (aliasesActivo) {
-          const additionalAliases = Array.isArray(aliasesActivo)
-            ? aliasesActivo
-            : [aliasesActivo];
-          additionalAliases.forEach((alias) => {
-            const aliasConPrefijo = `RT - ${alias}`;
-            if (!registro.aliases.includes(aliasConPrefijo)) {
-              registro.aliases.push(aliasConPrefijo);
-            }
-          });
-        }
-      }
-    }
-  
-    // Asigna el nombre base (ruta) para el archivo
-    registro.nameFile = nombreBase;
-  }
+  // 4. Definir el nombre final del archivo de registro
+  registro.nameFile = `${registro.folder}/RT - ${registro.id}`;
+}
 
 /**
  * Calcula el último idSec usado para registros con el mismo título en la carpeta especificada.
  */
-async calcularUltimoIdSec(titulo: string, folder: string, app: App): Promise<number> {
+async calcularUltimoIdSec(titulo: string, folder: string, app: App, siAsunto: boolean = false): Promise<number> {
   const archivos = app.vault.getFiles();
   let max = 0;
   for (const archivo of archivos) {
     if (archivo.path.startsWith(folder)) {
       const metadatos = app.metadataCache.getFileCache(archivo);
       if (metadatos && metadatos.frontmatter && metadatos.frontmatter.titulo === titulo) {
-        const idSec = metadatos.frontmatter.idSec;
-        if (idSec !== undefined && idSec > max) {
-          max = idSec;
+        if (siAsunto) {
+          // Solo considerar registros que sean de tarea
+          if (metadatos.frontmatter.siAsunto) {
+            const idSec = metadatos.frontmatter.idSec;
+            if (idSec !== undefined && idSec > max) {
+              max = idSec;
+            }
+          }
+        } else {
+          const idSec = metadatos.frontmatter.idSec;
+          if (idSec !== undefined && idSec > max) {
+            max = idSec;
+          }
         }
       }
     }
