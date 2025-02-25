@@ -527,71 +527,66 @@ limpiarTextoTarea(titulo: string): Promise<string> {
 }
 
 async construirNombreyAlias(registro: any, app: App) {
-  // 1. Calcular el último idSec existente.
-  // Para registros de tarea, usamos el parámetro siAsunto para filtrar solo esos registros.
+  // 1. Calcular el último idSec existente para este título
   const maxIdSec = await this.calcularUltimoIdSec(registro.titulo, registro.folder, app, registro.siAsunto);
   registro.idSec = maxIdSec + 1;
   
-  // 2. Definir el sufijo: para idSec > 1 se añade " - idSec", sino queda vacío.
+  // 2. Definir el sufijo: para idSec > 1 se añade " - idSec", sino queda vacío
   const suffix = registro.idSec > 1 ? ` - ${registro.idSec}` : "";
   
-  // 3. Función auxiliar para limpiar solo el prefijo "RT - " (no tocamos números internos)
-  function cleanRTPrefix(value: string): string {
+  // 3. Guardar una copia de los aliases originales de la nota
+  const originalAliases = Array.isArray(registro.aliases) ? [...registro.aliases] : [];
+  
+  // 4. Limpiar cualquier prefijo RT para evitar duplicaciones
+  function cleanPrefix(value) {
     if (!value) return "";
     return value.replace(/^RT -\s*/, "").trim();
   }
   
+  // 5. Crear nuevos aliases según el tipo de registro
   if (!registro.siAsunto) {
-    // CASO 1: Registro directo sobre la nota.
-    // Se asume que:
-    // - registro.nombre es el nombre original de la nota (ej. "PGTD - 47")
-    // - registro.aliases (del frontmatter) es un arreglo, por ejemplo:
-    //    registro.aliases[0] = "Podar el frente de la finca"
-    //    registro.aliases[1] = "PGTD/Podar el frente de la finca"
-    const noteName = registro.nombre || "";
-    let noteAlias0 = "";
-    let noteAlias1 = "";
-    if (Array.isArray(registro.aliases)) {
-      noteAlias0 = registro.aliases[0] || noteName;
-      noteAlias1 = registro.aliases[1] || noteName;
-    } else {
-      noteAlias0 = noteName;
-      noteAlias1 = noteName;
-    }
-    // No queremos alterar el "PGTD - 47" ya que ese es el nombre original.
-    registro.aliases = [
-      `RT - ${noteName}${suffix}`,
-      `RT - ${noteAlias0}${suffix}`,
-      `RT - ${noteAlias1}${suffix}`
+    // CASO 1: Registro directo sobre la nota
+    const noteName = cleanPrefix(registro.nombre || "");
+    
+    // Crear array de nuevos aliases
+    const newAliases = [
+      `RT - ${noteName}${suffix}` // Alias 0: Nombre de la nota + sufijo
     ];
+    
+    // Si hay aliases originales, usarlos para el segundo y tercer alias
+    if (originalAliases.length >= 1) {
+      newAliases.push(`RT - ${cleanPrefix(originalAliases[0])}${suffix}`); // Alias 1: Primer alias de la nota
+      
+      if (originalAliases.length >= 2) {
+        newAliases.push(`RT - ${cleanPrefix(originalAliases[1])}${suffix}`); // Alias 2: Segundo alias de la nota
+      }
+    }
+    
+    registro.aliases = newAliases;
   } else {
-    // CASO 2: Registro sobre una tarea.
-    // Se asume que:
-    // - registro.titulo es el texto limpio de la tarea (ej. "Una segunda tarea")
-    // - registro.nombre es el nombre de la nota (ej. "PGTD - 47")
-    // - registro.aliases (del frontmatter) es un arreglo:
-    //      registro.aliases[0] = "Podar el frente de la finca"
-    //      registro.aliases[1] = "PGTD/Podar el frente de la finca"
-    const taskText = registro.titulo || "";
-    const noteName = registro.nombre || "";
-    let noteAlias0 = "";
-    if (Array.isArray(registro.aliases)) {
-      noteAlias0 = registro.aliases[0] || noteName;
-    } else {
-      noteAlias0 = noteName;
-    }
-    // Para registros sobre tareas, queremos:
-    // - Alias 0: RT - [taskText] + suffix
-    // - Alias 1: RT - [noteName] / [taskText] + suffix
-    // - Alias 2: RT - [noteAlias0] / [taskText] + suffix
-    registro.aliases = [
-      `RT - ${taskText}${suffix}`,
-      `RT - ${noteName} / ${taskText}${suffix}`,
-      `RT - ${noteAlias0} / ${taskText}${suffix}`
+    // CASO 2: Registro sobre una tarea
+    const taskText = cleanPrefix(registro.titulo || "");
+    const noteName = cleanPrefix(registro.nombre || "");
+    
+    // Crear array de nuevos aliases
+    const newAliases = [
+      `RT - ${taskText}${suffix}`, // Alias 0: Texto de la tarea + sufijo
+      `RT - ${noteName} / ${taskText}${suffix}` // Alias 1: Nombre de la nota / Texto de la tarea + sufijo
     ];
+    
+    // Si hay aliases originales, usar el primero para el tercer alias
+    if (originalAliases.length >= 1) {
+      newAliases.push(`RT - ${cleanPrefix(originalAliases[0])} / ${taskText}${suffix}`); // Alias 2: Primer alias original / Texto de la tarea + sufijo
+    }
+    
+    registro.aliases = newAliases;
   }
   
-  // 4. Definir el nombre final del archivo de registro
+  // 6. Definir el nombre final del archivo de registro (asegurarse de que id no sea null)
+  if (!registro.id) {
+    console.error("Error: registro.id es null o undefined");
+    registro.id = Date.now(); // Asignar un valor temporal basado en timestamp para evitar errores
+  }
   registro.nameFile = `${registro.folder}/RT - ${registro.id}`;
 }
 
@@ -601,27 +596,22 @@ async construirNombreyAlias(registro: any, app: App) {
 async calcularUltimoIdSec(titulo: string, folder: string, app: App, siAsunto: boolean = false): Promise<number> {
   const archivos = app.vault.getFiles();
   let max = 0;
+  
   for (const archivo of archivos) {
     if (archivo.path.startsWith(folder)) {
-      const metadatos = app.metadataCache.getFileCache(archivo);
-      if (metadatos && metadatos.frontmatter && metadatos.frontmatter.titulo === titulo) {
-        if (siAsunto) {
-          // Solo considerar registros que sean de tarea
-          if (metadatos.frontmatter.siAsunto) {
-            const idSec = metadatos.frontmatter.idSec;
-            if (idSec !== undefined && idSec > max) {
-              max = idSec;
-            }
-          }
-        } else {
-          const idSec = metadatos.frontmatter.idSec;
-          if (idSec !== undefined && idSec > max) {
+      const metadatos = app.metadataCache.getFileCache(archivo)?.frontmatter;
+      if (metadatos && metadatos.titulo === titulo) {
+        // Si estamos buscando registros de tarea, verificar siAsunto
+        if (siAsunto === metadatos.siAsunto) {
+          const idSec = parseInt(metadatos.idSec);
+          if (!isNaN(idSec) && idSec > max) {
             max = idSec;
           }
         }
       }
     }
   }
+  
   return max;
 }
 
