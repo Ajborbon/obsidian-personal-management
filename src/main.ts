@@ -207,7 +207,6 @@ export default class ManagementPlugin extends Plugin {
   }
 
   getTp() {
-    debugger;
     if (
       !this.app ||
       !this.app.plugins.enabledPlugins.has("templater-obsidian")

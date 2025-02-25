@@ -35,7 +35,7 @@ export class YAMLUpdaterAPI {
     
 
     async actualizarNota(infoNota: any, campos: any) {
-        debugger;
+       
         //let nota = {}; // Inicializa el objeto nota.
         Object.assign(this.infoNota, infoNota); 
         
@@ -112,7 +112,7 @@ export class YAMLUpdaterAPI {
                 }
                 
                 // Actualizar la nota
-                debugger
+                
                 nota.estado = "🔵";
                 if (Object.keys(nota).length > 0) {
                     // Ejecuta tu código aquí si el objeto `nota` tiene más de una propiedad

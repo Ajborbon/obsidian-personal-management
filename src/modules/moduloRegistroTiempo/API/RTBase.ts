@@ -33,7 +33,7 @@ export class RTBase {
     async iniciarRegistro(infoSubsistema: { folder: string; indice: string; type: string; }, campos: any): Promise<any | null>;
     async iniciarRegistro(): Promise<any | null>;
     async iniciarRegistro(infoSubsistema?: { folder: string; indice: string; type: string; }, campos?: any): Promise<any | null> {
-        debugger;
+    
         if (typeof infoSubsistema === 'object' && infoSubsistema !== null) {
             if (!campos || !Array.isArray(campos)) {
                 throw new Error("Campos debe ser un array definido.");

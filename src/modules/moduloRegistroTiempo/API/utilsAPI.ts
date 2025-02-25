@@ -271,6 +271,7 @@ export class utilsAPI {
           if (registro.activo) {
             registro.titulo = registro.nombre;
             registro.siAsunto = true;
+            registro.tarea = false;
             registro = this.copiarCampos(registro);
           } else {
             new Notice("No hay nota activa para asignar");
@@ -473,6 +474,8 @@ async elegirTareaParaRegistro(
       registro.titulo = await this.limpiarTextoTarea(seleccion.tarea);
       registro.nombre = seleccion.archivo.basename;
       registro.siAsunto = true;
+      registro.tarea = true;
+      registro = this.copiarCampos(registro);
     } catch (error) {
       registro.detener = true;
       console.error("Error o modal cerrado sin selección:", error);
@@ -528,7 +531,8 @@ limpiarTextoTarea(titulo: string): Promise<string> {
 
 async construirNombreyAlias(registro: any, app: App) {
   // 1. Calcular el último idSec existente para este título
-  const maxIdSec = await this.calcularUltimoIdSec(registro.titulo, registro.folder, app, registro.siAsunto);
+  debugger;
+  const maxIdSec = await this.calcularUltimoIdSec(registro.titulo, registro.folder, app);
   registro.idSec = maxIdSec + 1;
   
   // 2. Definir el sufijo: para idSec > 1 se añade " - idSec", sino queda vacío
@@ -544,7 +548,7 @@ async construirNombreyAlias(registro: any, app: App) {
   }
   
   // 5. Crear nuevos aliases según el tipo de registro
-  if (!registro.siAsunto) {
+  if (!registro.tarea) {
     // CASO 1: Registro directo sobre la nota
     const noteName = cleanPrefix(registro.nombre || "");
     
@@ -590,28 +594,23 @@ async construirNombreyAlias(registro: any, app: App) {
   registro.nameFile = `${registro.folder}/RT - ${registro.id}`;
 }
 
-/**
+  /**
  * Calcula el último idSec usado para registros con el mismo título en la carpeta especificada.
  */
-async calcularUltimoIdSec(titulo: string, folder: string, app: App, siAsunto: boolean = false): Promise<number> {
+async calcularUltimoIdSec(titulo: string, folder: string, app: App): Promise<number> {
   const archivos = app.vault.getFiles();
   let max = 0;
-  
   for (const archivo of archivos) {
     if (archivo.path.startsWith(folder)) {
-      const metadatos = app.metadataCache.getFileCache(archivo)?.frontmatter;
-      if (metadatos && metadatos.titulo === titulo) {
-        // Si estamos buscando registros de tarea, verificar siAsunto
-        if (siAsunto === metadatos.siAsunto) {
-          const idSec = parseInt(metadatos.idSec);
-          if (!isNaN(idSec) && idSec > max) {
-            max = idSec;
-          }
+      const metadatos = app.metadataCache.getFileCache(archivo);
+      if (metadatos && metadatos.frontmatter && metadatos.frontmatter.titulo === titulo) {
+        const idSec = metadatos.frontmatter.idSec;
+        if (idSec !== undefined && idSec > max) {
+          max = idSec;
         }
       }
     }
   }
-  
   return max;
 }
 
