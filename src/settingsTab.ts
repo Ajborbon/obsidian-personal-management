@@ -72,6 +72,18 @@ export class PluginMainSettingsTab extends PluginSettingTab {
                             await this.plugin.saveSettings();
                         }));
 
+                    containerEl.createEl('h3', {text: 'Navegador de Tareas'});
+
+                    new Setting(containerEl)
+                        .setName('Activar navegador de tareas')
+                        .setDesc('Permite navegar directamente a tareas en ejecución')
+                        .addToggle(toggle => toggle
+                            .setValue(this.plugin.settings.taskNavigatorModule)
+                            .onChange(async (value) => {
+                                this.plugin.settings.taskNavigatorModule = value;
+                                await this.plugin.saveSettings();
+                            }));
+
             
 
             }

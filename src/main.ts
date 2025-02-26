@@ -27,6 +27,7 @@ import { TareasAPI } from "./modules/taskManager/api/tareasAPI";
 import { ModuloTabTitle } from './modules/moduloTabTitle';
 import { ModuloTaskManager } from './modules/taskManager';
 import { ModuloDataviewQueries } from './modules/dataviewQueries';
+import { TaskNavigatorModule } from './modules/taskNavigator';
 
 export default class ManagementPlugin extends Plugin {
   settings: PluginMainSettings | undefined;
@@ -55,6 +56,7 @@ export default class ManagementPlugin extends Plugin {
   moduloTabTitle: ModuloTabTitle | null = null;
   moduloTaskManager: ModuloTaskManager | null = null;
   moduloDataviewQueries: ModuloDataviewQueries | null = null;
+  taskNavigatorModule: TaskNavigatorModule | null = null;
   // Declara una propiedad para mantener una instancia de `StatusBarExtension`.
 
   async onload() {
@@ -85,7 +87,7 @@ export default class ManagementPlugin extends Plugin {
     this.subsistemasAPI = new subsistemasAPI(this);
     this.librosAPI = new librosAPI(this);
     this.newInbox = ingresarBandejaEntrada.bind(this);
-
+    this.taskNavigatorModule = new TaskNavigatorModule(this);
     // Añade la pestaña de configuración -
     this.addSettingTab(new PluginMainSettingsTab(this));
     // Inicializa las instancias de los módulos
@@ -132,6 +134,12 @@ export default class ManagementPlugin extends Plugin {
     } else {
       this.moduloDataviewQueries?.deactivate();
     }
+        // Activar el módulo si está configurado en settings (opcional)
+        if (this.settings.taskNavigatorModule) {
+          this.taskNavigatorModule?.activate();
+      }
+
+    
   
   }
 
@@ -178,6 +186,12 @@ export default class ManagementPlugin extends Plugin {
         this.moduloDataviewQueries?.deactivate();
     }
 
+    if (this.settings.taskNavigatorModule) {
+      this.taskNavigatorModule?.activate();
+  } else {
+      this.taskNavigatorModule?.deactivate();
+  }
+
     //this.moduloTerceros?.activate(this);
   }
 
@@ -187,6 +201,10 @@ export default class ManagementPlugin extends Plugin {
     if (this.moduloDataviewQueries) {
       this.moduloDataviewQueries.deactivate();
   }
+
+      if (this.taskNavigatorModule) {
+        this.taskNavigatorModule.deactivate();
+    }
     delete (this.app as any).gpManagement;
     return Promise.resolve();
   }
