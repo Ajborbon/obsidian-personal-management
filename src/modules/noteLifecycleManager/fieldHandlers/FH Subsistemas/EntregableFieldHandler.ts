@@ -6,6 +6,9 @@ import { FieldHandlerUtils } from '../../FieldHandlerUtils';
 import { SeleccionModal } from '../../../modales/seleccionModal';
 import { SeleccionModalTareas } from '../../../modales/seleccionModalTareas';
 import { fuzzySelectOrCreate } from '../../../modales/fuzzySelectOrCreate';
+import { SeleccionMultipleModal} from '../../../modales/seleccionMultipleModal';
+//import { DatepickerModal } from '../../../modales/datepickerModal';
+//import { SpinnerModal } from '../../../modales/spinnerModal';
 
 export class EntregableFieldHandler extends NoteFieldHandler implements EntregableFieldHandler {
     constructor(tp: any, infoSubsistema: any, plugin: any) {

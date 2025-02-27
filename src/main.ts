@@ -28,7 +28,11 @@ import { ModuloTabTitle } from './modules/moduloTabTitle';
 import { ModuloTaskManager } from './modules/taskManager';
 import { ModuloDataviewQueries } from './modules/dataviewQueries';
 import { TaskNavigatorModule } from './modules/taskNavigator';
-
+import { EntregableFieldHandler } from "./modules/noteLifecycleManager/fieldHandlers/FH Subsistemas/EntregableFieldHandler";
+import { SeleccionMultipleModal } from "./modules/modales/seleccionMultipleModal";
+import { DatepickerModal } from "./modules/modales/datepickerModal";
+import { SpinnerModal } from "./modules/modales/spinnerModal";
+import { PedidosClienteModal } from "./modules/modales/pedidosClienteModal";
 export default class ManagementPlugin extends Plugin {
   settings: PluginMainSettings | undefined;
   // Declara una propiedad `settings` para almacenar la configuración del plugin.

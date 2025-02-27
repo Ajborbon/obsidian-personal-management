@@ -49,6 +49,8 @@ export const DEFAULT_SETTINGS: PluginMainSettings = {
   indice_ContenidoParaEstudio: "Subsistemas/Contenido para Estudio/Indice Contenido para Estudio",
   folder_Campañas: "Subsistemas/Marketing/Proyectos",
   indice_Campañas: "Subsistemas/Marketing/Indice Campañas",
+  folder_Entregables: "Subsistemas/Marketing/Entregables",
+  indice_Entregables: "Subsistemas/Marketing/Indice Entregables",
 
   // Estructura
   folder_AreasVida: "Estructura/Areas de Vida",

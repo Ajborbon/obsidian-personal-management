@@ -71,8 +71,11 @@ export interface PluginMainSettings {
     indice_ContenidoParaEstudio: string,
   
     folder_Campañas: string,
-    indice_Campañas: string,   
-    
+    indice_Campañas: string,  
+    // Entregables Marketing
+    folder_Entregables: string,
+    indice_Entregables: string, 
+
     // Estructura
     folder_AreasVida: string,
     indice_AreasVida: string,
