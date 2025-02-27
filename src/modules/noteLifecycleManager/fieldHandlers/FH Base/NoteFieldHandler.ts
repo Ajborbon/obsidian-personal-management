@@ -82,6 +82,7 @@ export class NoteFieldHandler implements NoteFieldHandler {
     }
 
     async getAsunto(): Promise<{ siAsunto: boolean, nombre: string[] }> { // Funciona con frontmatter
+        
         let padres = [];
         let activo = app.workspace.getActiveFile();
         let siAsunto = false;

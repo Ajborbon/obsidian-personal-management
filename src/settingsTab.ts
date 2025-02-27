@@ -131,6 +131,36 @@ export class PluginMainSettingsTab extends PluginSettingTab {
                             await this.plugin.saveSettings();
                         }));
 
+                // Añadir un bloque desplegable para "Campañas" en el método display()
+                // Esto iría en la sección donde están los demás subsistemas
+
+                const campañasTitle = tabContent.createEl('p', { text: '▶ Subsistema de "Campañas"' });
+                campañasTitle.setAttribute('data-title', 'Subsistema de "Campañas"');
+                campañasTitle.style.cursor = 'pointer';
+                const campañasContent = tabContent.createDiv();
+                campañasContent.style.display = 'none'; // Inicialmente oculto
+                campañasTitle.onclick = toggleCollapse;
+
+                new Setting(campañasContent)
+                    .setName('Carpeta de Campañas')
+                    .setDesc('Establece la ruta de la carpeta donde se guardarán las campañas.')
+                    .addText((text) => text
+                        .setValue(this.plugin.settings.folder_Campañas)
+                        .onChange(async (value) => {
+                            this.plugin.settings.folder_Campañas = value;
+                            await this.plugin.saveSettings();
+                        }));
+
+                new Setting(campañasContent)
+                    .setName('Índice de Campañas')
+                    .setDesc('Establece la ruta del índice de campañas.')
+                    .addText((text) => text
+                        .setValue(this.plugin.settings.indice_Campañas)
+                        .onChange(async (value) => {
+                            this.plugin.settings.indice_Campañas = value;
+                            await this.plugin.saveSettings();
+                        }));
+
                 // Bloque desplegable para "Artículos de Blog"
                 const blogTitle = tabContent.createEl('p', { text: '▶ Subsistema de "Artículos de Blog"' });
                 blogTitle.setAttribute('data-title', 'Subsistema de "Artículos de Blog"');

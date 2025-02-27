@@ -33,6 +33,8 @@ import { RepositorioLibros_FH } from '../fieldHandlers/FH Subsistemas/Repositori
 import { Biblioteca_FH } from '../fieldHandlers/FH Subsistemas/Biblioteca_FH';
 import { Anual_FH } from '../fieldHandlers/FH Journals/Anual_FH';
 import { TrimestralFieldHandler } from '../fieldHandlers/FH Journals/TrimestralFieldHandler';
+import { CampañasFieldHandler } from '../fieldHandlers/FH Subsistemas/CampañasFieldHandler';
+
 // obsidian
 
 export class starterAPI {
@@ -111,6 +113,9 @@ export class starterAPI {
               break;
           case "Rx":
             fieldHandler = new ReflexionesFieldHandler(this.tp, this.infoSubsistema, this.plugin);
+            break;
+          case "Cp":
+            fieldHandler = new CampañasFieldHandler(this.tp, this.infoSubsistema, this.plugin);
             break;
           default:
             throw new Error(`No se ha definido un manejador de campos para el tipo ${this.infoSubsistema.type}`);

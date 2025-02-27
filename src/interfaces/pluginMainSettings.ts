@@ -70,6 +70,9 @@ export interface PluginMainSettings {
     folder_ContenidoParaEstudio: string,
     indice_ContenidoParaEstudio: string,
   
+    folder_Campañas: string,
+    indice_Campañas: string,   
+    
     // Estructura
     folder_AreasVida: string,
     indice_AreasVida: string,
