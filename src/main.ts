@@ -30,7 +30,7 @@ import { ModuloDataviewQueries } from './modules/dataviewQueries';
 import { TaskNavigatorModule } from './modules/taskNavigator';
 import { EntregableFieldHandler } from "./modules/noteLifecycleManager/fieldHandlers/FH Subsistemas/EntregableFieldHandler";
 import { SeleccionMultipleModal } from "./modules/modales/seleccionMultipleModal";
-import { DatepickerModal } from "./modules/modales/datepickerModal";
+import { DatePickerModal } from "./modules/modales/datePickerModal";
 import { SpinnerModal } from "./modules/modales/spinnerModal";
 import { PedidosClienteModal } from "./modules/modales/pedidosClienteModal";
 export default class ManagementPlugin extends Plugin {

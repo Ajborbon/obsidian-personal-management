@@ -7,8 +7,9 @@ import { SeleccionModal } from '../../../modales/seleccionModal';
 import { SeleccionModalTareas } from '../../../modales/seleccionModalTareas';
 import { fuzzySelectOrCreate } from '../../../modales/fuzzySelectOrCreate';
 import { SeleccionMultipleModal} from '../../../modales/seleccionMultipleModal';
-//import { DatepickerModal } from '../../../modales/datepickerModal';
-//import { SpinnerModal } from '../../../modales/spinnerModal';
+import { SpinnerModal } from '../../../modales/spinnerModal';
+import { DatePickerModal } from '../../../modales/datePickerModal';
+import { PedidosClienteModal } from '../../../modales/pedidosClienteModal';
 
 export class EntregableFieldHandler extends NoteFieldHandler implements EntregableFieldHandler {
     constructor(tp: any, infoSubsistema: any, plugin: any) {
@@ -208,26 +209,23 @@ export class EntregableFieldHandler extends NoteFieldHandler implements Entregab
         return prioridad;
     }
     
-    async getPublicacion(): Promise<string> {
-        // Implementamos un selector de fecha personalizado
-        const datepickerModal = new DatepickerModal(this.plugin.app);
-        const fechaSeleccionada = await datepickerModal.openAndAwaitSelection();
+    async getPublicacion() {
+        const modal = new DatePickerModal(this.plugin.app);
+        modal.open();
         
-        if (!fechaSeleccionada) {
-            // Si no selecciona fecha, usar la fecha actual
-            const fechaActual = new Date().toISOString().split('T')[0];
-            this.nota.publicacion = fechaActual;
-            return fechaActual;
+        const selectedDate = await modal.waitForInput();
+        if (selectedDate === null) {
+            return ""; // Si se cancela, devolver string vacío
         }
         
-        this.nota.publicacion = fechaSeleccionada;
-        return fechaSeleccionada;
+        this.nota.publicacion = selectedDate;
+        return selectedDate;
     }
     
     async getPiezaNube(): Promise<string> {
         const url = await this.prompt(
             "URL de la pieza en la nube (Google Drive, Dropbox, etc.):",
-            "",
+            "https://",
             false,
             false
         );
@@ -239,7 +237,7 @@ export class EntregableFieldHandler extends NoteFieldHandler implements Entregab
     async getUrlCanva(): Promise<string> {
         const url = await this.prompt(
             "URL del diseño en Canva:",
-            "",
+            "https://",
             false,
             false
         );
@@ -292,52 +290,70 @@ export class EntregableFieldHandler extends NoteFieldHandler implements Entregab
         return aliases;
     }
     
-    async getRename(): Promise<string> {
-        // Crear la estructura de carpetas por trimestre
-        const folderBase = `${this.infoSubsistema.folder}`;
-        const folderTrimestre = `${folderBase}/${this.nota.trimestre}`;
-        
-        // Asegurar que las carpetas existan
-        await FieldHandlerUtils.crearCarpeta(folderBase);
-        await FieldHandlerUtils.crearCarpeta(folderTrimestre);
-        
-        // Ruta completa del archivo
-        const newName = `${folderTrimestre}/${this.nota.titulo}.md`;
-        
-        const file = this.tp.file.config.target_file;
-        const existe = app.vault.getAbstractFileByPath(newName);
-        
-        try {
-            if (existe instanceof TFile) {
-                const nombreFile = newName.split("/");
-                const borrar = await this.suggester(
-                    ["Sobreescribir archivo actual", "Detener creación del archivo"],
-                    [true, false],
-                    true,
-                    `¿${nombreFile.pop()} ya existe. ¿Qué deseas hacer?`
-                );
-                
-                if (borrar) {
-                    await app.vault.delete(existe);
-                    if (file instanceof TFile) {
-                        await app.vault.rename(file, newName);
-                        console.log("Archivo renombrado con éxito.");
-                        return newName;
-                    }
-                } else {
-                    console.log("Cancelando la creación del archivo.");
-                    throw new Error("Proceso cancelado por el usuario.");
-                }
-            } else {
+// Implementación de getRename para la estructura de carpetas basada en trimestres
+async getRename() {
+    // El trimestre viene con formato [[trimestre]], así que extraemos el valor
+    const trimestreMatch = this.nota.trimestre.match(/\[\[(.*?)\]\]/);
+    const trimestre = trimestreMatch ? trimestreMatch[1] : "Sin-Trimestre";
+    
+    // Construimos la ruta con la estructura solicitada
+    const basePath = "Subsistemas/Marketing/Proyectos";
+    const folderPath = `${basePath}/${trimestre}`;
+    
+    // Creamos la carpeta del trimestre si no existe
+    await FieldHandlerUtils.crearCarpeta(folderPath);
+    
+    // Construimos el nombre completo del archivo
+    const newName = `${folderPath}/${this.nota.titulo}.md`;
+    
+    const file = this.tp.file.config.target_file;
+    const existe = app.vault.getAbstractFileByPath(newName);
+    
+    try {
+        if (existe instanceof TFile) {
+            const nombreFile = newName.split("/");
+            const borrar = await this.suggester(
+                ["Sobreescribir Archivo Actual", "Detener creación del archivo."],
+                [true, false],
+                true,
+                `¿${nombreFile.pop()} ya existe. Qué deseas hacer?`
+            );
+            
+            if (borrar) {
+                await app.vault.delete(existe);
                 if (file instanceof TFile) {
                     await app.vault.rename(file, newName);
                     console.log("Archivo renombrado con éxito.");
+                    
+                    // Abrir la nota en una nueva pestaña
+                    const nuevoArchivo = app.vault.getAbstractFileByPath(newName);
+                    if (nuevoArchivo instanceof TFile) {
+                        await app.workspace.getLeaf(true).openFile(nuevoArchivo);
+                    }
+                    
                     return newName;
                 }
+            } else {
+                console.log("Cancelando la creación del archivo.");
+                throw new Error("Proceso cancelado por el usuario.");
             }
-        } catch (error) {
-            console.error("Error al cambiar el nombre", error);
-            throw error;
+        } else {
+            if (file instanceof TFile) {
+                await app.vault.rename(file, newName);
+                console.log("Archivo renombrado con éxito.");
+                
+                // Abrir la nota en una nueva pestaña
+                const nuevoArchivo = app.vault.getAbstractFileByPath(newName);
+                if (nuevoArchivo instanceof TFile) {
+                    await app.workspace.getLeaf(true).openFile(nuevoArchivo);
+                }
+                
+                return newName;
+            }
         }
+    } catch (error) {
+        console.error("Error al cambiar el nombre", error);
+        throw error;
     }
+}
 }
