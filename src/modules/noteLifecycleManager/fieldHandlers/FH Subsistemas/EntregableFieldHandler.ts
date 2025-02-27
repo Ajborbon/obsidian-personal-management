@@ -291,20 +291,18 @@ export class EntregableFieldHandler extends NoteFieldHandler implements Entregab
     }
     
 // Implementación de getRename para la estructura de carpetas basada en trimestres
-async getRename() {
-    // El trimestre viene con formato [[trimestre]], así que extraemos el valor
-    const trimestreMatch = this.nota.trimestre.match(/\[\[(.*?)\]\]/);
-    const trimestre = trimestreMatch ? trimestreMatch[1] : "Sin-Trimestre";
+
+async getRename(): Promise<string> {
+    // Crear la estructura de carpetas por trimestre
+    const folderBase = `${this.infoSubsistema.folder}`;
+    const folderTrimestre = `${folderBase}/${this.nota.trimestre}`;
     
-    // Construimos la ruta con la estructura solicitada
-    const basePath = "Subsistemas/Marketing/Proyectos";
-    const folderPath = `${basePath}/${trimestre}`;
+    // Asegurar que las carpetas existan
+    await FieldHandlerUtils.crearCarpeta(folderBase);
+    await FieldHandlerUtils.crearCarpeta(folderTrimestre);
     
-    // Creamos la carpeta del trimestre si no existe
-    await FieldHandlerUtils.crearCarpeta(folderPath);
-    
-    // Construimos el nombre completo del archivo
-    const newName = `${folderPath}/${this.nota.titulo}.md`;
+    // Ruta completa del archivo
+    const newName = `${folderTrimestre}/${this.nota.titulo}.md`;
     
     const file = this.tp.file.config.target_file;
     const existe = app.vault.getAbstractFileByPath(newName);
@@ -313,10 +311,10 @@ async getRename() {
         if (existe instanceof TFile) {
             const nombreFile = newName.split("/");
             const borrar = await this.suggester(
-                ["Sobreescribir Archivo Actual", "Detener creación del archivo."],
+                ["Sobreescribir archivo actual", "Detener creación del archivo"],
                 [true, false],
                 true,
-                `¿${nombreFile.pop()} ya existe. Qué deseas hacer?`
+                `¿${nombreFile.pop()} ya existe. ¿Qué deseas hacer?`
             );
             
             if (borrar) {
@@ -324,13 +322,6 @@ async getRename() {
                 if (file instanceof TFile) {
                     await app.vault.rename(file, newName);
                     console.log("Archivo renombrado con éxito.");
-                    
-                    // Abrir la nota en una nueva pestaña
-                    const nuevoArchivo = app.vault.getAbstractFileByPath(newName);
-                    if (nuevoArchivo instanceof TFile) {
-                        await app.workspace.getLeaf(true).openFile(nuevoArchivo);
-                    }
-                    
                     return newName;
                 }
             } else {
@@ -341,13 +332,6 @@ async getRename() {
             if (file instanceof TFile) {
                 await app.vault.rename(file, newName);
                 console.log("Archivo renombrado con éxito.");
-                
-                // Abrir la nota en una nueva pestaña
-                const nuevoArchivo = app.vault.getAbstractFileByPath(newName);
-                if (nuevoArchivo instanceof TFile) {
-                    await app.workspace.getLeaf(true).openFile(nuevoArchivo);
-                }
-                
                 return newName;
             }
         }
