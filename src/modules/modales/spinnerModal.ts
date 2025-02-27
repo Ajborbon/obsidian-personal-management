@@ -109,9 +109,39 @@ export class SpinnerModal extends Modal {
 
     private changeValue(direction: number) {
         if (!this.numberDisplay) return;
-        
-        this.currentValue += direction;
-        this.numberDisplay.textContent = this.currentValue.toString();
+    
+        let newValue = this.currentValue;
+    
+        if (direction > 0) { // Incrementar
+            if (newValue < 1) {
+                // De 0.33 a 0.5 y de 0.5 a 1
+                if (newValue === 0.33) {
+                    newValue = 0.5;
+                } else if (newValue === 0.5) {
+                    newValue = 1;
+                }
+            } else {
+                // Si ya es 1 o mayor, incrementa de 1 en 1
+                newValue = newValue + 1;
+            }
+        } else if (direction < 0) { // Decrementar
+            if (newValue > 1) {
+                // Si es mayor a 1, decrementa de 1 en 1
+                newValue = newValue - 1;
+            } else if (newValue === 1) {
+                // De 1 pasa a 0.5
+                newValue = 0.5;
+            } else if (newValue === 0.5) {
+                // De 0.5 pasa a 0.33
+                newValue = 0.33;
+            } else {
+                // No se permite bajar de 0.33
+                newValue = 0.33;
+            }
+        }
+    
+        this.currentValue = newValue;
+        this.numberDisplay.textContent = newValue.toString();
     }
 
     private confirm() {

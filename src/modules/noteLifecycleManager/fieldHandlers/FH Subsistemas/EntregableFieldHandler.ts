@@ -240,18 +240,18 @@ export class EntregableFieldHandler extends NoteFieldHandler implements Entregab
     async getTrimestre(): Promise<string> {
         // Verificar si es una continuación desde una Campaña
         const activo = app.workspace.getActiveFile();
-        
+        debugger;
         if (activo) {
             const metadata = app.metadataCache.getFileCache(activo)?.frontmatter;
             
-            if (metadata && metadata.type === 'Campaña') {
+            if (metadata && metadata.type === 'Cp') {
                 const esContinuacion = await this.suggester(
                     ["Sí", "No"],
                     [true, false],
                     false,
                     `¿Este entregable es parte de la campaña ${activo.basename}?`
                 );
-                
+                debugger;
                 if (esContinuacion && metadata.trimestre) {
                     this.nota.trimestre = metadata.trimestre;
                     return metadata.trimestre;
@@ -272,8 +272,8 @@ export class EntregableFieldHandler extends NoteFieldHandler implements Entregab
             throw new Error("Debe seleccionar un trimestre para continuar");
         }
         
-        this.nota.trimestre = trimestre;
-        return trimestre;
+        this.nota.trimestre = `[[${trimestre}]]`;
+        return `[[${trimestre}]]`;
     }
     
     async getTipo(): Promise<string> {
@@ -517,17 +517,17 @@ async getRename(): Promise<string> {
     // Crear la estructura de carpetas por trimestre
     const folderBase = `${this.infoSubsistema.folder}`;
     const folderTrimestre = `${folderBase}/${this.nota.trimestre}`;
-    
+
     // Asegurar que las carpetas existan
     await FieldHandlerUtils.crearCarpeta(folderBase);
     await FieldHandlerUtils.crearCarpeta(folderTrimestre);
-    
+
     // Ruta completa del archivo
     const newName = `${folderTrimestre}/${this.nota.titulo}.md`;
-    
+
     const file = this.tp.file.config.target_file;
     const existe = app.vault.getAbstractFileByPath(newName);
-    
+
     try {
         if (existe instanceof TFile) {
             const nombreFile = newName.split("/");
@@ -537,12 +537,19 @@ async getRename(): Promise<string> {
                 true,
                 `¿${nombreFile.pop()} ya existe. ¿Qué deseas hacer?`
             );
-            
+
             if (borrar) {
                 await app.vault.delete(existe);
                 if (file instanceof TFile) {
                     await app.vault.rename(file, newName);
                     console.log("Archivo renombrado con éxito.");
+
+                    // Abrir el archivo en una nueva pestaña
+                    const newFile = app.vault.getAbstractFileByPath(newName);
+                    if (newFile instanceof TFile) {
+                        const leaf = app.workspace.getLeaf(true);
+                        await leaf.openFile(newFile);
+                    }
                     return newName;
                 }
             } else {
@@ -553,6 +560,13 @@ async getRename(): Promise<string> {
             if (file instanceof TFile) {
                 await app.vault.rename(file, newName);
                 console.log("Archivo renombrado con éxito.");
+
+                // Abrir el archivo en una nueva pestaña
+                const newFile = app.vault.getAbstractFileByPath(newName);
+                if (newFile instanceof TFile) {
+                    const leaf = app.workspace.getLeaf(true);
+                    await leaf.openFile(newFile);
+                }
                 return newName;
             }
         }
@@ -561,4 +575,5 @@ async getRename(): Promise<string> {
         throw error;
     }
 }
+
 }
