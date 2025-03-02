@@ -219,8 +219,13 @@ generarArbolReferencias(paginaActual, dv, profundidadMaxima = 3, visitadas = new
     const contenedor = dv.el("div", "", { cls: "backlinks-tree" });
     
     if (profundidadActual === 0) {
-        // Añadir título solo en la raíz
-        const titulo = dv.el("h3", "Referencias a esta nota", { cls: "backlinks-tree-title" });
+        // Añadir título personalizado solo en la raíz
+        const tipoNota = paginaActual.typeName || "Nota";
+        const alias = paginaActual.file.aliases && paginaActual.file.aliases.length > 0 
+            ? paginaActual.file.aliases[0] 
+            : (paginaActual.titulo || paginaActual.file.name);
+            
+        const titulo = dv.el("h3", `Referencias a ${tipoNota} "${alias}"`, { cls: "backlinks-tree-title" });
         contenedor.appendChild(titulo);
     }
     
@@ -317,30 +322,55 @@ generarArbolReferencias(paginaActual, dv, profundidadMaxima = 3, visitadas = new
             const tipoEl = dv.el("span", `[${tipo}] `, { cls: "backlinks-tree-type" });
             item.appendChild(tipoEl);
             
-            // Añadir enlace a la referencia - asegurarse de que sea texto
+            // Determinar el texto para mostrar en el enlace
             let nombreMostrado = "";
             try {
-                nombreMostrado = referencia.file.aliases 
+                nombreMostrado = referencia.file.aliases && referencia.file.aliases.length > 0
                     ? referencia.file.aliases[0] 
                     : (referencia.titulo || referencia.file.name);
             } catch (e) {
                 nombreMostrado = referencia.file.name || "Sin nombre";
             }
             
-            // Crear el enlace usando una función de ayuda
-            let enlace;
+            // Crear enlace usando el método correcto para enlaces clicables
             try {
-                enlace = dv.fileLink(referencia.file.path, false, nombreMostrado);
-                // Verificar que el enlace sea válido
-                if (!enlace || typeof enlace.outerHTML !== 'string') {
-                    throw new Error("El enlace generado no es válido");
-                }
+                // Primero intentamos con fileLink
+                const enlace = dv.el("a", nombreMostrado, {
+                    attr: {
+                        href: referencia.file.path,
+                        "data-href": referencia.file.path,
+                        class: "internal-link"
+                    }
+                });
+                
+                // Asegurar que el enlace es clicable
+                enlace.addEventListener("click", (event) => {
+                    event.preventDefault();
+                    const target = event.target;
+                    const href = target.getAttribute("data-href");
+                    if (href) {
+                        // Intenta abrir con la API de Obsidian
+                        app.workspace.openLinkText(href, "", false);
+                    }
+                });
+                
                 item.appendChild(enlace);
             } catch (e) {
-                console.error("Error al crear enlace:", e);
-                // Crear un texto simple como alternativa
-                const textoEnlace = dv.el("span", nombreMostrado);
-                item.appendChild(textoEnlace);
+                console.error("Error al crear enlace con método primario:", e);
+                
+                // Plan B: usar createEl de Obsidian directamente
+                try {
+                    const enlace = document.createElement("a");
+                    enlace.textContent = nombreMostrado;
+                    enlace.href = `obsidian://open?vault=${encodeURIComponent(app.vault.getName())}&file=${encodeURIComponent(referencia.file.path)}`;
+                    enlace.classList.add("internal-link");
+                    item.appendChild(enlace);
+                } catch (e2) {
+                    console.error("Error al crear enlace con método alternativo:", e2);
+                    // Fallback final: texto plano
+                    const textoPlano = dv.el("span", nombreMostrado);
+                    item.appendChild(textoPlano);
+                }
             }
             
             // Buscar recursivamente referencias a esta referencia
