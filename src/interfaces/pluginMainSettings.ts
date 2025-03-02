@@ -70,11 +70,11 @@ export interface PluginMainSettings {
     folder_ContenidoParaEstudio: string,
     indice_ContenidoParaEstudio: string,
   
-    folder_Campañas: string,
-    indice_Campañas: string,  
+    folder_Campaña: string,
+    indice_Campaña: string,  
     // Entregables Marketing
-    folder_Entregables: string,
-    indice_Entregables: string, 
+    folder_Entregable: string,
+    indice_Entregable: string, 
 
     // Estructura
     folder_AreasVida: string,

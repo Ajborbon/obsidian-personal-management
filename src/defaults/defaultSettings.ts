@@ -47,10 +47,10 @@ export const DEFAULT_SETTINGS: PluginMainSettings = {
   indice_RegistroTiempo: "Subsistemas/Registro Tiempo/Indice Registro Tiempo",
   folder_ContenidoParaEstudio: "Subsistemas/Contenido para Estudio/Contenido",
   indice_ContenidoParaEstudio: "Subsistemas/Contenido para Estudio/Indice Contenido para Estudio",
-  folder_Campañas: "Subsistemas/Marketing/Proyectos",
-  indice_Campañas: "Subsistemas/Marketing/Indice Campañas",
-  folder_Entregables: "Subsistemas/Marketing/Entregables",
-  indice_Entregables: "Subsistemas/Marketing/Indice Entregables",
+  folder_Campaña: "Subsistemas/Marketing/Proyectos",
+  indice_Campaña: "Subsistemas/Marketing/Indice Campañas",
+  folder_Entregable: "Subsistemas/Marketing/Entregables",
+  indice_Entregable: "Subsistemas/Marketing/Indice Entregables",
 
   // Estructura
   folder_AreasVida: "Estructura/Areas de Vida",
