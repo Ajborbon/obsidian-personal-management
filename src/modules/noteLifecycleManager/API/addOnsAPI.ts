@@ -53,6 +53,349 @@ export class addOnsAPI {
         }
     }
   
+// Función para generar el texto de relaciones de una nota
+// Añadir esta función a la clase addOnsAPI en src/modules/noteLifecycleManager/API/addOnsAPI.ts
+// En src/modules/noteLifecycleManager/API/addOnsAPI.ts
 
+/**
+ * Genera texto de relaciones con enlaces funcionales y formateado con CSS
+ * @param pagina La página actual obtenida a través de dv.current()
+ * @param dv El objeto dataview para acceder a sus funciones
+ * @returns Objeto HTML para ser usado con dv.paragraph()
+ */
+generarTextoRelaciones(pagina, dv) {
+    // Primero generamos el texto con enlaces funcionales
+    let texto = `${pagina.typeName || "Entregable"} relacionado a `;
+    const relaciones = [];
+    
+    // Asunto
+    if (pagina.asunto && Array.isArray(pagina.asunto)) {
+        const asuntoLinks = [];
+        for (const entryObj of pagina.asunto) {
+            const path = entryObj.path || entryObj;
+            if (typeof path === 'string' && path.length > 0) {
+                try {
+                    const asuntoPage = dv.page(path);
+                    if (asuntoPage && asuntoPage.file) {
+                        const alias = asuntoPage.file.aliases?.[0] || asuntoPage.titulo || asuntoPage.file.name;
+                        asuntoLinks.push(dv.fileLink(asuntoPage.file.path, false, alias));
+                    } else {
+                        asuntoLinks.push("asunto no encontrado");
+                    }
+                } catch (e) {
+                    asuntoLinks.push("asunto no encontrado");
+                }
+            }
+        }
+        
+        if (asuntoLinks.length > 0) {
+            relaciones.push(`asunto: ${asuntoLinks.join(", ")}`);
+        } else {
+            relaciones.push("asunto: asunto no encontrado");
+        }
+    }
+
+    // Proyectos GTD
+    if (pagina.proyectoGTD && (Array.isArray(pagina.proyectoGTD) || typeof pagina.proyectoGTD === 'string')) {
+        const proyectoLinks = [];
+        const proyectoArray = Array.isArray(pagina.proyectoGTD) 
+            ? pagina.proyectoGTD 
+            : [pagina.proyectoGTD];
+        
+        for (const entryObj of proyectoArray) {
+            const path = entryObj.path || entryObj;
+            if (typeof path === 'string' && path.length > 0) {
+                try {
+                    const proyectoPage = dv.page(path);
+                    if (proyectoPage && proyectoPage.file) {
+                        const alias = proyectoPage.file.aliases?.[0] || proyectoPage.titulo || proyectoPage.file.name;
+                        proyectoLinks.push(dv.fileLink(proyectoPage.file.path, false, alias));
+                    }
+                } catch (e) {
+                    // Si la página no se encuentra, podemos extraer el título del path o la entrada original
+                    if (typeof entryObj === 'string' && entryObj.includes('|')) {
+                        const partes = entryObj.split('|');
+                        proyectoLinks.push(partes[partes.length - 1].replace(']]', ''));
+                    } else {
+                        // Intentamos encontrar el nombre desde el path
+                        const pathParts = path.split('/');
+                        const fileName = pathParts[pathParts.length - 1].replace('.md', '');
+                        proyectoLinks.push(fileName);
+                    }
+                }
+            }
+        }
+        
+        if (proyectoLinks.length > 0) {
+            relaciones.push(`PGTD: ${proyectoLinks.join(", ")}`);
+        }
+    }
+
+    // Áreas de interés
+    if (pagina.areaInteres && (Array.isArray(pagina.areaInteres) || typeof pagina.areaInteres === 'string')) {
+        const areaLinks = [];
+        const areaArray = Array.isArray(pagina.areaInteres) 
+            ? pagina.areaInteres 
+            : [pagina.areaInteres];
+        
+        for (const entryObj of areaArray) {
+            const path = entryObj.path || entryObj;
+            if (typeof path === 'string' && path.length > 0) {
+                try {
+                    const areaPage = dv.page(path);
+                    if (areaPage && areaPage.file) {
+                        const alias = areaPage.file.aliases?.[0] || areaPage.titulo || areaPage.file.name;
+                        areaLinks.push(dv.fileLink(areaPage.file.path, false, alias));
+                    }
+                } catch (e) {
+                    // Si la página no se encuentra, podemos extraer el título del path o la entrada original
+                    if (typeof entryObj === 'string' && entryObj.includes('|')) {
+                        const partes = entryObj.split('|');
+                        areaLinks.push(partes[partes.length - 1].replace(']]', ''));
+                    } else {
+                        // Intentamos encontrar el nombre desde el path
+                        const pathParts = path.split('/');
+                        const fileName = pathParts[pathParts.length - 1].replace('.md', '');
+                        areaLinks.push(fileName);
+                    }
+                }
+            }
+        }
+        
+        if (areaLinks.length > 0) {
+            relaciones.push(`AI: ${areaLinks.join(", ")}`);
+        }
+    }
+
+    // Área de vida
+    if (pagina.areaVida) {
+        let areaVidaText = pagina.areaVida;
+        
+        // Si el área de vida es una referencia, procesar de manera similar
+        if (typeof pagina.areaVida === 'string' && pagina.areaVida.includes('[[')) {
+            // Es una referencia wiki, obtener el nombre amigable
+            const match = pagina.areaVida.match(/\[\[(.*?)\|(.*?)\]\]/);
+            if (match && match.length >= 3) {
+                areaVidaText = match[2];
+            } else {
+                areaVidaText = pagina.areaVida.replace(/\[\[|\]\]/g, '');
+            }
+        }
+        
+        relaciones.push(`AV: ${areaVidaText}`);
+    }
+
+    // Unir todas las relaciones
+    texto += relaciones.join(", ");
+    
+    // Añadir el estado al final
+    if (pagina.estado) {
+        texto += ` en estado ${pagina.estado}`;
+    }
+    
+    // Envolver el contenido en un span con clase para estilos CSS
+    // Creamos un elemento HTML utilizando las funciones de Dataview
+    return dv.el("span", texto, { cls: "nota-relaciones" });
+}
+
+
+/**
+ * Genera un árbol de referencias a la nota actual de forma recursiva
+ * @param paginaActual La página actual
+ * @param dv Objeto dataview para acceder a sus funciones
+ * @param profundidadMaxima Profundidad máxima de recursión (defecto: 3)
+ * @param visitadas Set de IDs de páginas ya visitadas para evitar ciclos
+ * @param profundidadActual Profundidad actual de recursión
+ * @returns Elemento HTML con la estructura de árbol
+ */
+generarArbolReferencias(paginaActual, dv, profundidadMaxima = 3, visitadas = new Set(), profundidadActual = 0) {
+    // Validar que paginaActual tenga las propiedades necesarias
+    if (!paginaActual || !paginaActual.file) {
+        console.error("Error: paginaActual no tiene las propiedades necesarias", paginaActual);
+        return dv.el("div", "Error: No se puede generar el árbol de referencias.", { cls: "backlinks-tree-error" });
+    }
+    
+    // Crear el contenedor principal
+    const contenedor = dv.el("div", "", { cls: "backlinks-tree" });
+    
+    if (profundidadActual === 0) {
+        // Añadir título solo en la raíz
+        const titulo = dv.el("h3", "Referencias a esta nota", { cls: "backlinks-tree-title" });
+        contenedor.appendChild(titulo);
+    }
+    
+    // Si hemos llegado a la profundidad máxima, no seguimos explorando
+    if (profundidadActual >= profundidadMaxima) {
+        return contenedor;
+    }
+    
+    // Marcar esta página como visitada para evitar ciclos
+    visitadas.add(paginaActual.file.path);
+    
+    // Obtener todas las páginas que hacen referencia directa a la página actual
+    let todasLasPaginas;
+    try {
+        todasLasPaginas = dv.pages();
+    } catch (e) {
+        console.error("Error al obtener páginas:", e);
+        const errorMsg = dv.el("p", "Error al obtener páginas de Dataview", { cls: "backlinks-tree-error" });
+        contenedor.appendChild(errorMsg);
+        return contenedor;
+    }
+    
+    // Filtrar las páginas que referencian a la actual a través de 'asunto'
+    let referenciasDirectas = [];
+    try {
+        referenciasDirectas = todasLasPaginas.filter(p => {
+            if (!p.asunto) return false;
+            
+            // Normalizar asunto a array
+            const asuntos = Array.isArray(p.asunto) ? p.asunto : [p.asunto];
+            
+            for (const asunto of asuntos) {
+                // Si asunto es un objeto con path y coincide con la página actual
+                if (asunto && typeof asunto === 'object' && asunto.path === paginaActual.file.path) {
+                    return true;
+                }
+                
+                // Si asunto es una cadena con el formato [[ruta|alias]]
+                if (typeof asunto === 'string' && asunto.includes(paginaActual.file.path)) {
+                    return true;
+                }
+                
+                // Si asunto es una cadena y coincide con el alias o nombre de la página actual
+                if (typeof asunto === 'string') {
+                    // Verificar coincidencia con aliases
+                    const aliases = paginaActual.file.aliases || [];
+                    for (const alias of aliases) {
+                        if (asunto.includes(alias)) {
+                            return true;
+                        }
+                    }
+                    
+                    // Verificar coincidencia con el nombre del archivo
+                    if (asunto.includes(paginaActual.file.name)) {
+                        return true;
+                    }
+                }
+            }
+            
+            return false;
+        });
+    } catch (e) {
+        console.error("Error al filtrar referencias:", e);
+        const errorMsg = dv.el("p", "Error al procesar referencias", { cls: "backlinks-tree-error" });
+        contenedor.appendChild(errorMsg);
+        return contenedor;
+    }
+    
+    // Si no hay referencias, mostrar mensaje
+    if (referenciasDirectas.length === 0) {
+        if (profundidadActual === 0) {
+            const mensaje = dv.el("p", "No se encontraron referencias a esta nota", { cls: "backlinks-tree-empty" });
+            contenedor.appendChild(mensaje);
+        }
+        return contenedor;
+    }
+    
+    // Crear lista para mostrar referencias
+    const lista = dv.el("ul", "", { cls: `backlinks-tree-level-${profundidadActual}` });
+    
+    // Añadir cada referencia a la lista
+    for (const referencia of referenciasDirectas) {
+        try {
+            // Evitar ciclos
+            if (visitadas.has(referencia.file.path)) {
+                continue;
+            }
+            
+            // Crear elemento de lista
+            const item = dv.el("li", "", { cls: "backlinks-tree-item" });
+            
+            // Añadir tipo y enlace
+            const tipo = referencia.typeName || "Nota";
+            const tipoEl = dv.el("span", `[${tipo}] `, { cls: "backlinks-tree-type" });
+            item.appendChild(tipoEl);
+            
+            // Añadir enlace a la referencia - asegurarse de que sea texto
+            let nombreMostrado = "";
+            try {
+                nombreMostrado = referencia.file.aliases 
+                    ? referencia.file.aliases[0] 
+                    : (referencia.titulo || referencia.file.name);
+            } catch (e) {
+                nombreMostrado = referencia.file.name || "Sin nombre";
+            }
+            
+            // Crear el enlace usando una función de ayuda
+            let enlace;
+            try {
+                enlace = dv.fileLink(referencia.file.path, false, nombreMostrado);
+                // Verificar que el enlace sea válido
+                if (!enlace || typeof enlace.outerHTML !== 'string') {
+                    throw new Error("El enlace generado no es válido");
+                }
+                item.appendChild(enlace);
+            } catch (e) {
+                console.error("Error al crear enlace:", e);
+                // Crear un texto simple como alternativa
+                const textoEnlace = dv.el("span", nombreMostrado);
+                item.appendChild(textoEnlace);
+            }
+            
+            // Buscar recursivamente referencias a esta referencia
+            try {
+                // Paso el set de visitadas como copia para no afectar otros niveles
+                const nuevoVisitadas = new Set([...visitadas]);
+                nuevoVisitadas.add(referencia.file.path);
+                
+                const subReferencias = this.generarArbolReferencias(
+                    referencia, dv, profundidadMaxima, 
+                    nuevoVisitadas, profundidadActual + 1
+                );
+                
+                // Verificar que el resultado es un nodo DOM válido
+                if (subReferencias && subReferencias.nodeType) {
+                    // Verificar si tiene contenido útil
+                    if (subReferencias.children && subReferencias.children.length > 0) {
+                        // Verificar si hay más que solo el título
+                        const tieneContenidoUtil = subReferencias.children.length > 1 || 
+                            (subReferencias.children.length === 1 && 
+                             !subReferencias.children[0].classList.contains("backlinks-tree-title"));
+                        
+                        if (tieneContenidoUtil) {
+                            item.appendChild(subReferencias);
+                        }
+                    }
+                }
+            } catch (e) {
+                console.error("Error en la recursión para " + referencia.file.path, e);
+                const errorMsg = dv.el("span", " (Error al obtener subreferencias)", { cls: "backlinks-tree-error" });
+                item.appendChild(errorMsg);
+            }
+            
+            // Añadir el item a la lista
+            lista.appendChild(item);
+            
+        } catch (e) {
+            console.error("Error al procesar referencia:", e);
+            // Continuar con la siguiente referencia
+            continue;
+        }
+    }
+    
+    // Añadir la lista al contenedor
+    try {
+        if (lista && lista.nodeType) {
+            contenedor.appendChild(lista);
+        }
+    } catch (e) {
+        console.error("Error al añadir lista al contenedor:", e);
+        const errorMsg = dv.el("p", "Error al generar estructura de árbol", { cls: "backlinks-tree-error" });
+        contenedor.appendChild(errorMsg);
+    }
+    
+    return contenedor;
+}
 
   }

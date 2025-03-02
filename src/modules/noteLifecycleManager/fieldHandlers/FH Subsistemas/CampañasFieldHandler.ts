@@ -151,7 +151,9 @@ export class CampañasFieldHandler extends NoteFieldHandler {
     async getAliases() {
         this.nota.aliases = [];
         this.nota.aliases.push(this.nota.titulo);
-        this.nota.aliases.push(`CP/${this.nota.titulo}`);
+        this.nota.aliases.push(`CP-${this.nota.titulo}`);
+        // Formato: CP-id
+        this.nota.aliases.push(`CP-${this.nota.id}`);
         return this.nota.aliases;
     }
 

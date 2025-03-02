@@ -501,11 +501,15 @@ export class EntregableFieldHandler extends NoteFieldHandler implements Entregab
     async getAliases(): Promise<string[]> {
         const aliases = [];
         
-        // Formato: EMkt-id
-        aliases.push(`EMkt-${this.nota.id}`);
-        
+          
+        // Formato: Nombre
+        aliases.push(`${this.nota.titulo}`);
+       
         // Formato: EMkt-Nombre
         aliases.push(`EMkt-${this.nota.titulo}`);
+       
+         // Formato: EMkt-id
+         aliases.push(`EMkt-${this.nota.id}`);
         
         this.nota.aliases = aliases;
         return aliases;

@@ -648,4 +648,151 @@
 }
 
 
+/* Para añadir en tu archivo styles.css */
 
+.nota-relaciones {
+  display: block;
+  padding: 10px 15px;
+  margin: 10px 0;
+  background-color: var(--background-secondary);
+  border-left: 4px solid var(--interactive-accent);
+  border-radius: 4px;
+  font-size: 0.92em;
+  line-height: 1.5;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+/* Estilo del texto y enlaces dentro del bloque */
+.nota-relaciones a {
+  color: var(--interactive-accent); 
+  font-weight: 500;
+  text-decoration: none;
+  transition: all 0.15s ease;
+  border-bottom: 1px solid transparent;
+}
+
+.nota-relaciones a:hover {
+  border-bottom: 1px solid var(--interactive-accent);
+  color: var(--interactive-accent-hover);
+}
+
+/* Estilos para términos específicos */
+.nota-relaciones strong {
+  font-weight: 600;
+  color: var(--text-normal);
+}
+
+/* Estado de emoji más visible */
+.nota-relaciones span[role="img"],
+.nota-relaciones span.emoji {
+  font-size: 1.1em;
+  vertical-align: -0.1em;
+  margin-left: 0.2em;
+}
+
+/* Modo oscuro ajustes */
+.theme-dark .nota-relaciones {
+  background-color: var(--background-secondary-alt);
+}
+
+/* Para añadir en tu archivo styles.css */
+
+/* Contenedor principal del árbol de referencias */
+.backlinks-tree {
+  margin: 10px 0;
+  padding: 10px;
+  background-color: var(--background-secondary);
+  border-radius: 6px;
+  border-left: 4px solid var(--interactive-accent);
+  font-size: 0.92em;
+}
+
+/* Título del árbol */
+.backlinks-tree-title {
+  margin-top: 0;
+  margin-bottom: 10px;
+  color: var(--text-normal);
+  font-size: 1.2em;
+  font-weight: 600;
+}
+
+/* Mensaje cuando no hay referencias */
+.backlinks-tree-empty {
+  color: var(--text-muted);
+  font-style: italic;
+  margin: 5px 0;
+}
+
+/* Mensaje de error */
+.backlinks-tree-error {
+  color: var(--text-error);
+  font-style: italic;
+  margin: 5px 0;
+  padding: 5px;
+  border-left: 2px solid var(--text-error);
+}
+
+/* Listas de cada nivel */
+.backlinks-tree ul {
+  margin: 5px 0 5px 10px;
+  padding-left: 15px;
+  list-style-type: none;
+  border-left: 1px dashed var(--text-muted);
+}
+
+/* Elementos de lista */
+.backlinks-tree-item {
+  margin: 5px 0;
+  padding: 3px 0;
+  position: relative;
+}
+
+/* Línea horizontal antes de cada item */
+.backlinks-tree-item::before {
+  content: "";
+  position: absolute;
+  width: 10px;
+  height: 1px;
+  background-color: var(--text-muted);
+  left: -15px;
+  top: 12px;
+}
+
+/* Tipo de nota */
+.backlinks-tree-type {
+  color: var(--text-faint);
+  font-style: italic;
+  margin-right: 5px;
+}
+
+/* Enlaces en el árbol */
+.backlinks-tree a {
+  color: var(--interactive-accent);
+  text-decoration: none;
+  font-weight: 500;
+  transition: all 0.15s ease;
+  border-bottom: 1px solid transparent;
+}
+
+.backlinks-tree a:hover {
+  border-bottom: 1px solid var(--interactive-accent);
+  color: var(--interactive-accent-hover);
+}
+
+/* Ajuste para modo oscuro */
+.theme-dark .backlinks-tree {
+  background-color: var(--background-secondary-alt);
+}
+
+/* Estilos específicos para distintos niveles (opcional, para mayor claridad) */
+.backlinks-tree-level-0 {
+  /* Primer nivel */
+}
+
+.backlinks-tree-level-1 {
+  /* Segundo nivel */
+}
+
+.backlinks-tree-level-2 {
+  /* Tercer nivel */
+}
