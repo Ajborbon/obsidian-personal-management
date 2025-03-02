@@ -516,7 +516,9 @@ export class EntregableFieldHandler extends NoteFieldHandler implements Entregab
 async getRename(): Promise<string> {
     // Crear la estructura de carpetas por trimestre
     const folderBase = `${this.infoSubsistema.folder}`;
-    const folderTrimestre = `${folderBase}/${this.nota.trimestre}`;
+    // Aplicar filtro para eliminar [[ y ]]
+    const trimestreLimpio = this.nota.trimestre.replace(/\[\[|\]\]/g, '').trim();         
+    const folderTrimestre = `${folderBase}/${trimestreLimpio}`;
 
     // Asegurar que las carpetas existan
     await FieldHandlerUtils.crearCarpeta(folderBase);
