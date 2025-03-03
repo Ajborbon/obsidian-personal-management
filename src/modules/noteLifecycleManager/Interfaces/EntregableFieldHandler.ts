@@ -11,5 +11,7 @@ export interface EntregableFieldHandler extends NoteFieldHandler {
     getPiezaNube(): Promise<string>;
     getUrlCanva(): Promise<string>;
     getHits(): Promise<number>;
+
+    getFacturable(): Promise<boolean>;
     getPedidosAlCliente(): Promise<{ pedidos: string, pendientes: boolean }>;
 }

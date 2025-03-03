@@ -498,6 +498,29 @@ export class EntregableFieldHandler extends NoteFieldHandler implements Entregab
         return resultado;
     }
     
+    // Método para determinar si el entregable es facturable basado en quién lo realizará
+    async getFacturable(): Promise<boolean> {
+        // Opciones disponibles
+        const opciones = ["Un tercero", "Andrés Julián Borbón"];
+        const valores = [false, true];
+        
+        // Usamos el método suggester nativo, que ya maneja la navegación por teclado
+        const realizador = await this.suggester(
+            opciones,
+            valores,
+            false, // No es multiselección
+            "¿Quién realizará este entregable?"
+        );
+        
+        // Si el usuario cancela, asumimos "Un tercero" (no facturable)
+        if (realizador === null) {
+            this.nota.facturable = false;
+            return false;
+        }
+        
+        this.nota.facturable = realizador;
+        return realizador;
+    }
     async getAliases(): Promise<string[]> {
         const aliases = [];
         

@@ -796,3 +796,48 @@
 .backlinks-tree-level-2 {
   /* Tercer nivel */
 }
+
+/* Contenedor para los enlaces de Notion */
+.notion-links-container {
+  margin: 15px 0;
+  padding: 10px;
+  background-color: var(--background-secondary);
+  border-left: 4px solid #2383E2; /* Color azul de Notion */
+  border-radius: 4px;
+}
+
+/* Cada ítem de enlace */
+.notion-link-item {
+  margin: 5px 0;
+  line-height: 1.5;
+}
+
+/* Enlaces de Notion */
+.notion-links-container a {
+  color: #2383E2; /* Color azul de Notion */
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
+  transition: all 0.15s ease;
+}
+
+.notion-links-container a:hover {
+  border-bottom: 1px solid #2383E2;
+  color: #1B6ED1; /* Un poco más oscuro al pasar el cursor */
+}
+
+/* Mensaje cuando no hay enlaces */
+.notion-links-message {
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+/* Mensaje de error */
+.notion-links-error {
+  color: var(--text-error);
+  font-style: italic;
+}
+
+/* Ajustes para modo oscuro */
+.theme-dark .notion-links-container {
+  background-color: var(--background-secondary-alt);
+}

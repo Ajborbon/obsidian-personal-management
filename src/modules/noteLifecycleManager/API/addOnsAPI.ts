@@ -428,4 +428,71 @@ generarArbolReferencias(paginaActual, dv, profundidadMaxima = 3, visitadas = new
     return contenedor;
 }
 
+
+/**
+ * Muestra enlaces sincronizados en Notion desde el frontmatter 
+ * que comienzan con el prefijo "link-"
+ * @param dv El objeto dataview para acceder a sus funciones
+ * @param pagina La página actual (normalmente dv.current())
+ * @returns El contenedor con los resultados
+ */
+mostrarEnlacesSincronizados(dv, pagina) {
+    // Crear contenedor para los resultados
+    const contenedor = dv.el("div", "", { cls: "notion-links-container" });
+    
+    try {
+        // Obtener el frontmatter
+        const meta = pagina.file.frontmatter;
+        if (!meta) {
+            const mensaje = dv.el("p", "No se encontró frontmatter en esta nota.", { cls: "notion-links-message" });
+            contenedor.appendChild(mensaje);
+            return contenedor;
+        }
+        
+        // Obtener el valor de typeName si existe
+        const typeName = meta.typeName || "Elemento";
+        
+        // Filtrar las claves que comiencen con "link-" y sean URLs válidas
+        const linkFields = Object.entries(meta)
+            .filter(([key, value]) => key.startsWith("link-") && typeof value === "string" && value.startsWith("http"))
+            .map(([key, value]) => ({
+                url: value
+            }));
+        
+        // Renderizar el mensaje si se encuentra al menos un enlace válido
+        if (linkFields.length > 0) {
+            linkFields.forEach(field => {
+                // Crear un párrafo para cada enlace
+                const parrafo = document.createElement("p");
+                parrafo.classList.add("notion-link-item");
+                
+                // Crear texto
+                parrafo.textContent = `${typeName} sincronizado en Notion en `;
+                
+                // Crear enlace
+                const enlace = document.createElement("a");
+                enlace.href = field.url;
+                enlace.textContent = field.url;
+                enlace.target = "_blank"; // Abrir en nueva pestaña
+                enlace.rel = "noopener noreferrer"; // Seguridad para enlaces externos
+                
+                // Añadir el enlace al párrafo
+                parrafo.appendChild(enlace);
+                
+                // Añadir el párrafo al contenedor
+                contenedor.appendChild(parrafo);
+            });
+        } else {
+            const mensaje = dv.el("p", "No se encontraron enlaces sincronizados en Notion.", { cls: "notion-links-message" });
+            contenedor.appendChild(mensaje);
+        }
+    } catch (error) {
+        console.error("Error al procesar enlaces sincronizados:", error);
+        const errorMsg = dv.el("p", "Error al procesar enlaces sincronizados. Consulta la consola para más detalles.", { cls: "notion-links-error" });
+        contenedor.appendChild(errorMsg);
+    }
+    
+    return contenedor;
+}
+
   }
