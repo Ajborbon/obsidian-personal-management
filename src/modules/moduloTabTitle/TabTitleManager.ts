@@ -36,10 +36,20 @@ export class TabTitleManager {
 
     private async updateTab(leaf: WorkspaceLeaf) {
         if (!(leaf.view instanceof MarkdownView) || !leaf.view.file) return;
-
+    
         const { displayTitle, source } = await this.getPreferredTitleWithSource(leaf.view.file);
         if (displayTitle) {
-            const formattedTitle = `${leaf.view.file.basename} / ${displayTitle}`;
+            // Determinar el formato dependiendo de la fuente
+            let formattedTitle;
+            
+            if (source === 'aliases-special' || source === 'aliases-two') {
+                // Para 3 o más aliases o 2 aliases exactos, mostrar solo el displayTitle sin el nombre del archivo
+                formattedTitle = displayTitle;
+            } else {
+                // Para otros casos (1 alias o titulo), mostrar el formato original
+                formattedTitle = `${leaf.view.file.basename} / ${displayTitle}`;
+            }
+            
             leaf.view.titleEl.innerText = formattedTitle;
             if (leaf.tabHeaderInnerTitleEl) {
                 leaf.tabHeaderInnerTitleEl.innerText = formattedTitle;
@@ -52,15 +62,23 @@ export class TabTitleManager {
         try {
             const metadata = await this.waitForMetadata(file);
             
-            // Primero intenta obtener el primer alias
+            // Verificar si tiene aliases
             if (metadata?.aliases) {
-                if (Array.isArray(metadata.aliases) && metadata.aliases.length > 0) {
+                // Caso especial: 3 o más aliases - mostrar aliases[2] / aliases[0]
+                if (Array.isArray(metadata.aliases) && metadata.aliases.length >= 3) {
+                    return { 
+                        displayTitle: `${metadata.aliases[2]} / ${metadata.aliases[0]}`,
+                        source: 'aliases-special'
+                    };
+                }
+                // Comportamiento normal para menos de 3 aliases
+                else if (Array.isArray(metadata.aliases) && metadata.aliases.length > 0) {
                     return { 
                         displayTitle: metadata.aliases[0],
                         source: 'aliases'
                     };
                 }
-                if (typeof metadata.aliases === 'string') {
+                else if (typeof metadata.aliases === 'string') {
                     return { 
                         displayTitle: metadata.aliases,
                         source: 'aliases'
