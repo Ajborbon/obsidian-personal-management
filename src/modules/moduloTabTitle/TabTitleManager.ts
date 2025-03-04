@@ -34,29 +34,7 @@ export class TabTitleManager {
         }
     }
 
-    private async updateTab(leaf: WorkspaceLeaf) {
-        if (!(leaf.view instanceof MarkdownView) || !leaf.view.file) return;
-    
-        const { displayTitle, source } = await this.getPreferredTitleWithSource(leaf.view.file);
-        if (displayTitle) {
-            // Determinar el formato dependiendo de la fuente
-            let formattedTitle;
-            
-            if (source === 'aliases-special' || source === 'aliases-two') {
-                // Para 3 o más aliases o 2 aliases exactos, mostrar solo el displayTitle sin el nombre del archivo
-                formattedTitle = displayTitle;
-            } else {
-                // Para otros casos (1 alias o titulo), mostrar el formato original
-                formattedTitle = `${leaf.view.file.basename} / ${displayTitle}`;
-            }
-            
-            leaf.view.titleEl.innerText = formattedTitle;
-            if (leaf.tabHeaderInnerTitleEl) {
-                leaf.tabHeaderInnerTitleEl.innerText = formattedTitle;
-            }
-            Logger.debug(`Updated tab title to: ${formattedTitle} (source: ${source})`);
-        }
-    }
+
 
     async getPreferredTitleWithSource(file: TFile): Promise<{ displayTitle: string | null; source: string }> {
         try {
@@ -127,16 +105,132 @@ export class TabTitleManager {
         });
     }
 
-    restoreDefaultTitles() {
-        Logger.info('Restoring default titles');
-        const leaves = this.plugin.app.workspace.getLeavesOfType('markdown');
-        for (const leaf of leaves) {
-            if (leaf.view instanceof MarkdownView && leaf.view.file) {
-                leaf.view.titleEl.innerText = leaf.view.file.basename;
-                if (leaf.tabHeaderInnerTitleEl) {
-                    leaf.tabHeaderInnerTitleEl.innerText = leaf.view.file.basename;
-                }
+
+  // Método para aplicar scroll horizontal a un elemento de título de pestaña
+  private applyHorizontalScrollToTab(tabElement: HTMLElement) {
+    // Asegurar que solo aplicamos una vez
+    if (tabElement.getAttribute('data-scroll-enabled') === 'true') return;
+    
+    // Almacenar estilos originales para restaurarlos al desactivar
+    const originalStyles = {
+        overflow: tabElement.style.overflow,
+        textOverflow: tabElement.style.textOverflow,
+        whiteSpace: tabElement.style.whiteSpace,
+        maxWidth: tabElement.style.maxWidth,
+        transition: tabElement.style.transition
+    };
+    
+    // Establecer estilos base
+    tabElement.style.overflow = "hidden";
+    tabElement.style.textOverflow = "ellipsis";
+    tabElement.style.whiteSpace = "nowrap";
+    tabElement.style.maxWidth = "150px"; // Ajustable según necesidades
+    tabElement.style.transition = "max-width 0.3s ease-in-out";
+    
+    // Crear handler para mouseenter
+    const mouseEnterHandler = () => {
+        const fullWidth = tabElement.scrollWidth;
+        tabElement.style.overflow = "auto";
+        tabElement.style.textOverflow = "clip";
+        tabElement.style.maxWidth = Math.min(fullWidth, 300) + "px"; // Limitar expansión
+    };
+    
+    // Crear handler para mouseleave
+    const mouseLeaveHandler = () => {
+        tabElement.style.overflow = "hidden";
+        tabElement.style.textOverflow = "ellipsis";
+        tabElement.style.maxWidth = "150px";
+        setTimeout(() => { tabElement.scrollLeft = 0; }, 300); // Retrasar para animación
+    };
+    
+    // Asignar event listeners
+    tabElement.addEventListener("mouseenter", mouseEnterHandler);
+    tabElement.addEventListener("mouseleave", mouseLeaveHandler);
+    
+    // Marcar elemento como configurado
+    tabElement.setAttribute('data-scroll-enabled', 'true');
+    
+    // Almacenar referencias para limpieza
+    if (!this.scrollEnabledElements) this.scrollEnabledElements = new Map();
+    this.scrollEnabledElements.set(tabElement, {
+        mouseEnterHandler,
+        mouseLeaveHandler,
+        originalStyles
+    });
+}
+
+// Método para limpiar el scroll de un elemento
+private removeHorizontalScrollFromTab(tabElement: HTMLElement) {
+    if (!tabElement || !this.scrollEnabledElements) return;
+    
+    const handlers = this.scrollEnabledElements.get(tabElement);
+    if (!handlers) return;
+    
+    // Eliminar event listeners
+    tabElement.removeEventListener("mouseenter", handlers.mouseEnterHandler);
+    tabElement.removeEventListener("mouseleave", handlers.mouseLeaveHandler);
+    
+    // Restaurar estilos originales
+    Object.assign(tabElement.style, handlers.originalStyles);
+    
+    // Limpiar marca
+    tabElement.removeAttribute('data-scroll-enabled');
+    
+    // Eliminar de la colección
+    this.scrollEnabledElements.delete(tabElement);
+}
+
+// Sobrescritura del método updateTab
+async updateTab(leaf: WorkspaceLeaf) {
+    if (!(leaf.view instanceof MarkdownView) || !leaf.view.file) return;
+
+    const { displayTitle, source } = await this.getPreferredTitleWithSource(leaf.view.file);
+    if (displayTitle) {
+        // Determinar el formato del título según la lógica existente
+        let formattedTitle;
+        if (source === 'aliases-special' || source === 'aliases-two') {
+            formattedTitle = displayTitle;
+        } else {
+            formattedTitle = `${leaf.view.file.basename} / ${displayTitle}`;
+        }
+        
+        // Establecer el título
+        leaf.view.titleEl.innerText = formattedTitle;
+        
+        if (leaf.tabHeaderInnerTitleEl) {
+            leaf.tabHeaderInnerTitleEl.innerText = formattedTitle;
+            // Aplicar comportamiento de scroll horizontal
+            this.applyHorizontalScrollToTab(leaf.tabHeaderInnerTitleEl);
+        }
+    }
+}
+
+// Método para limpiar recursos al desactivar
+cleanupScrollHandlers() {
+    if (!this.scrollEnabledElements) return;
+    
+    this.scrollEnabledElements.forEach((handlers, element) => {
+        this.removeHorizontalScrollFromTab(element);
+    });
+    
+    this.scrollEnabledElements.clear();
+}
+
+// Sobrescribir restoreDefaultTitles para incluir la limpieza
+restoreDefaultTitles() {
+    // Limpiar manejadores de scroll
+    this.cleanupScrollHandlers();
+    
+    // Restaurar títulos como antes
+    const leaves = this.plugin.app.workspace.getLeavesOfType('markdown');
+    for (const leaf of leaves) {
+        if (leaf.view instanceof MarkdownView && leaf.view.file) {
+            leaf.view.titleEl.innerText = leaf.view.file.basename;
+            if (leaf.tabHeaderInnerTitleEl) {
+                leaf.tabHeaderInnerTitleEl.innerText = leaf.view.file.basename;
             }
         }
     }
+}
+    
 }
