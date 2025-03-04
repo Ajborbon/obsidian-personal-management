@@ -763,29 +763,38 @@ async obtenerEstadisticasTiempo(proyectoPath) {
    * @returns Elemento HTML con las estadísticas visualizadas
    */
 
-mostrarEstadisticasTiempo(dv, datos) {
+  mostrarEstadisticasTiempo(dv, datos) {
     try {
       // Si hay error, mostrar mensaje
       if (datos.error) {
-        return dv.el("div", datos.error, { cls: "tiempo-stats-error" });
+        const errorDiv = document.createElement("div");
+        errorDiv.className = "tiempo-stats-error";
+        errorDiv.textContent = datos.error;
+        return errorDiv;
       }
       
       // Obtener estadísticas y registros
       const { estadisticas, registros, proyecto } = datos;
       
       // Crear contenedor principal
-      const contenedor = dv.el("div", "", { cls: "tiempo-stats-container" });
+      const contenedor = document.createElement("div");
+      contenedor.className = "tiempo-stats-container";
+      contenedor.style.padding = "16px 0"; // Mantener padding vertical, eliminar horizontal
+      contenedor.style.width = "100%";
+      contenedor.style.boxSizing = "border-box";
       
       // Si no hay registros, mostrar mensaje y salir
       if (!registros || registros.length === 0) {
-        const mensajeVacio = dv.el("p", "No se encontraron registros de tiempo para este proyecto.", 
-            { cls: "tiempo-stats-empty-message" });
+        const mensajeVacio = document.createElement("p");
+        mensajeVacio.className = "tiempo-stats-empty-message";
+        mensajeVacio.textContent = "No se encontraron registros de tiempo para este proyecto.";
         contenedor.appendChild(mensajeVacio);
         return contenedor;
       }
       
       // === SECCIÓN 1: ESTADÍSTICAS PRINCIPALES ===
-      const statsContainer = dv.el("div", "", { cls: "tiempo-stats-summary" });
+      const statsContainer = document.createElement("div");
+      statsContainer.className = "tiempo-stats-summary";
       
       // Crear tarjetas de estadísticas
       const infoEstadisticas = [
@@ -817,15 +826,25 @@ mostrarEstadisticasTiempo(dv, datos) {
       ];
       
       // Crear grid para las tarjetas
-      const statsGrid = dv.el("div", "", { cls: "tiempo-stats-grid" });
+      const statsGrid = document.createElement("div");
+      statsGrid.className = "tiempo-stats-grid";
       
       // Añadir cada tarjeta al grid
       for (const stat of infoEstadisticas) {
-        const tarjeta = dv.el("div", "", { cls: "tiempo-stat-card" });
+        const tarjeta = document.createElement("div");
+        tarjeta.className = "tiempo-stat-card";
         
-        const icono = dv.el("span", stat.icono, { cls: "tiempo-stat-icon" });
-        const titulo = dv.el("div", stat.titulo, { cls: "tiempo-stat-title" });
-        const valor = dv.el("div", stat.valor, { cls: "tiempo-stat-value" });
+        const icono = document.createElement("span");
+        icono.className = "tiempo-stat-icon";
+        icono.textContent = stat.icono;
+        
+        const titulo = document.createElement("div");
+        titulo.className = "tiempo-stat-title";
+        titulo.textContent = stat.titulo;
+        
+        const valor = document.createElement("div");
+        valor.className = "tiempo-stat-value";
+        valor.textContent = stat.valor;
         
         tarjeta.appendChild(icono);
         tarjeta.appendChild(titulo);
@@ -839,10 +858,13 @@ mostrarEstadisticasTiempo(dv, datos) {
       
       // === SECCIÓN 2: SESIÓN ACTIVA (si existe) ===
       if (estadisticas.sesionActiva) {
-        const activoContainer = dv.el("div", "", { cls: "tiempo-sesion-activa-container" });
+        const activoContainer = document.createElement("div");
+        activoContainer.className = "tiempo-sesion-activa-container";
         
         // Título de la sección
-        const tituloActivo = dv.el("h3", "Sesión activa", { cls: "tiempo-activo-title" });
+        const tituloActivo = document.createElement("h3");
+        tituloActivo.className = "tiempo-activo-title";
+        tituloActivo.textContent = "Sesión activa";
         activoContainer.appendChild(tituloActivo);
         
         // Encontrar el registro activo
@@ -850,35 +872,33 @@ mostrarEstadisticasTiempo(dv, datos) {
         
         if (registroActivo) {
           // Crear tarjeta de sesión activa
-          const tarjetaActiva = dv.el("div", "", { cls: "tiempo-activo-card" });
+          const tarjetaActiva = document.createElement("div");
+          tarjetaActiva.className = "tiempo-activo-card";
           
           // Descripción
-          const descActiva = dv.el("div", registroActivo.descripcion, { cls: "tiempo-activo-descripcion" });
+          const descActiva = document.createElement("div");
+          descActiva.className = "tiempo-activo-descripcion";
+          descActiva.textContent = registroActivo.descripcion;
           tarjetaActiva.appendChild(descActiva);
           
           // Tiempo en ejecución
-          const tiempoEjecucion = dv.el("div", estadisticas.sesionActiva.tiempoFormateado, { 
-            cls: "tiempo-ejecucion",
-            attr: {
-              id: `tiempo-ejecucion-${estadisticas.sesionActiva.id}`
-            }
-          });
+          const tiempoEjecucion = document.createElement("div");
+          tiempoEjecucion.className = "tiempo-ejecucion";
+          tiempoEjecucion.id = `tiempo-ejecucion-${estadisticas.sesionActiva.id}`;
+          tiempoEjecucion.textContent = estadisticas.sesionActiva.tiempoFormateado;
           tarjetaActiva.appendChild(tiempoEjecucion);
           
           // Botón para ir al registro
-          const enlaceRegistro = dv.el("a", "Ver registro completo", { 
-            cls: "tiempo-activo-enlace",
-            attr: {
-              href: registroActivo.path,
-              "data-href": registroActivo.path,
-              class: "internal-link"
-            }
-          });
+          const enlaceRegistro = document.createElement("a");
+          enlaceRegistro.className = "tiempo-activo-enlace internal-link";
+          enlaceRegistro.href = registroActivo.path;
+          enlaceRegistro.setAttribute("data-href", registroActivo.path);
+          enlaceRegistro.textContent = "Ver registro completo";
           
           // Hacer clicable el enlace
           enlaceRegistro.addEventListener("click", (event) => {
             event.preventDefault();
-            const href = event.target.getAttribute("data-href");
+            const href = enlaceRegistro.getAttribute("data-href");
             if (href) {
               app.workspace.openLinkText(href, "", false);
             }
@@ -893,21 +913,40 @@ mostrarEstadisticasTiempo(dv, datos) {
       
       // === SECCIÓN 3: TABLA DE REGISTROS ===
       // Título de la sección
-      const tituloTabla = dv.el("h3", "Registros de tiempo", { cls: "tiempo-table-title" });
+      const tituloTabla = document.createElement("h3");
+      tituloTabla.className = "tiempo-table-title";
+      tituloTabla.textContent = "Registros de tiempo";
       contenedor.appendChild(tituloTabla);
       
-      // Crear la tabla
-      const tabla = dv.el("table", "", { cls: "tiempo-registros-table" });
+      // Crear la tabla con estilos directos para evitar espacios no deseados
+      const tabla = document.createElement("table");
+      tabla.className = "tiempo-registros-table";
+      tabla.style.width = "100%";
+      tabla.style.tableLayout = "fixed";
+      tabla.style.borderCollapse = "collapse";
+      tabla.style.margin = "0";
+      tabla.style.padding = "0";
       
       // Crear encabezados
-      const encabezado = dv.el("thead", "");
-      const filaEncabezado = dv.el("tr", "");
+      const encabezado = document.createElement("thead");
+      const filaEncabezado = document.createElement("tr");
       
-      // MODIFICADO: Eliminar "Contexto" de los encabezados
-      const encabezados = ["Descripción", "Duración", "Fecha"];
+      // Definir encabezados y sus estilos
+      const encabezados = [
+        { texto: "Descripción", ancho: "60%", align: "left" },
+        { texto: "Duración", ancho: "15%", align: "center" },
+        { texto: "Fecha", ancho: "25%", align: "left" }
+      ];
       
-      for (const textoEncabezado of encabezados) {
-        const th = dv.el("th", textoEncabezado);
+      for (const { texto, ancho, align } of encabezados) {
+        const th = document.createElement("th");
+        th.textContent = texto;
+        th.style.width = ancho;
+        th.style.textAlign = align;
+        th.style.padding = "10px";
+        if (texto === "Descripción") {
+          th.style.paddingLeft = "0"; // Eliminar padding izquierdo del primer encabezado
+        }
         filaEncabezado.appendChild(th);
       }
       
@@ -915,50 +954,53 @@ mostrarEstadisticasTiempo(dv, datos) {
       tabla.appendChild(encabezado);
       
       // Crear cuerpo de la tabla
-      const cuerpo = dv.el("tbody", "");
+      const cuerpo = document.createElement("tbody");
       
       // Añadir filas con los datos
       for (const registro of registros) {
-        const fila = dv.el("tr", "");
+        const fila = document.createElement("tr");
         
         // Columna: Descripción con enlace a la nota
-        const celdaDescripcion = dv.el("td", "");
+        const celdaDescripcion = document.createElement("td");
+        celdaDescripcion.style.width = "60%";
+        celdaDescripcion.style.paddingLeft = "0"; // Eliminar padding izquierdo
+        celdaDescripcion.style.whiteSpace = "normal";
+        celdaDescripcion.style.wordWrap = "break-word";
+        celdaDescripcion.style.wordBreak = "break-word";
+        celdaDescripcion.style.overflowWrap = "break-word";
         
         try {
-          // Texto de la descripción
-          const textoDescripcion = document.createTextNode(registro.descripcion);
-          celdaDescripcion.appendChild(textoDescripcion);
+          // Contenedor para la descripción que fuerce el salto de línea
+          const descripcionDiv = document.createElement("div");
+          descripcionDiv.style.display = "inline";
+          descripcionDiv.style.whiteSpace = "normal";
+          descripcionDiv.style.wordWrap = "break-word";
+          descripcionDiv.style.wordBreak = "break-word";
+          descripcionDiv.textContent = registro.descripcion || "Sin descripción";
+          celdaDescripcion.appendChild(descripcionDiv);
           
           // Agregar enlace
-          const enlaceSpan = dv.el("span", "", { cls: "tiempo-ver-mas" });
+          const enlaceSpan = document.createElement("span");
+          enlaceSpan.className = "tiempo-ver-mas";
           enlaceSpan.appendChild(document.createTextNode(" ("));
           
-          // Crear enlace usando dataview
-          try {
-            const enlace = dv.el("a", "ver", { 
-              attr: { 
-                href: registro.path,
-                "data-href": registro.path,
-                class: "internal-link" 
-              } 
-            });
-            
-            // Hacer el enlace clicable
-            enlace.addEventListener("click", (event) => {
-              event.preventDefault();
-              const href = event.target.getAttribute("data-href");
-              if (href) {
-                // Abrir con API de Obsidian
-                app.workspace.openLinkText(href, "", false);
-              }
-            });
-            
-            enlaceSpan.appendChild(enlace);
-          } catch (e) {
-            // Si falla, crear texto plano
-            enlaceSpan.appendChild(document.createTextNode("ver registro"));
-          }
+          // Crear enlace
+          const enlace = document.createElement("a");
+          enlace.className = "internal-link";
+          enlace.href = registro.path;
+          enlace.setAttribute("data-href", registro.path);
+          enlace.textContent = "ver";
           
+          // Hacer clicable el enlace
+          enlace.addEventListener("click", (event) => {
+            event.preventDefault();
+            const href = enlace.getAttribute("data-href");
+            if (href) {
+              app.workspace.openLinkText(href, "", false);
+            }
+          });
+          
+          enlaceSpan.appendChild(enlace);
           enlaceSpan.appendChild(document.createTextNode(")"));
           celdaDescripcion.appendChild(enlaceSpan);
         } catch (e) {
@@ -967,16 +1009,20 @@ mostrarEstadisticasTiempo(dv, datos) {
         
         fila.appendChild(celdaDescripcion);
         
-        // Columna: Duración
-        const celdaDuracion = dv.el("td", registro.tiempoFormateado);
+        // Columna: Duración (centrada)
+        const celdaDuracion = document.createElement("td");
+        celdaDuracion.style.width = "15%";
+        celdaDuracion.style.textAlign = "center";
+        celdaDuracion.textContent = registro.tiempoFormateado;
         fila.appendChild(celdaDuracion);
         
         // Columna: Fecha
-        const textoFecha = registro.horaFinal || registro.horaInicio;
-        const celdaFecha = dv.el("td", textoFecha);
+        const celdaFecha = document.createElement("td");
+        celdaFecha.style.width = "25%";
+        celdaFecha.style.whiteSpace = "normal";
+        celdaFecha.style.wordWrap = "break-word";
+        celdaFecha.textContent = registro.horaFinal || registro.horaInicio;
         fila.appendChild(celdaFecha);
-        
-        // MODIFICADO: Eliminar columna Contexto
         
         cuerpo.appendChild(fila);
       }
@@ -987,7 +1033,10 @@ mostrarEstadisticasTiempo(dv, datos) {
       return contenedor;
     } catch (error) {
       console.error("Error al mostrar estadísticas de tiempo:", error);
-      return dv.el("div", "Error al mostrar estadísticas: " + error.message, { cls: "tiempo-stats-error" });
+      const errorDiv = document.createElement("div");
+      errorDiv.className = "tiempo-stats-error";
+      errorDiv.textContent = "Error al mostrar estadísticas: " + error.message;
+      return errorDiv;
     }
   }
 

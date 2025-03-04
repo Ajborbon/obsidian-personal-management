@@ -843,13 +843,16 @@
 }
 
 
-/* Contenedor principal */
+/* Eliminar espacio a la izquierda de la tabla */
+/* Contenedor principal - eliminar el padding izquierdo */
 .tiempo-stats-container {
   margin: 20px 0;
-  padding: 16px;
+  padding: 16px 0; /* Mantener padding vertical, eliminar horizontal */
   border-radius: 8px;
   background-color: var(--background-secondary);
   box-shadow: 0 2px 5px rgba(0,0,0,0.08);
+  width: 100%;
+  box-sizing: border-box;
 }
 
 /* Sección de resumen con tarjetas */
@@ -914,121 +917,3 @@
   color: var(--text-normal);
 }
 
-/* Tabla de registros */
-.tiempo-registros-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 0.9em;
-  border-radius: 8px;
-  overflow: hidden;
-  box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-}
-
-.tiempo-registros-table th,
-.tiempo-registros-table td {
-  padding: 10px 14px;
-  border-bottom: 1px solid var(--background-modifier-border);
-}
-
-.tiempo-registros-table th {
-  text-align: left;
-  font-weight: bold;
-  background-color: var(--background-secondary-alt);
-  color: var(--text-normal);
-  position: sticky;
-  top: 0;
-}
-
-.tiempo-registros-table tr:nth-child(even) {
-  background-color: var(--background-secondary);
-}
-
-.tiempo-registros-table tr:hover {
-  background-color: var(--background-modifier-hover);
-}
-
-/* Ajustes de columnas */
-./* Ajusta los anchos de columna ahora que tenemos solo tres columnas */
-.tiempo-registros-table th:nth-child(1),
-.tiempo-registros-table td:nth-child(1) {
-  width: 50%; /* Columna Descripción - más ancha ahora */
-  max-width: 50%;
-  white-space: normal;
-  word-wrap: break-word;
-  overflow-wrap: break-word;
-}
-
-.tiempo-registros-table th:nth-child(2),
-.tiempo-registros-table td:nth-child(2) {
-  width: 20%; /* Columna Duración */
-  white-space: nowrap;
-}
-
-.tiempo-registros-table th:nth-child(3),
-.tiempo-registros-table td:nth-child(3) {
-  width: 30%; /* Columna Fecha */
-  white-space: normal;
-}
-
-/* Enlace "Ver más" dentro de la descripción */
-.tiempo-ver-mas {
-  font-size: 0.85em;
-  opacity: 0.7;
-  margin-left: 6px;
-  white-space: nowrap;
-}
-
-.tiempo-ver-mas:hover {
-  opacity: 1;
-}
-
-.tiempo-ver-mas a {
-  text-decoration: none;
-  color: var(--text-accent);
-}
-
-.tiempo-ver-mas a:hover {
-  text-decoration: underline;
-}
-
-/* Mensajes de información o error */
-.tiempo-stats-empty-message {
-  text-align: center;
-  color: var(--text-muted);
-  font-style: italic;
-  padding: 20px;
-  background-color: var(--background-primary);
-  border-radius: 8px;
-  margin: 10px 0;
-}
-
-.tiempo-stats-error {
-  color: var(--text-error);
-  background-color: var(--background-modifier-error);
-  padding: 14px;
-  border-radius: 8px;
-  margin: 10px 0;
-  font-size: 0.9em;
-}
-
-/* Adaptación para modo oscuro */
-.theme-dark .tiempo-stat-card {
-  background-color: var(--background-secondary-alt);
-}
-
-/* Responsive para pantallas pequeñas */
-@media (max-width: 600px) {
-  .tiempo-stats-grid {
-    grid-template-columns: 1fr 1fr;
-  }
-  
-  .tiempo-registros-table th,
-  .tiempo-registros-table td {
-    padding: 8px 10px;
-    font-size: 0.85em;
-  }
-  
-  .tiempo-table-title {
-    font-size: 1.1em;
-  }
-}
