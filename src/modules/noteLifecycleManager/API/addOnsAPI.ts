@@ -762,7 +762,8 @@ async obtenerEstadisticasTiempo(proyectoPath) {
    * @param datos Objeto con los datos obtenidos de obtenerEstadisticasTiempo
    * @returns Elemento HTML con las estadísticas visualizadas
    */
-  mostrarEstadisticasTiempo(dv, datos) {
+
+mostrarEstadisticasTiempo(dv, datos) {
     try {
       // Si hay error, mostrar mensaje
       if (datos.error) {
@@ -805,12 +806,12 @@ async obtenerEstadisticasTiempo(proyectoPath) {
         },
         {
           titulo: "Últimos 7 días",
-          valor: estadisticas.ultimos7Dias.formateado,
+          valor: estadisticas.ultimos7Dias?.formateado || "N/A",
           icono: "📅"
         },
         {
           titulo: "Últimos 30 días",
-          valor: estadisticas.ultimos30Dias.formateado,
+          valor: estadisticas.ultimos30Dias?.formateado || "N/A",
           icono: "📆"
         }
       ];
@@ -836,7 +837,61 @@ async obtenerEstadisticasTiempo(proyectoPath) {
       statsContainer.appendChild(statsGrid);
       contenedor.appendChild(statsContainer);
       
-      // === SECCIÓN 2: TABLA DE REGISTROS ===
+      // === SECCIÓN 2: SESIÓN ACTIVA (si existe) ===
+      if (estadisticas.sesionActiva) {
+        const activoContainer = dv.el("div", "", { cls: "tiempo-sesion-activa-container" });
+        
+        // Título de la sección
+        const tituloActivo = dv.el("h3", "Sesión activa", { cls: "tiempo-activo-title" });
+        activoContainer.appendChild(tituloActivo);
+        
+        // Encontrar el registro activo
+        const registroActivo = registros.find(r => r.estado === "🟢");
+        
+        if (registroActivo) {
+          // Crear tarjeta de sesión activa
+          const tarjetaActiva = dv.el("div", "", { cls: "tiempo-activo-card" });
+          
+          // Descripción
+          const descActiva = dv.el("div", registroActivo.descripcion, { cls: "tiempo-activo-descripcion" });
+          tarjetaActiva.appendChild(descActiva);
+          
+          // Tiempo en ejecución
+          const tiempoEjecucion = dv.el("div", estadisticas.sesionActiva.tiempoFormateado, { 
+            cls: "tiempo-ejecucion",
+            attr: {
+              id: `tiempo-ejecucion-${estadisticas.sesionActiva.id}`
+            }
+          });
+          tarjetaActiva.appendChild(tiempoEjecucion);
+          
+          // Botón para ir al registro
+          const enlaceRegistro = dv.el("a", "Ver registro completo", { 
+            cls: "tiempo-activo-enlace",
+            attr: {
+              href: registroActivo.path,
+              "data-href": registroActivo.path,
+              class: "internal-link"
+            }
+          });
+          
+          // Hacer clicable el enlace
+          enlaceRegistro.addEventListener("click", (event) => {
+            event.preventDefault();
+            const href = event.target.getAttribute("data-href");
+            if (href) {
+              app.workspace.openLinkText(href, "", false);
+            }
+          });
+          
+          tarjetaActiva.appendChild(enlaceRegistro);
+          activoContainer.appendChild(tarjetaActiva);
+        }
+        
+        contenedor.appendChild(activoContainer);
+      }
+      
+      // === SECCIÓN 3: TABLA DE REGISTROS ===
       // Título de la sección
       const tituloTabla = dv.el("h3", "Registros de tiempo", { cls: "tiempo-table-title" });
       contenedor.appendChild(tituloTabla);
@@ -848,7 +903,8 @@ async obtenerEstadisticasTiempo(proyectoPath) {
       const encabezado = dv.el("thead", "");
       const filaEncabezado = dv.el("tr", "");
       
-      const encabezados = ["Descripción", "Duración", "Fecha", "Contexto"];
+      // MODIFICADO: Eliminar "Contexto" de los encabezados
+      const encabezados = ["Descripción", "Duración", "Fecha"];
       
       for (const textoEncabezado of encabezados) {
         const th = dv.el("th", textoEncabezado);
@@ -920,9 +976,7 @@ async obtenerEstadisticasTiempo(proyectoPath) {
         const celdaFecha = dv.el("td", textoFecha);
         fila.appendChild(celdaFecha);
         
-        // Columna: Contexto (asunto)
-        const celdaContexto = dv.el("td", registro.asuntoAlias || "Sin contexto");
-        fila.appendChild(celdaContexto);
+        // MODIFICADO: Eliminar columna Contexto
         
         cuerpo.appendChild(fila);
       }
