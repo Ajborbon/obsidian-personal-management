@@ -495,4 +495,447 @@ mostrarEnlacesSincronizados(dv, pagina) {
     return contenedor;
 }
 
+// -------
+
+/**
+ * Procesa y prepara las estadísticas de tiempo para un proyecto
+ * @param proyectoPath Ruta completa del archivo del proyecto
+ * @returns Objeto con todas las estadísticas y registros procesados
+ */
+async obtenerEstadisticasTiempo(proyectoPath) {
+    try {
+      // Obtener carpeta de registros de tiempo desde la configuración
+      const folderRT = this.plugin.settings.folder_RegistroTiempo;
+      
+      // Función para formatear duración en milisegundos a formato legible
+      const formatDuration = (ms) => {
+        if (ms === null || ms === undefined || isNaN(ms)) {
+          return "No definido";
+        } else {
+          // Convertir milisegundos a minutos, horas y días
+          let minutos = Math.floor(ms / (1000 * 60));
+          let horas = Math.floor(minutos / 60);
+          minutos = minutos % 60;
+          let dias = Math.floor(horas / 24);
+          horas = horas % 24;
+          
+          // Formatear el string de salida
+          if (dias > 0) {
+            return `${dias} d ${horas} h ${minutos} min`;
+          } else if (horas > 0) {
+            return `${horas} h ${minutos} min`;
+          } else {
+            return `${minutos} min`;
+          }
+        }
+      };
+      
+      // Función para calcular tiempo transcurrido desde una fecha
+      const tiempoDesde = (fechaString) => {
+        if (!fechaString) return "Desconocido";
+        
+        try {
+          // Extraer fecha y hora de formatos comunes
+          let fecha;
+          if (fechaString.includes(' ')) {
+            // Formato "YYYY-MM-DD día HH:mm"
+            const partes = fechaString.split(' ');
+            const fechaSolo = partes[0]; // YYYY-MM-DD
+            const horaSolo = partes[partes.length - 1]; // HH:mm
+            fecha = new Date(`${fechaSolo}T${horaSolo}`);
+          } else {
+            fecha = new Date(fechaString);
+          }
+          
+          if (isNaN(fecha.getTime())) {
+            return "Fecha inválida";
+          }
+          
+          const ahora = new Date();
+          const diferencia = ahora.getTime() - fecha.getTime();
+          
+          // Convertir a días/horas/minutos
+          const dias = Math.floor(diferencia / (1000 * 60 * 60 * 24));
+          const horas = Math.floor((diferencia % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+          const minutos = Math.floor((diferencia % (1000 * 60 * 60)) / (1000 * 60));
+          
+          if (dias > 30) {
+            return `hace ${Math.floor(dias / 30)} meses`;
+          } else if (dias > 0) {
+            return `hace ${dias} días`;
+          } else if (horas > 0) {
+            return `hace ${horas} horas`;
+          } else {
+            return `hace ${minutos} minutos`;
+          }
+        } catch (e) {
+          console.error("Error al procesar fecha:", e);
+          return "Error en fecha";
+        }
+      };
+      
+      // Obtener el proyecto y su alias/título
+      const proyectoFile = app.vault.getAbstractFileByPath(proyectoPath);
+      if (!proyectoFile) {
+        return { error: "Proyecto no encontrado" };
+      }
+      
+      const metadataProyecto = app.metadataCache.getFileCache(proyectoFile)?.frontmatter;
+      const proyectoAlias = metadataProyecto?.aliases?.[0] || metadataProyecto?.titulo || proyectoFile.basename;
+      
+      // Fecha actual y límites para los períodos
+      const ahora = new Date();
+      const limite7Dias = new Date(ahora);
+      limite7Dias.setDate(ahora.getDate() - 7);
+      const limite30Dias = new Date(ahora);
+      limite30Dias.setDate(ahora.getDate() - 30);
+      
+      // Buscar todos los registros de tiempo relacionados con este proyecto
+      // Esto es lo más pesado y lo hacemos una sola vez en el plugin
+      let registros = [];
+      const allFiles = app.vault.getMarkdownFiles()
+        .filter(file => file.path.startsWith(folderRT + "/"));
+      
+      // Procesar cada archivo de registro de tiempo
+      for (const file of allFiles) {
+        try {
+          const metadata = app.metadataCache.getFileCache(file)?.frontmatter;
+          if (!metadata) continue;
+          
+          // Verificar si este registro está relacionado con el proyecto actual
+          let estaRelacionado = false;
+          
+          // Comprobar proyectoGTD
+          if (metadata.proyectoGTD) {
+            if (Array.isArray(metadata.proyectoGTD)) {
+              // Para cada elemento del array proyectoGTD
+              for (const proyecto of metadata.proyectoGTD) {
+                // Eliminar corchetes de wiklinks
+                const proyectoLimpio = proyecto.replace(/\[\[|\]\]/g, '');
+                
+                // Comprobar si contiene la ruta o el nombre del proyecto
+                if (proyectoLimpio.includes(proyectoPath) || 
+                    proyectoLimpio.includes(proyectoFile.basename) ||
+                    (proyectoAlias && proyectoLimpio.includes(proyectoAlias))) {
+                  estaRelacionado = true;
+                  break;
+                }
+              }
+            } else if (typeof metadata.proyectoGTD === 'string') {
+              // Si es un string, hacer la misma comprobación
+              const proyectoLimpio = metadata.proyectoGTD.replace(/\[\[|\]\]/g, '');
+              if (proyectoLimpio.includes(proyectoPath) || 
+                  proyectoLimpio.includes(proyectoFile.basename) ||
+                  (proyectoAlias && proyectoLimpio.includes(proyectoAlias))) {
+                estaRelacionado = true;
+              }
+            }
+          }
+          
+          // Si está relacionado, añadirlo a los registros
+          if (estaRelacionado) {
+            // Obtener información de asunto si existe
+            let asuntoAlias = null;
+            if (metadata.asunto && metadata.asunto.length > 0) {
+              try {
+                // Intentar extraer el asunto (formato wiki)
+                const asuntoStr = metadata.asunto[0];
+                // Extraer la ruta del asunto de formato [[ruta|alias]]
+                const asuntoMatch = asuntoStr.match(/\[\[(.*?)(?:\|(.*?))?\]\]/);
+                if (asuntoMatch) {
+                  const asuntoPath = asuntoMatch[1];
+                  const asuntoFile = app.vault.getAbstractFileByPath(asuntoPath + ".md");
+                  if (asuntoFile) {
+                    const asuntoMetadata = app.metadataCache.getFileCache(asuntoFile)?.frontmatter;
+                    asuntoAlias = asuntoMetadata?.aliases?.[0] || asuntoMetadata?.titulo || asuntoFile.basename;
+                  }
+                }
+              } catch (e) {
+                console.error("Error procesando asunto:", e);
+              }
+            }
+            
+            // Crear objeto de registro con toda la información necesaria
+            const registro = {
+              path: file.path,
+              basename: file.basename,
+              descripcion: metadata.descripcion || "Sin descripción",
+              tiempoTrabajado: metadata.tiempoTrabajado || 0,
+              estado: metadata.estado || "🔄",
+              horaInicio: metadata.horaInicio || metadata.fecha || "Desconocido",
+              horaFinal: metadata.horaFinal || "",
+              asuntoAlias: asuntoAlias,
+              aliases: metadata.aliases || [],
+            };
+            
+            registros.push(registro);
+          }
+        } catch (error) {
+          console.error(`Error procesando archivo ${file.path}:`, error);
+        }
+      }
+      
+      // Ordenar registros por horaFinal descendente
+      registros.sort((a, b) => {
+        // Primero intentamos ordenar por horaFinal
+        if (a.horaFinal && b.horaFinal) {
+          return new Date(b.horaFinal).getTime() - new Date(a.horaFinal).getTime();
+        }
+        // Si no hay horaFinal, ordenamos por horaInicio
+        return new Date(b.horaInicio).getTime() - new Date(a.horaInicio).getTime();
+      });
+      
+      // Calcular estadísticas
+      let totalTiempoTrabajado = 0;
+      let ultimaActividad = registros.length > 0 ? (registros[0].horaFinal || registros[0].horaInicio) : null;
+      let tiempoUltimos7Dias = 0;
+      let tiempoUltimos30Dias = 0;
+      
+      // Procesar cada registro para calcular estadísticas
+      for (let registro of registros) {
+        // Sumar tiempo total
+        totalTiempoTrabajado += registro.tiempoTrabajado;
+        
+        // Verificar si está en los últimos períodos
+        let fechaRegistro;
+        if (registro.horaFinal) {
+          // Extraer fecha de formato "YYYY-MM-DD día HH:mm"
+          const partes = registro.horaFinal.split(' ');
+          const fechaSolo = partes[0]; // YYYY-MM-DD
+          fechaRegistro = new Date(fechaSolo);
+        } else if (registro.horaInicio) {
+          // Extraer fecha de otros formatos posibles
+          const partesFecha = registro.horaInicio.split(' ');
+          fechaRegistro = new Date(partesFecha[0]);
+        }
+        
+        if (fechaRegistro) {
+          if (fechaRegistro >= limite7Dias) {
+            tiempoUltimos7Dias += registro.tiempoTrabajado;
+          }
+          if (fechaRegistro >= limite30Dias) {
+            tiempoUltimos30Dias += registro.tiempoTrabajado;
+          }
+        }
+        
+        // Añadir propiedad formateada para mostrar en la tabla
+        registro.tiempoFormateado = formatDuration(registro.tiempoTrabajado);
+      }
+      
+      // Crear y retornar objeto con toda la información procesada
+      return {
+        proyecto: {
+          path: proyectoPath,
+          nombre: proyectoFile.basename,
+          alias: proyectoAlias
+        },
+        estadisticas: {
+          totalTiempoTrabajado: {
+            valor: totalTiempoTrabajado,
+            formateado: formatDuration(totalTiempoTrabajado)
+          },
+          numSesiones: registros.length,
+          ultimaActividad: {
+            fecha: ultimaActividad,
+            tiempoDesde: ultimaActividad ? tiempoDesde(ultimaActividad) : "Sin actividad"
+          },
+          ultimos7Dias: {
+            valor: tiempoUltimos7Dias,
+            formateado: formatDuration(tiempoUltimos7Dias)
+          },
+          ultimos30Dias: {
+            valor: tiempoUltimos30Dias,
+            formateado: formatDuration(tiempoUltimos30Dias)
+          }
+        },
+        registros: registros
+      };
+    } catch (error) {
+      console.error("Error en obtenerEstadisticasTiempo:", error);
+      return { error: "Error procesando estadísticas de tiempo: " + error.message };
+    }
+  }
+  
+  /**
+   * Genera el HTML para mostrar las estadísticas de tiempo
+   * @param dv Objeto dataview para crear elementos
+   * @param datos Objeto con los datos obtenidos de obtenerEstadisticasTiempo
+   * @returns Elemento HTML con las estadísticas visualizadas
+   */
+  mostrarEstadisticasTiempo(dv, datos) {
+    try {
+      // Si hay error, mostrar mensaje
+      if (datos.error) {
+        return dv.el("div", datos.error, { cls: "tiempo-stats-error" });
+      }
+      
+      // Obtener estadísticas y registros
+      const { estadisticas, registros, proyecto } = datos;
+      
+      // Crear contenedor principal
+      const contenedor = dv.el("div", "", { cls: "tiempo-stats-container" });
+      
+      // Si no hay registros, mostrar mensaje y salir
+      if (!registros || registros.length === 0) {
+        const mensajeVacio = dv.el("p", "No se encontraron registros de tiempo para este proyecto.", 
+            { cls: "tiempo-stats-empty-message" });
+        contenedor.appendChild(mensajeVacio);
+        return contenedor;
+      }
+      
+      // === SECCIÓN 1: ESTADÍSTICAS PRINCIPALES ===
+      const statsContainer = dv.el("div", "", { cls: "tiempo-stats-summary" });
+      
+      // Crear tarjetas de estadísticas
+      const infoEstadisticas = [
+        {
+          titulo: "Tiempo Total",
+          valor: estadisticas.totalTiempoTrabajado.formateado,
+          icono: "⏱️"
+        },
+        {
+          titulo: "Sesiones",
+          valor: estadisticas.numSesiones,
+          icono: "🔄"
+        },
+        {
+          titulo: "Última Actividad",
+          valor: estadisticas.ultimaActividad.tiempoDesde,
+          icono: "🕒"
+        },
+        {
+          titulo: "Últimos 7 días",
+          valor: estadisticas.ultimos7Dias.formateado,
+          icono: "📅"
+        },
+        {
+          titulo: "Últimos 30 días",
+          valor: estadisticas.ultimos30Dias.formateado,
+          icono: "📆"
+        }
+      ];
+      
+      // Crear grid para las tarjetas
+      const statsGrid = dv.el("div", "", { cls: "tiempo-stats-grid" });
+      
+      // Añadir cada tarjeta al grid
+      for (const stat of infoEstadisticas) {
+        const tarjeta = dv.el("div", "", { cls: "tiempo-stat-card" });
+        
+        const icono = dv.el("span", stat.icono, { cls: "tiempo-stat-icon" });
+        const titulo = dv.el("div", stat.titulo, { cls: "tiempo-stat-title" });
+        const valor = dv.el("div", stat.valor, { cls: "tiempo-stat-value" });
+        
+        tarjeta.appendChild(icono);
+        tarjeta.appendChild(titulo);
+        tarjeta.appendChild(valor);
+        
+        statsGrid.appendChild(tarjeta);
+      }
+      
+      statsContainer.appendChild(statsGrid);
+      contenedor.appendChild(statsContainer);
+      
+      // === SECCIÓN 2: TABLA DE REGISTROS ===
+      // Título de la sección
+      const tituloTabla = dv.el("h3", "Registros de tiempo", { cls: "tiempo-table-title" });
+      contenedor.appendChild(tituloTabla);
+      
+      // Crear la tabla
+      const tabla = dv.el("table", "", { cls: "tiempo-registros-table" });
+      
+      // Crear encabezados
+      const encabezado = dv.el("thead", "");
+      const filaEncabezado = dv.el("tr", "");
+      
+      const encabezados = ["Descripción", "Duración", "Fecha", "Contexto"];
+      
+      for (const textoEncabezado of encabezados) {
+        const th = dv.el("th", textoEncabezado);
+        filaEncabezado.appendChild(th);
+      }
+      
+      encabezado.appendChild(filaEncabezado);
+      tabla.appendChild(encabezado);
+      
+      // Crear cuerpo de la tabla
+      const cuerpo = dv.el("tbody", "");
+      
+      // Añadir filas con los datos
+      for (const registro of registros) {
+        const fila = dv.el("tr", "");
+        
+        // Columna: Descripción con enlace a la nota
+        const celdaDescripcion = dv.el("td", "");
+        
+        try {
+          // Texto de la descripción
+          const textoDescripcion = document.createTextNode(registro.descripcion);
+          celdaDescripcion.appendChild(textoDescripcion);
+          
+          // Agregar enlace
+          const enlaceSpan = dv.el("span", "", { cls: "tiempo-ver-mas" });
+          enlaceSpan.appendChild(document.createTextNode(" ("));
+          
+          // Crear enlace usando dataview
+          try {
+            const enlace = dv.el("a", "ver", { 
+              attr: { 
+                href: registro.path,
+                "data-href": registro.path,
+                class: "internal-link" 
+              } 
+            });
+            
+            // Hacer el enlace clicable
+            enlace.addEventListener("click", (event) => {
+              event.preventDefault();
+              const href = event.target.getAttribute("data-href");
+              if (href) {
+                // Abrir con API de Obsidian
+                app.workspace.openLinkText(href, "", false);
+              }
+            });
+            
+            enlaceSpan.appendChild(enlace);
+          } catch (e) {
+            // Si falla, crear texto plano
+            enlaceSpan.appendChild(document.createTextNode("ver registro"));
+          }
+          
+          enlaceSpan.appendChild(document.createTextNode(")"));
+          celdaDescripcion.appendChild(enlaceSpan);
+        } catch (e) {
+          celdaDescripcion.textContent = registro.descripcion || "Sin descripción";
+        }
+        
+        fila.appendChild(celdaDescripcion);
+        
+        // Columna: Duración
+        const celdaDuracion = dv.el("td", registro.tiempoFormateado);
+        fila.appendChild(celdaDuracion);
+        
+        // Columna: Fecha
+        const textoFecha = registro.horaFinal || registro.horaInicio;
+        const celdaFecha = dv.el("td", textoFecha);
+        fila.appendChild(celdaFecha);
+        
+        // Columna: Contexto (asunto)
+        const celdaContexto = dv.el("td", registro.asuntoAlias || "Sin contexto");
+        fila.appendChild(celdaContexto);
+        
+        cuerpo.appendChild(fila);
+      }
+      
+      tabla.appendChild(cuerpo);
+      contenedor.appendChild(tabla);
+      
+      return contenedor;
+    } catch (error) {
+      console.error("Error al mostrar estadísticas de tiempo:", error);
+      return dv.el("div", "Error al mostrar estadísticas: " + error.message, { cls: "tiempo-stats-error" });
+    }
+  }
+
+
   }

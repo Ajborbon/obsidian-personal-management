@@ -841,3 +841,193 @@
 .theme-dark .notion-links-container {
   background-color: var(--background-secondary-alt);
 }
+
+
+/* Contenedor principal */
+.tiempo-stats-container {
+  margin: 20px 0;
+  padding: 16px;
+  border-radius: 8px;
+  background-color: var(--background-secondary);
+  box-shadow: 0 2px 5px rgba(0,0,0,0.08);
+}
+
+/* Sección de resumen con tarjetas */
+.tiempo-stats-summary {
+  margin-bottom: 24px;
+}
+
+/* Grid para las tarjetas de estadísticas */
+.tiempo-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+/* Tarjetas individuales */
+.tiempo-stat-card {
+  padding: 14px;
+  border-radius: 8px;
+  background-color: var(--background-primary);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.tiempo-stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+}
+
+/* Elementos dentro de las tarjetas */
+.tiempo-stat-icon {
+  font-size: 1.8em;
+  margin-bottom: 10px;
+}
+
+.tiempo-stat-title {
+  font-size: 0.85em;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+  text-align: center;
+  font-weight: 500;
+}
+
+.tiempo-stat-value {
+  font-size: 1.2em;
+  font-weight: bold;
+  text-align: center;
+  color: var(--text-normal);
+}
+
+/* Título de la tabla */
+.tiempo-table-title {
+  margin: 20px 0 16px;
+  font-size: 1.3em;
+  font-weight: bold;
+  border-bottom: 1px solid var(--background-modifier-border);
+  padding-bottom: 8px;
+  color: var(--text-normal);
+}
+
+/* Tabla de registros */
+.tiempo-registros-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9em;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+}
+
+.tiempo-registros-table th,
+.tiempo-registros-table td {
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--background-modifier-border);
+}
+
+.tiempo-registros-table th {
+  text-align: left;
+  font-weight: bold;
+  background-color: var(--background-secondary-alt);
+  color: var(--text-normal);
+  position: sticky;
+  top: 0;
+}
+
+.tiempo-registros-table tr:nth-child(even) {
+  background-color: var(--background-secondary);
+}
+
+.tiempo-registros-table tr:hover {
+  background-color: var(--background-modifier-hover);
+}
+
+/* Ajustes de columnas */
+.tiempo-registros-table th:nth-child(1),
+.tiempo-registros-table td:nth-child(1) {
+  width: 40%;
+}
+
+.tiempo-registros-table th:nth-child(2),
+.tiempo-registros-table td:nth-child(2) {
+  width: 20%;
+  white-space: nowrap;
+}
+
+.tiempo-registros-table th:nth-child(3),
+.tiempo-registros-table td:nth-child(3) {
+  width: 20%;
+}
+
+.tiempo-registros-table th:nth-child(4),
+.tiempo-registros-table td:nth-child(4) {
+  width: 20%;
+}
+
+/* Enlace "Ver más" dentro de la descripción */
+.tiempo-ver-mas {
+  font-size: 0.85em;
+  opacity: 0.7;
+  margin-left: 6px;
+  white-space: nowrap;
+}
+
+.tiempo-ver-mas:hover {
+  opacity: 1;
+}
+
+.tiempo-ver-mas a {
+  text-decoration: none;
+  color: var(--text-accent);
+}
+
+.tiempo-ver-mas a:hover {
+  text-decoration: underline;
+}
+
+/* Mensajes de información o error */
+.tiempo-stats-empty-message {
+  text-align: center;
+  color: var(--text-muted);
+  font-style: italic;
+  padding: 20px;
+  background-color: var(--background-primary);
+  border-radius: 8px;
+  margin: 10px 0;
+}
+
+.tiempo-stats-error {
+  color: var(--text-error);
+  background-color: var(--background-modifier-error);
+  padding: 14px;
+  border-radius: 8px;
+  margin: 10px 0;
+  font-size: 0.9em;
+}
+
+/* Adaptación para modo oscuro */
+.theme-dark .tiempo-stat-card {
+  background-color: var(--background-secondary-alt);
+}
+
+/* Responsive para pantallas pequeñas */
+@media (max-width: 600px) {
+  .tiempo-stats-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+  
+  .tiempo-registros-table th,
+  .tiempo-registros-table td {
+    padding: 8px 10px;
+    font-size: 0.85em;
+  }
+  
+  .tiempo-table-title {
+    font-size: 1.1em;
+  }
+}
