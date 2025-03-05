@@ -1535,7 +1535,7 @@ crearEncabezadoReferencia(referencia, dv, numTareas) {
         // Asegurar que el enlace es clicable usando la API de Obsidian
         enlace.addEventListener("click", (event) => {
             event.preventDefault();
-            app.workspace.openLinkText(referencia.file.path, "", false);
+            app.workspace.openLinkText(referencia.file.path, "", true);
         });
         
         header.appendChild(enlace);
@@ -1634,9 +1634,7 @@ navegarATarea(path, linea) {
         
         if (canUseEState) {
             // Esta es la forma más moderna de abrir archivos en Obsidian
-            app.workspace.openLinkText(path, "", false, {
-                eState: { line: linea }
-            });
+            app.workspace.openLinkText(path, "", true, { eState: { line: linea } });
         } else {
             // Alternativa: abrir el archivo y luego intentar ir a la línea
             const leaf = app.workspace.getLeaf(false);
