@@ -1070,11 +1070,10 @@ async generarArbolTareas(paginaActual, dv, profundidadMaxima = 3, visitadas = ne
             ? paginaActual.file.aliases[0] 
             : (paginaActual.titulo || paginaActual.file.name);
             
-            const titulo = document.createElement("h3");
-            titulo.className = "tasks-tree-title";
-            titulo.textContent = "Tareas pendientes";
-            contenedor.appendChild(titulo);
-     
+        const titulo = document.createElement("h3");
+        titulo.className = "tasks-tree-title";
+        titulo.textContent = "Tareas pendientes";
+        contenedor.appendChild(titulo);
     }
     
     // Si hemos llegado a la profundidad máxima, no seguimos explorando
@@ -1101,7 +1100,9 @@ async generarArbolTareas(paginaActual, dv, profundidadMaxima = 3, visitadas = ne
         todasLasPaginas = dv.pages();
     } catch (e) {
         console.error("Error al obtener páginas:", e);
-        const errorMsg = dv.el("p", "Error al obtener páginas de Dataview", { cls: "tasks-tree-error" });
+        const errorMsg = document.createElement("p");
+        errorMsg.textContent = "Error al obtener páginas de Dataview";
+        errorMsg.className = "tasks-tree-error";
         contenedor.appendChild(errorMsg);
         
         // Aún así, mostramos las tareas de la página actual si las hay
@@ -1183,7 +1184,9 @@ async generarArbolTareas(paginaActual, dv, profundidadMaxima = 3, visitadas = ne
         console.log(`Encontradas ${referenciasDirectas.length} referencias directas a ${paginaActual.file.path}`);
     } catch (e) {
         console.error("Error al filtrar referencias:", e);
-        const errorMsg = dv.el("p", "Error al procesar referencias", { cls: "tasks-tree-error" });
+        const errorMsg = document.createElement("p");
+        errorMsg.textContent = "Error al procesar referencias";
+        errorMsg.className = "tasks-tree-error";
         contenedor.appendChild(errorMsg);
         
         // Aún así, mostramos las tareas de la página actual si las hay
@@ -1196,10 +1199,12 @@ async generarArbolTareas(paginaActual, dv, profundidadMaxima = 3, visitadas = ne
     
     // Verificar si tenemos tareas en la página actual o en referencias
     const hayTareasEnActual = tareas.length > 0;
-    let hayTareasEnReferencias = false;
     
     // Primero verificamos si alguna referencia tiene tareas
     const referenciasConTareas = [];
+    const referenciasConTareasHeredadas = []; // Nuevo array para referencias sin tareas propias pero con tareas heredadas
+    
+    // Procesar todas las referencias directas, incluso si no tienen tareas propias
     for (const referencia of referenciasDirectas) {
         // Evitar ciclos
         if (visitadas.has(referencia.file.path)) {
@@ -1207,18 +1212,62 @@ async generarArbolTareas(paginaActual, dv, profundidadMaxima = 3, visitadas = ne
         }
         
         try {
+            // Extraer tareas propias de la referencia
             const tareasReferencia = await this.extraerTareasDePagina(referencia, dv);
+            
+            // CAMBIO AQUÍ: Comprobar si esta referencia tiene referencias anidadas con tareas
+            // Aunque no tenga tareas propias, necesitamos explorar más profundo
+            let tieneTareasHeredadas = false;
+            let refAnidadasConTareas = [];
+            
+            // Crear copia del conjunto visitadas para evitar afectar a otras ramas
+            const nuevoVisitadas = new Set([...visitadas]);
+            nuevoVisitadas.add(referencia.file.path);
+            
+            // Buscar recursivamente en profundidad
+            const resultadoAnidado = await this.generarArbolTareas(
+                referencia, dv, profundidadMaxima, 
+                nuevoVisitadas, profundidadActual + 1,
+                true // Es una referencia nidada
+            );
+            
+            // Verificar si el resultado anidado contiene tareas (buscando elementos con clase .tasks-item)
+            if (resultadoAnidado && resultadoAnidado.nodeType) {
+                const tareasAnidadas = resultadoAnidado.querySelectorAll('.tasks-item');
+                tieneTareasHeredadas = tareasAnidadas.length > 0;
+                
+                if (tieneTareasHeredadas) {
+                    // Guardar el resultado anidado para usarlo después
+                    refAnidadasConTareas.push({
+                        referencia,
+                        resultado: resultadoAnidado
+                    });
+                }
+            }
+            
             if (tareasReferencia.length > 0) {
-                hayTareasEnReferencias = true;
+                // Esta referencia tiene tareas propias
                 referenciasConTareas.push({
                     referencia,
-                    tareas: tareasReferencia
+                    tareas: tareasReferencia,
+                    refAnidadas: refAnidadasConTareas
+                });
+            } else if (tieneTareasHeredadas) {
+                // Esta referencia no tiene tareas propias, pero tiene subreferencias con tareas
+                referenciasConTareasHeredadas.push({
+                    referencia,
+                    tareas: [], // No tiene tareas propias
+                    refAnidadas: refAnidadasConTareas
                 });
             }
         } catch (e) {
-            console.error(`Error al extraer tareas de referencia ${referencia.file.path}:`, e);
+            console.error(`Error al procesar referencia ${referencia.file.path}:`, e);
         }
     }
+    
+    // Combinar ambos tipos de referencias para procesarlas juntas
+    const todasLasReferenciasConTareas = [...referenciasConTareas, ...referenciasConTareasHeredadas];
+    const hayTareasEnReferencias = todasLasReferenciasConTareas.length > 0;
     
     // Si no hay tareas en la página actual ni en referencias, y no estamos en la raíz,
     // no mostramos nada (para optimizar espacio)
@@ -1230,11 +1279,14 @@ async generarArbolTareas(paginaActual, dv, profundidadMaxima = 3, visitadas = ne
     // o si es la raíz (profundidadActual === 0)
     if (hayTareasEnActual && (!esReferenciaNidada || profundidadActual === 0)) {
         // Crear sección para las tareas de la página actual
-        const seccionActual = dv.el("div", "", { cls: "tasks-node-current" });
+        const seccionActual = document.createElement("div");
+        seccionActual.className = "tasks-node-current";
         
         // Crear encabezado solo si hay referencias directas (para diferenciar)
-        if (referenciasConTareas.length > 0) {
-            const encabezadoActual = dv.el("div", "Tareas directas", { cls: "tasks-node-header" });
+        if (hayTareasEnReferencias) {
+            const encabezadoActual = document.createElement("div");
+            encabezadoActual.className = "tasks-node-header";
+            encabezadoActual.textContent = "Tareas directas";
             seccionActual.appendChild(encabezadoActual);
         }
         
@@ -1245,72 +1297,66 @@ async generarArbolTareas(paginaActual, dv, profundidadMaxima = 3, visitadas = ne
         contenedor.appendChild(seccionActual);
     }
     
-    // Si tenemos referencias con tareas, procesamos cada una
-    if (referenciasConTareas.length > 0) {
+    // Si tenemos referencias con tareas (propias o heredadas), procesamos cada una
+    if (hayTareasEnReferencias) {
         // Crear sección para las tareas de referencias
-        const seccionReferencias = dv.el("div", "", { cls: "tasks-refs-container" });
+        const seccionReferencias = document.createElement("div");
+        seccionReferencias.className = "tasks-refs-container";
         
         // Solo añadimos encabezado si hay tareas tanto en actual como en referencias
         if (hayTareasEnActual && (!esReferenciaNidada || profundidadActual === 0)) {
-            const encabezadoRefs = dv.el("div", "Tareas en notas relacionadas", { cls: "tasks-refs-header" });
+            const encabezadoRefs = document.createElement("div");
+            encabezadoRefs.className = "tasks-refs-header";
+            encabezadoRefs.textContent = "Tareas en notas relacionadas";
             seccionReferencias.appendChild(encabezadoRefs);
         }
         
         // Crear lista para las referencias
-        const listaRefs = dv.el("ul", "", { cls: "tasks-refs-list" });
+        const listaRefs = document.createElement("ul");
+        listaRefs.className = "tasks-refs-list";
         
-        // Procesar cada referencia con tareas
-        for (const { referencia, tareas } of referenciasConTareas) {
+        // Procesar cada referencia con tareas (propias o heredadas)
+        for (const { referencia, tareas, refAnidadas } of todasLasReferenciasConTareas) {
             // Crear elemento para esta referencia
-            const itemRef = dv.el("li", "", { cls: "tasks-ref-item" });
+            const itemRef = document.createElement("li");
+            itemRef.className = "tasks-ref-item";
             
             // Crear encabezado con información de la referencia
             const headerRef = this.crearEncabezadoReferencia(referencia, dv, tareas.length);
             itemRef.appendChild(headerRef);
             
-           
-            // Crear contenedor colapsable para las tareas
-            const tareasContainer = document.createElement("div");
-            tareasContainer.className = "tasks-container";
-            // Añade un atributo de datos para identificar a qué nota pertenece este contenedor
-            tareasContainer.setAttribute("data-path", referencia.file.path);
-            // Agregar las tareas de esta referencia
-            this.agregarTareasAContenedor(tareas, tareasContainer, dv, referencia);
-            
-            // Agregar el contenedor de tareas al elemento de referencia
-            itemRef.appendChild(tareasContainer);
-            
-            // Buscar recursivamente más referencias y tareas
-            try {
-                // Crear copia del conjunto visitadas para evitar afectar a otras ramas
-                const nuevoVisitadas = new Set([...visitadas]);
-                nuevoVisitadas.add(referencia.file.path);
+            // Si tiene tareas propias, mostrarlas
+            if (tareas.length > 0) {
+                // Crear contenedor colapsable para las tareas
+                const tareasContainer = document.createElement("div");
+                tareasContainer.className = "tasks-container";
+                // Añadir atributo de datos para identificar a qué nota pertenece este contenedor
+                tareasContainer.setAttribute("data-path", referencia.file.path);
                 
-                // Llamar recursivamente para obtener referencias a esta referencia
-                // Indicamos que es una referencia nidada para evitar mostrar las tareas duplicadas
-                const subReferencias = await this.generarArbolTareas(
-                    referencia, dv, profundidadMaxima, 
-                    nuevoVisitadas, profundidadActual + 1,
-                    true // Indicar que es una referencia nidada
-                );
+                // Agregar las tareas de esta referencia
+                this.agregarTareasAContenedor(tareas, tareasContainer, dv, referencia);
                 
-                // Verificar que el resultado es un nodo DOM válido con contenido útil
-                if (subReferencias && subReferencias.nodeType && 
-                    subReferencias.children && subReferencias.children.length > 1) {
-                    // Quitar el título repetido si existe
-                    const tituloRepetido = subReferencias.querySelector('.tasks-tree-title');
-                    if (tituloRepetido) {
-                        tituloRepetido.remove();
+                // Agregar el contenedor de tareas al elemento de referencia
+                itemRef.appendChild(tareasContainer);
+            }
+            
+            // Si tiene subreferencias con tareas, mostrarlas
+            if (refAnidadas && refAnidadas.length > 0) {
+                for (const { resultado } of refAnidadas) {
+                    if (resultado && resultado.nodeType) {
+                        // Quitar el título repetido si existe
+                        const tituloRepetido = resultado.querySelector('.tasks-tree-title');
+                        if (tituloRepetido) {
+                            tituloRepetido.remove();
+                        }
+                        
+                        // Aplicar clase especial para sub-referencias
+                        resultado.classList.add('tasks-subrefs-container');
+                        
+                        // Agregar sub-referencias al elemento actual
+                        itemRef.appendChild(resultado);
                     }
-                    
-                    // Aplicar clase especial para sub-referencias
-                    subReferencias.classList.add('tasks-subrefs-container');
-                    
-                    // Agregar sub-referencias al elemento actual
-                    itemRef.appendChild(subReferencias);
                 }
-            } catch (e) {
-                console.error(`Error en recursión para ${referencia.file.path}:`, e);
             }
             
             // Añadir el elemento de referencia a la lista
@@ -1326,7 +1372,9 @@ async generarArbolTareas(paginaActual, dv, profundidadMaxima = 3, visitadas = ne
     
     // Si no hay tareas en absoluto y estamos en la raíz, mostrar mensaje
     if (!hayTareasEnActual && !hayTareasEnReferencias && profundidadActual === 0) {
-        const mensaje = dv.el("p", "No se encontraron tareas pendientes o en progreso", { cls: "tasks-tree-empty" });
+        const mensaje = document.createElement("p");
+        mensaje.textContent = "No se encontraron tareas pendientes o en progreso";
+        mensaje.className = "tasks-tree-empty";
         contenedor.appendChild(mensaje);
     }
     
@@ -1423,7 +1471,7 @@ async extraerTareasDePagina(pagina, dv) {
  * @returns {HTMLElement} - Elemento HTML con el encabezado
  */
 crearEncabezadoReferencia(referencia, dv, numTareas) {
-  
+    // Crear el contenedor del encabezado
     const header = document.createElement("div");
     header.className = "tasks-ref-header";
 
@@ -1441,16 +1489,18 @@ crearEncabezadoReferencia(referencia, dv, numTareas) {
         this.setAttribute("data-state", newState);
         this.textContent = newState === "expanded" ? "▼" : "▶";
         
-        // Obtener el contenedor de tareas asociado - buscar el elemento hermano que sigue al padre de este botón
-        // El botón está dentro del header, y queremos encontrar el contenedor de tareas que es hermano del header
+        // Obtener el elemento padre del botón (header) y luego el elemento padre del header (li)
         const headerElement = this.closest(".tasks-ref-header");
         if (headerElement && headerElement.parentNode) {
-            // Buscar el contenedor de tareas que es hijo directo del mismo padre que el header
-            const tareasContainers = headerElement.parentNode.querySelectorAll(".tasks-container");
-            if (tareasContainers.length > 0) {
-                const tareasContainer = tareasContainers[0]; // El primer .tasks-container encontrado
-                tareasContainer.style.display = newState === "expanded" ? "block" : "none";
-            }
+            const listItem = headerElement.parentNode;
+            
+            // Obtener todos los contenedores secundarios - tanto tasks-container como tasks-subrefs-container
+            const containers = listItem.querySelectorAll('.tasks-container, .tasks-subrefs-container');
+            
+            // Cambiar la visibilidad de todos los contenedores encontrados
+            containers.forEach(container => {
+                container.style.display = newState === "expanded" ? "block" : "none";
+            });
         }
         
         // Detener propagación para que no interfiera con otros clics
@@ -1468,35 +1518,39 @@ crearEncabezadoReferencia(referencia, dv, numTareas) {
     // Tipo de la nota (si está disponible)
     const tipo = referencia.typeName;
     if (tipo) {
-        const tipoSpan = dv.el("span", `[${tipo}] `, { cls: "tasks-ref-type" });
+        const tipoSpan = document.createElement("span");
+        tipoSpan.className = "tasks-ref-type";
+        tipoSpan.textContent = `[${tipo}] `;
         header.appendChild(tipoSpan);
     }
     
     // Crear el enlace a la nota
     try {
-        const enlace = dv.el("a", nombreMostrado, {
-            attr: {
-                href: referencia.file.path,
-                "data-href": referencia.file.path,
-                class: "internal-link tasks-ref-link"
-            }
-        });
+        const enlace = document.createElement("a");
+        enlace.className = "internal-link tasks-ref-link";
+        enlace.href = referencia.file.path;
+        enlace.setAttribute("data-href", referencia.file.path);
+        enlace.textContent = nombreMostrado;
         
-        // Asegurar que el enlace es clicable
+        // Asegurar que el enlace es clicable usando la API de Obsidian
         enlace.addEventListener("click", (event) => {
-            // No detener propagación para permitir comportamiento normal del enlace
-            // Esto permite que el sistema de navegación de Obsidian maneje el click
+            event.preventDefault();
+            app.workspace.openLinkText(referencia.file.path, "", false);
         });
         
         header.appendChild(enlace);
     } catch (e) {
         console.error("Error al crear enlace:", e);
-        const textoPlano = dv.el("span", nombreMostrado, { cls: "tasks-ref-name" });
+        const textoPlano = document.createElement("span");
+        textoPlano.className = "tasks-ref-name";
+        textoPlano.textContent = nombreMostrado;
         header.appendChild(textoPlano);
     }
     
     // Añadir contador de tareas
-    const contador = dv.el("span", `(${numTareas})`, { cls: "tasks-count" });
+    const contador = document.createElement("span");
+    contador.className = "tasks-count";
+    contador.textContent = `(${numTareas})`;
     header.appendChild(contador);
     
     return header;
@@ -1513,20 +1567,19 @@ agregarTareasAContenedor(tareas, contenedor, dv, pagina) {
     if (!tareas || tareas.length === 0) return;
     
     // Crear lista para las tareas
-    const lista = dv.el("ul", "", { cls: "tasks-list" });
+    const lista = document.createElement("ul");
+    lista.className = "tasks-list";
     
     // Añadir cada tarea como ítem de lista
     for (const tarea of tareas) {
-        const item = dv.el("li", "", { 
-            cls: `tasks-item tasks-${tarea.estado}`,
-            attr: { "data-linea": tarea.lineaIndice }
-        });
+        const item = document.createElement("li");
+        item.className = `tasks-item tasks-${tarea.estado}`;
+        item.setAttribute("data-linea", tarea.lineaIndice);
         
         // Crear el indicador de estado (checkbox)
-        const checkbox = dv.el("span", 
-            tarea.estado === 'pendiente' ? "☐" : "◔", 
-            { cls: `tasks-checkbox tasks-checkbox-${tarea.estado}` }
-        );
+        const checkbox = document.createElement("span");
+        checkbox.className = `tasks-checkbox tasks-checkbox-${tarea.estado}`;
+        checkbox.textContent = tarea.estado === 'pendiente' ? "☐" : "◔";
         
         // Añadir listener al checkbox para navegar a la tarea
         checkbox.addEventListener("click", () => {
@@ -1534,7 +1587,9 @@ agregarTareasAContenedor(tareas, contenedor, dv, pagina) {
         });
         
         // Crear contenedor para el texto de la tarea
-        const textoSpan = dv.el("span", tarea.texto, { cls: "tasks-text" });
+        const textoSpan = document.createElement("span");
+        textoSpan.className = "tasks-text";
+        textoSpan.textContent = tarea.texto;
         
         // Añadir listener al texto para navegar a la tarea
         textoSpan.addEventListener("click", () => {
