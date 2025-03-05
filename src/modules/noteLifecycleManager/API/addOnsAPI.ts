@@ -1047,16 +1047,17 @@ async obtenerEstadisticasTiempo(proyectoPath) {
  * @param {Number} profundidadMaxima - Profundidad máxima de recursión (defecto: 3)
  * @param {Set} visitadas - Set de IDs de páginas ya visitadas para evitar ciclos
  * @param {Number} profundidadActual - Profundidad actual de recursión
+ * @param {Boolean} esReferenciaNidada - Indica si es una referencia nidada (para evitar duplicación)
  * @returns {HTMLElement} - Elemento HTML con la estructura de árbol de tareas
  */
-async generarArbolTareas(paginaActual, dv, profundidadMaxima = 3, visitadas = new Set(), profundidadActual = 0) {
+async generarArbolTareas(paginaActual, dv, profundidadMaxima = 3, visitadas = new Set(), profundidadActual = 0, esReferenciaNidada = false) {
     // Validar que paginaActual tenga las propiedades necesarias
     if (!paginaActual || !paginaActual.file) {
         console.error("Error: paginaActual no tiene las propiedades necesarias", paginaActual);
         return dv.el("div", "Error: No se puede generar el árbol de tareas.", { cls: "tasks-tree-error" });
     }
     
-    console.log(`Procesando tareas de: ${paginaActual.file.path} (profundidad: ${profundidadActual})`);
+    console.log(`Procesando tareas de: ${paginaActual.file.path} (profundidad: ${profundidadActual}, esReferenciaNidada: ${esReferenciaNidada})`);
     
     // Crear el contenedor principal
     const contenedor = dv.el("div", "", { cls: "tasks-tree" });
@@ -1221,8 +1222,9 @@ async generarArbolTareas(paginaActual, dv, profundidadMaxima = 3, visitadas = ne
         return contenedor;
     }
     
-    // Si tenemos tareas en la página actual, las mostramos
-    if (hayTareasEnActual) {
+    // Si tenemos tareas en la página actual, las mostramos, pero solo si no es una referencia nidada
+    // o si es la raíz (profundidadActual === 0)
+    if (hayTareasEnActual && (!esReferenciaNidada || profundidadActual === 0)) {
         // Crear sección para las tareas de la página actual
         const seccionActual = dv.el("div", "", { cls: "tasks-node-current" });
         
@@ -1245,7 +1247,7 @@ async generarArbolTareas(paginaActual, dv, profundidadMaxima = 3, visitadas = ne
         const seccionReferencias = dv.el("div", "", { cls: "tasks-refs-container" });
         
         // Solo añadimos encabezado si hay tareas tanto en actual como en referencias
-        if (hayTareasEnActual) {
+        if (hayTareasEnActual && (!esReferenciaNidada || profundidadActual === 0)) {
             const encabezadoRefs = dv.el("div", "Tareas en notas relacionadas", { cls: "tasks-refs-header" });
             seccionReferencias.appendChild(encabezadoRefs);
         }
@@ -1281,9 +1283,11 @@ async generarArbolTareas(paginaActual, dv, profundidadMaxima = 3, visitadas = ne
                 nuevoVisitadas.add(referencia.file.path);
                 
                 // Llamar recursivamente para obtener referencias a esta referencia
+                // Indicamos que es una referencia nidada para evitar mostrar las tareas duplicadas
                 const subReferencias = await this.generarArbolTareas(
                     referencia, dv, profundidadMaxima, 
-                    nuevoVisitadas, profundidadActual + 1
+                    nuevoVisitadas, profundidadActual + 1,
+                    true // Indicar que es una referencia nidada
                 );
                 
                 // Verificar que el resultado es un nodo DOM válido con contenido útil
