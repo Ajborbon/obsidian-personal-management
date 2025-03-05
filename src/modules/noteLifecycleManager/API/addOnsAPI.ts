@@ -53,9 +53,7 @@ export class addOnsAPI {
         }
     }
   
-// Función para generar el texto de relaciones de una nota
-// Añadir esta función a la clase addOnsAPI en src/modules/noteLifecycleManager/API/addOnsAPI.ts
-// En src/modules/noteLifecycleManager/API/addOnsAPI.ts
+
 
 /**
  * Genera texto de relaciones con enlaces funcionales y formateado con CSS
@@ -1040,5 +1038,567 @@ async obtenerEstadisticasTiempo(proyectoPath) {
     }
   }
 
+// ---- TAREAS
+
+/**
+ * Genera un árbol de tareas pendientes y en progreso de la nota actual y sus referencias
+ * @param {Object} paginaActual - La página actual obtenida a través de dv.current()
+ * @param {Object} dv - El objeto dataview para acceder a sus funciones
+ * @param {Number} profundidadMaxima - Profundidad máxima de recursión (defecto: 3)
+ * @param {Set} visitadas - Set de IDs de páginas ya visitadas para evitar ciclos
+ * @param {Number} profundidadActual - Profundidad actual de recursión
+ * @returns {HTMLElement} - Elemento HTML con la estructura de árbol de tareas
+ */
+async generarArbolTareas(paginaActual, dv, profundidadMaxima = 3, visitadas = new Set(), profundidadActual = 0) {
+    // Validar que paginaActual tenga las propiedades necesarias
+    if (!paginaActual || !paginaActual.file) {
+        console.error("Error: paginaActual no tiene las propiedades necesarias", paginaActual);
+        return dv.el("div", "Error: No se puede generar el árbol de tareas.", { cls: "tasks-tree-error" });
+    }
+    
+    console.log(`Procesando tareas de: ${paginaActual.file.path} (profundidad: ${profundidadActual})`);
+    
+    // Crear el contenedor principal
+    const contenedor = dv.el("div", "", { cls: "tasks-tree" });
+    
+    if (profundidadActual === 0) {
+        // Añadir título personalizado solo en la raíz
+        const tipoNota = paginaActual.typeName || "Nota";
+        const alias = paginaActual.file.aliases && paginaActual.file.aliases.length > 0 
+            ? paginaActual.file.aliases[0] 
+            : (paginaActual.titulo || paginaActual.file.name);
+            
+        const titulo = dv.el("h3", `Tareas pendientes de ${tipoNota} "${alias}"`, { cls: "tasks-tree-title" });
+        contenedor.appendChild(titulo);
+    }
+    
+    // Si hemos llegado a la profundidad máxima, no seguimos explorando
+    if (profundidadActual >= profundidadMaxima) {
+        return contenedor;
+    }
+    
+    // Marcar esta página como visitada para evitar ciclos
+    visitadas.add(paginaActual.file.path);
+    
+    // Extraer tareas de la página actual
+    let tareas;
+    try {
+        tareas = await this.extraerTareasDePagina(paginaActual, dv);
+        console.log(`Encontradas ${tareas.length} tareas en ${paginaActual.file.path}`);
+    } catch (e) {
+        console.error(`Error al extraer tareas de ${paginaActual.file.path}:`, e);
+        tareas = [];
+    }
+    
+    // Obtener todas las páginas que hacen referencia directa a la página actual
+    let todasLasPaginas;
+    try {
+        todasLasPaginas = dv.pages();
+    } catch (e) {
+        console.error("Error al obtener páginas:", e);
+        const errorMsg = dv.el("p", "Error al obtener páginas de Dataview", { cls: "tasks-tree-error" });
+        contenedor.appendChild(errorMsg);
+        
+        // Aún así, mostramos las tareas de la página actual si las hay
+        if (tareas.length > 0) {
+            this.agregarTareasAContenedor(tareas, contenedor, dv, paginaActual);
+        }
+        
+        return contenedor;
+    }
+    
+    // Filtrar las páginas que referencian a la actual a través de 'asunto'
+    let referenciasDirectas = [];
+    try {
+        // Función segura para verificar si un asunto hace referencia a la página actual
+        const referenciaAPaginaActual = (asunto) => {
+            try {
+                // Si asunto es un objeto con path y coincide con la página actual
+                if (asunto && typeof asunto === 'object' && asunto.path === paginaActual.file.path) {
+                    return true;
+                }
+                
+                // Si asunto es una cadena
+                if (typeof asunto === 'string') {
+                    // Verificar si contiene la ruta completa
+                    if (asunto.includes(paginaActual.file.path)) {
+                        return true;
+                    }
+                    
+                    // Verificar coincidencia con aliases (si existen)
+                    if (paginaActual.file.aliases && Array.isArray(paginaActual.file.aliases)) {
+                        for (const alias of paginaActual.file.aliases) {
+                            if (alias && asunto.includes(alias)) {
+                                return true;
+                            }
+                        }
+                    }
+                    
+                    // Verificar coincidencia con el nombre del archivo
+                    if (paginaActual.file.name && asunto.includes(paginaActual.file.name)) {
+                        return true;
+                    }
+                    
+                    // Verificamos si el archivo tiene titulo o aliases
+                    const titulo = paginaActual.titulo || paginaActual.title;
+                    if (titulo && asunto.includes(titulo)) {
+                        return true;
+                    }
+                }
+                
+                return false;
+            } catch (err) {
+                console.warn("Error al verificar referencia:", err);
+                return false;
+            }
+        };
+        
+        // Filtrar las páginas con manejo de errores mejorado
+        referenciasDirectas = todasLasPaginas.filter(p => {
+            try {
+                if (!p || !p.asunto) return false;
+                
+                // Normalizar asunto a array
+                const asuntos = Array.isArray(p.asunto) ? p.asunto : [p.asunto];
+                
+                // Verificar cada asunto
+                for (const asunto of asuntos) {
+                    if (referenciaAPaginaActual(asunto)) {
+                        return true;
+                    }
+                }
+                
+                return false;
+            } catch (err) {
+                console.warn("Error al filtrar página:", err, p);
+                return false;
+            }
+        });
+        
+        console.log(`Encontradas ${referenciasDirectas.length} referencias directas a ${paginaActual.file.path}`);
+    } catch (e) {
+        console.error("Error al filtrar referencias:", e);
+        const errorMsg = dv.el("p", "Error al procesar referencias", { cls: "tasks-tree-error" });
+        contenedor.appendChild(errorMsg);
+        
+        // Aún así, mostramos las tareas de la página actual si las hay
+        if (tareas.length > 0) {
+            this.agregarTareasAContenedor(tareas, contenedor, dv, paginaActual);
+        }
+        
+        return contenedor;
+    }
+    
+    // Verificar si tenemos tareas en la página actual o en referencias
+    const hayTareasEnActual = tareas.length > 0;
+    let hayTareasEnReferencias = false;
+    
+    // Primero verificamos si alguna referencia tiene tareas
+    const referenciasConTareas = [];
+    for (const referencia of referenciasDirectas) {
+        // Evitar ciclos
+        if (visitadas.has(referencia.file.path)) {
+            continue;
+        }
+        
+        try {
+            const tareasReferencia = await this.extraerTareasDePagina(referencia, dv);
+            if (tareasReferencia.length > 0) {
+                hayTareasEnReferencias = true;
+                referenciasConTareas.push({
+                    referencia,
+                    tareas: tareasReferencia
+                });
+            }
+        } catch (e) {
+            console.error(`Error al extraer tareas de referencia ${referencia.file.path}:`, e);
+        }
+    }
+    
+    // Si no hay tareas en la página actual ni en referencias, y no estamos en la raíz,
+    // no mostramos nada (para optimizar espacio)
+    if (!hayTareasEnActual && !hayTareasEnReferencias && profundidadActual > 0) {
+        return contenedor;
+    }
+    
+    // Si tenemos tareas en la página actual, las mostramos
+    if (hayTareasEnActual) {
+        // Crear sección para las tareas de la página actual
+        const seccionActual = dv.el("div", "", { cls: "tasks-node-current" });
+        
+        // Crear encabezado solo si hay referencias directas (para diferenciar)
+        if (referenciasConTareas.length > 0) {
+            const encabezadoActual = dv.el("div", "Tareas directas", { cls: "tasks-node-header" });
+            seccionActual.appendChild(encabezadoActual);
+        }
+        
+        // Agregar las tareas de la página actual
+        this.agregarTareasAContenedor(tareas, seccionActual, dv, paginaActual);
+        
+        // Añadir la sección al contenedor principal
+        contenedor.appendChild(seccionActual);
+    }
+    
+    // Si tenemos referencias con tareas, procesamos cada una
+    if (referenciasConTareas.length > 0) {
+        // Crear sección para las tareas de referencias
+        const seccionReferencias = dv.el("div", "", { cls: "tasks-refs-container" });
+        
+        // Solo añadimos encabezado si hay tareas tanto en actual como en referencias
+        if (hayTareasEnActual) {
+            const encabezadoRefs = dv.el("div", "Tareas en notas relacionadas", { cls: "tasks-refs-header" });
+            seccionReferencias.appendChild(encabezadoRefs);
+        }
+        
+        // Crear lista para las referencias
+        const listaRefs = dv.el("ul", "", { cls: "tasks-refs-list" });
+        
+        // Procesar cada referencia con tareas
+        for (const { referencia, tareas } of referenciasConTareas) {
+            // Crear elemento para esta referencia
+            const itemRef = dv.el("li", "", { cls: "tasks-ref-item" });
+            
+            // Crear encabezado con información de la referencia
+            const headerRef = this.crearEncabezadoReferencia(referencia, dv, tareas.length);
+            itemRef.appendChild(headerRef);
+            
+            // Crear contenedor colapsable para las tareas
+            const tareasContainer = dv.el("div", "", { 
+                cls: "tasks-list-container",
+                attr: { "data-path": referencia.file.path }
+            });
+            
+            // Agregar las tareas de esta referencia
+            this.agregarTareasAContenedor(tareas, tareasContainer, dv, referencia);
+            
+            // Agregar el contenedor de tareas al elemento de referencia
+            itemRef.appendChild(tareasContainer);
+            
+            // Buscar recursivamente más referencias y tareas
+            try {
+                // Crear copia del conjunto visitadas para evitar afectar a otras ramas
+                const nuevoVisitadas = new Set([...visitadas]);
+                nuevoVisitadas.add(referencia.file.path);
+                
+                // Llamar recursivamente para obtener referencias a esta referencia
+                const subReferencias = await this.generarArbolTareas(
+                    referencia, dv, profundidadMaxima, 
+                    nuevoVisitadas, profundidadActual + 1
+                );
+                
+                // Verificar que el resultado es un nodo DOM válido con contenido útil
+                if (subReferencias && subReferencias.nodeType && 
+                    subReferencias.children && subReferencias.children.length > 1) {
+                    // Quitar el título repetido si existe
+                    const tituloRepetido = subReferencias.querySelector('.tasks-tree-title');
+                    if (tituloRepetido) {
+                        tituloRepetido.remove();
+                    }
+                    
+                    // Aplicar clase especial para sub-referencias
+                    subReferencias.classList.add('tasks-subrefs-container');
+                    
+                    // Agregar sub-referencias al elemento actual
+                    itemRef.appendChild(subReferencias);
+                }
+            } catch (e) {
+                console.error(`Error en recursión para ${referencia.file.path}:`, e);
+            }
+            
+            // Añadir el elemento de referencia a la lista
+            listaRefs.appendChild(itemRef);
+        }
+        
+        // Añadir la lista de referencias a la sección
+        seccionReferencias.appendChild(listaRefs);
+        
+        // Añadir la sección al contenedor principal
+        contenedor.appendChild(seccionReferencias);
+    }
+    
+    // Si no hay tareas en absoluto y estamos en la raíz, mostrar mensaje
+    if (!hayTareasEnActual && !hayTareasEnReferencias && profundidadActual === 0) {
+        const mensaje = dv.el("p", "No se encontraron tareas pendientes o en progreso", { cls: "tasks-tree-empty" });
+        contenedor.appendChild(mensaje);
+    }
+    
+    return contenedor;
+}
+
+/**
+ * Extrae las tareas pendientes y en progreso de una página
+ * @param {Object} pagina - La página de la que extraer tareas
+ * @param {Object} dv - El objeto dataview
+ * @returns {Array} - Array de objetos con las tareas extraídas
+ */
+async extraerTareasDePagina(pagina, dv) {
+    try {
+        // Verificar que pagina.file existe
+        if (!pagina || !pagina.file || !pagina.file.path) {
+            console.warn("Página o archivo no válido:", pagina);
+            return [];
+        }
+        
+        // Obtener el contenido del archivo de manera segura
+        let contenido;
+        try {
+            // Primero intentamos con el método de Dataview si está disponible
+            if (dv && typeof dv.io !== 'undefined' && typeof dv.io.load === 'function') {
+                contenido = await dv.io.load(pagina.file.path);
+            } 
+            // Si no funciona, usamos el método de Obsidian
+            else {
+                const archivo = app.vault.getAbstractFileByPath(pagina.file.path);
+                if (archivo && archivo instanceof app.TFile) {
+                    contenido = await app.vault.read(archivo);
+                } else {
+                    throw new Error("No se pudo encontrar el archivo");
+                }
+            }
+        } catch (readError) {
+            console.warn(`No se pudo leer el archivo ${pagina.file.path}:`, readError);
+            return [];
+        }
+        
+        // Si no pudimos obtener el contenido, retornamos array vacío
+        if (!contenido) {
+            console.warn(`No se pudo obtener contenido para ${pagina.file.path}`);
+            return [];
+        }
+        
+        // Dividir el contenido en líneas
+        const lineas = contenido.split('\n');
+        
+        // Array para almacenar las tareas encontradas
+        const tareas = [];
+        
+        // Analizar cada línea buscando tareas
+        for (let i = 0; i < lineas.length; i++) {
+            const linea = lineas[i];
+            
+            // Expresión regular para detectar tareas pendientes (- [ ]) o en progreso (- [/])
+            const tareaRegex = /^(\s*)-\s*\[([ \/])\]\s*(.+)$/;
+            const coincidencia = tareaRegex.exec(linea);
+            
+            if (coincidencia) {
+                // Extraer las partes de la tarea
+                const indentacion = coincidencia[1];
+                const estado = coincidencia[2] === ' ' ? 'pendiente' : 'progreso';
+                const texto = coincidencia[3].trim();
+                
+                // Crear objeto para la tarea
+                const tarea = {
+                    texto,
+                    estado,
+                    indentacion: indentacion.length,
+                    lineaIndice: i,
+                    lineaOriginal: linea
+                };
+                
+                // Añadir la tarea al array
+                tareas.push(tarea);
+            }
+        }
+        
+        return tareas;
+    } catch (error) {
+        console.error(`Error al extraer tareas de ${pagina?.file?.path || 'página desconocida'}:`, error);
+        return []; // Retornar array vacío en caso de error
+    }
+}
+
+/**
+ * Crea el encabezado para una referencia con contador de tareas
+ * @param {Object} referencia - La referencia para la que crear el encabezado
+ * @param {Object} dv - El objeto dataview
+ * @param {Number} numTareas - Número de tareas en esta referencia
+ * @returns {HTMLElement} - Elemento HTML con el encabezado
+ */
+crearEncabezadoReferencia(referencia, dv, numTareas) {
+    // Crear contenedor para el encabezado
+    const header = dv.el("div", "", { cls: "tasks-ref-header" });
+    
+    // Añadir botón de expansión/colapso
+    const toggleBtn = dv.el("span", "▼", {
+        cls: "tasks-toggle-btn",
+        attr: { "data-state": "expanded", "title": "Colapsar/Expandir" }
+    });
+    
+    // Añadir handler para colapsar/expandir
+    toggleBtn.addEventListener("click", function(event) {
+        const currentState = this.getAttribute("data-state");
+        const newState = currentState === "expanded" ? "collapsed" : "expanded";
+        this.setAttribute("data-state", newState);
+        this.textContent = newState === "expanded" ? "▼" : "▶";
+        
+        // Obtener el contenedor de tareas asociado
+        const path = referencia.file.path;
+        const tareasContainer = document.querySelector(`.tasks-list-container[data-path="${path}"]`);
+        
+        if (tareasContainer) {
+            tareasContainer.style.display = newState === "expanded" ? "block" : "none";
+        }
+        
+        // Detener propagación para que no interfiera con otros clics
+        event.stopPropagation();
+    });
+    
+    // Añadir botón de expansión al encabezado
+    header.appendChild(toggleBtn);
+    
+    // Determinar el texto para mostrar
+    let nombreMostrado = referencia.file.aliases && referencia.file.aliases.length > 0
+        ? referencia.file.aliases[0]
+        : (referencia.titulo || referencia.file.name);
+        
+    // Tipo de la nota (si está disponible)
+    const tipo = referencia.typeName;
+    if (tipo) {
+        const tipoSpan = dv.el("span", `[${tipo}] `, { cls: "tasks-ref-type" });
+        header.appendChild(tipoSpan);
+    }
+    
+    // Crear el enlace a la nota
+    try {
+        const enlace = dv.el("a", nombreMostrado, {
+            attr: {
+                href: referencia.file.path,
+                "data-href": referencia.file.path,
+                class: "internal-link tasks-ref-link"
+            }
+        });
+        
+        // Asegurar que el enlace es clicable
+        enlace.addEventListener("click", (event) => {
+            // No detener propagación para permitir comportamiento normal del enlace
+            // Esto permite que el sistema de navegación de Obsidian maneje el click
+        });
+        
+        header.appendChild(enlace);
+    } catch (e) {
+        console.error("Error al crear enlace:", e);
+        const textoPlano = dv.el("span", nombreMostrado, { cls: "tasks-ref-name" });
+        header.appendChild(textoPlano);
+    }
+    
+    // Añadir contador de tareas
+    const contador = dv.el("span", `(${numTareas})`, { cls: "tasks-count" });
+    header.appendChild(contador);
+    
+    return header;
+}
+
+/**
+ * Agrega un conjunto de tareas a un contenedor DOM
+ * @param {Array} tareas - Array de objetos de tareas
+ * @param {HTMLElement} contenedor - Contenedor al que añadir las tareas
+ * @param {Object} dv - Objeto dataview
+ * @param {Object} pagina - Página a la que pertenecen las tareas
+ */
+agregarTareasAContenedor(tareas, contenedor, dv, pagina) {
+    if (!tareas || tareas.length === 0) return;
+    
+    // Crear lista para las tareas
+    const lista = dv.el("ul", "", { cls: "tasks-list" });
+    
+    // Añadir cada tarea como ítem de lista
+    for (const tarea of tareas) {
+        const item = dv.el("li", "", { 
+            cls: `tasks-item tasks-${tarea.estado}`,
+            attr: { "data-linea": tarea.lineaIndice }
+        });
+        
+        // Crear el indicador de estado (checkbox)
+        const checkbox = dv.el("span", 
+            tarea.estado === 'pendiente' ? "☐" : "◔", 
+            { cls: `tasks-checkbox tasks-checkbox-${tarea.estado}` }
+        );
+        
+        // Añadir listener al checkbox para navegar a la tarea
+        checkbox.addEventListener("click", () => {
+            this.navegarATarea(pagina.file.path, tarea.lineaIndice);
+        });
+        
+        // Crear contenedor para el texto de la tarea
+        const textoSpan = dv.el("span", tarea.texto, { cls: "tasks-text" });
+        
+        // Añadir listener al texto para navegar a la tarea
+        textoSpan.addEventListener("click", () => {
+            this.navegarATarea(pagina.file.path, tarea.lineaIndice);
+        });
+        
+        // Añadir los elementos al ítem
+        item.appendChild(checkbox);
+        item.appendChild(textoSpan);
+        
+        // Añadir el ítem a la lista
+        lista.appendChild(item);
+    }
+    
+    // Añadir la lista al contenedor
+    contenedor.appendChild(lista);
+}
+
+/**
+ * Navega a una tarea específica en una nota
+ * @param {string} path - Ruta de la nota
+ * @param {number} linea - Número de línea de la tarea
+ */
+navegarATarea(path, linea) {
+    if (!path) {
+        console.error("No se proporcionó una ruta de archivo válida");
+        return;
+    }
+    
+    // Navegar a la nota y posicionar en la línea de la tarea
+    try {
+        // Obtener el archivo
+        const archivo = app.vault.getAbstractFileByPath(path);
+        
+        if (!archivo) {
+            console.warn(`No se encontró el archivo: ${path}`);
+            return;
+        }
+        
+        // Verificar si podemos usar eState para posicionarse en una línea específica
+        const canUseEState = typeof app.workspace.openLinkText === 'function';
+        
+        if (canUseEState) {
+            // Esta es la forma más moderna de abrir archivos en Obsidian
+            app.workspace.openLinkText(path, "", false, {
+                eState: { line: linea }
+            });
+        } else {
+            // Alternativa: abrir el archivo y luego intentar ir a la línea
+            const leaf = app.workspace.getLeaf(false);
+            leaf.openFile(archivo).then(() => {
+                // Intentar posicionar en la línea después de que se abra el archivo
+                setTimeout(() => {
+                    if (leaf.view && leaf.view.editor) {
+                        const editor = leaf.view.editor;
+                        editor.setCursor({ line: linea, ch: 0 });
+                        editor.scrollIntoView({ from: { line: linea, ch: 0 }, to: { line: linea, ch: 0 } }, true);
+                    }
+                }, 100);
+            });
+        }
+    } catch (e) {
+        console.error("Error al navegar a la tarea:", e);
+        
+        // Fallback más robusto - mostrar mensaje al usuario
+        try {
+            // Intentar abrir el archivo sin posicionarse en una línea específica
+            const archivo = app.vault.getAbstractFileByPath(path);
+            if (archivo) {
+                app.workspace.getLeaf(false).openFile(archivo);
+            } else {
+                new Notice("No se pudo encontrar el archivo: " + path);
+            }
+        } catch (err) {
+            console.error("Error en el fallback de navegación:", err);
+            new Notice("Error al abrir el archivo: " + err.message);
+        }
+    }
+}
 
   }

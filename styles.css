@@ -917,3 +917,368 @@
   color: var(--text-normal);
 }
 
+/* -----  Generar Arbol de tareas ---- */
+/* -----                          ---- */
+
+/* Contenedor principal del árbol de tareas */
+.tasks-tree {
+  margin: 1rem 0;
+  padding: 1rem;
+  background-color: var(--background-secondary);
+  border-radius: 8px;
+  border-left: 4px solid var(--interactive-accent);
+  font-size: 0.92em;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  width: 100%;
+  box-sizing: border-box;
+  animation: fade-in 0.3s ease-in-out;
+}
+
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Título del árbol */
+.tasks-tree-title {
+  margin-top: 0;
+  margin-bottom: 1rem;
+  color: var(--text-normal);
+  font-size: 1.4em;
+  font-weight: 600;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--background-modifier-border);
+  text-align: center;
+}
+
+/* Mensaje cuando no hay tareas */
+.tasks-tree-empty {
+  color: var(--text-muted);
+  font-style: italic;
+  text-align: center;
+  padding: 1rem;
+  background-color: var(--background-primary);
+  border-radius: 6px;
+  margin: 1rem 0;
+}
+
+/* Mensaje de error */
+.tasks-tree-error {
+  color: var(--text-error);
+  font-style: italic;
+  margin: 0.5rem 0;
+  padding: 0.5rem;
+  border-left: 2px solid var(--text-error);
+  background-color: var(--background-modifier-error);
+  border-radius: 4px;
+}
+
+/* Sección de tareas de la nota actual */
+.tasks-node-current {
+  margin-bottom: 1.5rem;
+  border-radius: 6px;
+  background-color: var(--background-primary);
+  padding: 0.8rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+/* Encabezado para tareas directas */
+.tasks-node-header {
+  font-weight: bold;
+  color: var(--text-normal);
+  margin-bottom: 0.5rem;
+  font-size: 1.1em;
+  border-bottom: 1px solid var(--background-modifier-border);
+  padding-bottom: 0.3rem;
+}
+
+/* Contenedor para las referencias */
+.tasks-refs-container {
+  margin-top: 1rem;
+}
+
+/* Encabezado para referencias */
+.tasks-refs-header {
+  font-weight: bold;
+  color: var(--text-normal);
+  margin-bottom: 0.5rem;
+  font-size: 1.1em;
+  border-bottom: 1px solid var(--background-modifier-border);
+  padding-bottom: 0.3rem;
+}
+
+/* Lista de referencias */
+.tasks-refs-list {
+  margin: 0.5rem 0;
+  padding-left: 0.5rem;
+  list-style-type: none;
+}
+
+/* Elemento de referencia */
+.tasks-ref-item {
+  margin: 0.8rem 0;
+  padding: 0;
+  position: relative;
+  border-radius: 6px;
+  background-color: var(--background-primary);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+  transition: all 0.2s ease;
+}
+
+.tasks-ref-item:hover {
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+  transform: translateY(-1px);
+}
+
+/* Encabezado de referencia */
+.tasks-ref-header {
+  padding: 0.7rem;
+  background-color: var(--background-primary-alt);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.tasks-ref-header:hover {
+  background-color: var(--background-modifier-hover);
+}
+
+/* Tipo de nota en una referencia */
+.tasks-ref-type {
+  color: var(--text-muted);
+  font-size: 0.9em;
+  font-style: italic;
+}
+
+/* Enlace en encabezado de referencia */
+.tasks-ref-link {
+  color: var(--text-normal);
+  text-decoration: none;
+  font-weight: 500;
+  flex-grow: 1;
+}
+
+.tasks-ref-link:hover {
+  color: var(--text-accent);
+  text-decoration: underline;
+}
+
+/* Contador de tareas */
+.tasks-count {
+  background-color: var(--interactive-accent);
+  color: white;
+  border-radius: 10px;
+  padding: 0.1rem 0.5rem;
+  font-size: 0.8em;
+  font-weight: bold;
+  display: inline-block;
+  min-width: 1rem;
+  text-align: center;
+}
+
+/* Contenedor de subreferencias */
+.tasks-subrefs-container {
+  margin-left: 1.5rem;
+  padding-left: 1rem;
+  border-left: 1px dashed var(--background-modifier-border);
+}
+
+/* Contenedor lista de tareas */
+.tasks-list-container {
+  padding: 0.7rem;
+}
+
+/* Lista de tareas */
+.tasks-list {
+  margin: 0;
+  padding-left: 0.3rem;
+  list-style-type: none;
+}
+
+/* Elemento de tarea */
+.tasks-item {
+  padding: 0.35rem 0.3rem;
+  margin: 0.25rem 0;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  border-radius: 4px;
+  transition: background-color 0.2s ease;
+  cursor: pointer;
+}
+
+.tasks-item:hover {
+  background-color: var(--background-modifier-hover);
+}
+
+/* Checkbox personalizado */
+.tasks-checkbox {
+  font-size: 1.2em;
+  display: inline-flex;
+  width: 1.2em;
+  height: 1.2em;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+/* Estilos específicos según estado de tarea */
+.tasks-pendiente {
+  color: var(--text-normal);
+}
+
+.tasks-progreso {
+  color: var(--text-accent);
+}
+
+.tasks-checkbox-pendiente {
+  color: var(--text-muted);
+}
+
+.tasks-checkbox-progreso {
+  color: var(--text-accent);
+}
+
+/* Texto de la tarea */
+.tasks-text {
+  flex-grow: 1;
+  line-height: 1.4;
+}
+
+/* Botón para colapsar/expandir */
+.tasks-toggle-btn {
+  cursor: pointer;
+  font-size: 0.8em;
+  width: 1.2em;
+  height: 1.2em;
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  transition: transform 0.2s ease;
+  user-select: none;
+}
+
+.tasks-toggle-btn[data-state="collapsed"] {
+  transform: rotate(-90deg);
+}
+
+/* Estados de botón de colapso */
+.tasks-toggle-btn:hover {
+  color: var(--text-accent);
+}
+
+/* Tema oscuro - Personalización específica */
+.theme-dark .tasks-tree {
+  background-color: var(--background-secondary-alt);
+}
+
+.theme-dark .tasks-node-current,
+.theme-dark .tasks-ref-item {
+  background-color: var(--background-secondary);
+}
+
+.theme-dark .tasks-ref-header {
+  background-color: rgba(0, 0, 0, 0.15);
+}
+
+/* Animación para tareas */
+@keyframes highlight-task {
+  0% { background-color: var(--interactive-accent-hover); }
+  100% { background-color: transparent; }
+}
+
+.tasks-item.highlight {
+  animation: highlight-task 1.5s ease-out forwards;
+}
+
+/* Estilos para pantallas más pequeñas */
+@media (max-width: 768px) {
+  .tasks-tree {
+    padding: 0.75rem;
+    font-size: 0.9em;
+  }
+  
+  .tasks-tree-title {
+    font-size: 1.2em;
+  }
+  
+  .tasks-ref-header {
+    padding: 0.5rem;
+  }
+  
+  .tasks-list-container {
+    padding: 0.5rem;
+  }
+}
+
+/* Estilos para el efecto de carga */
+.tasks-loading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 3rem;
+  width: 100%;
+}
+
+.tasks-loading-spinner {
+  width: 20px;
+  height: 20px;
+  border: 2px solid var(--background-modifier-border);
+  border-top-color: var(--interactive-accent);
+  border-radius: 50%;
+  animation: spinner 0.8s linear infinite;
+}
+
+@keyframes spinner {
+  to { transform: rotate(360deg); }
+}
+
+/* Botón "Ver más" para tareas */
+.tasks-see-more {
+  display: block;
+  text-align: center;
+  margin-top: 0.5rem;
+  padding: 0.3rem;
+  background-color: var(--background-secondary-alt);
+  border-radius: 4px;
+  cursor: pointer;
+  color: var(--text-accent);
+  font-size: 0.85em;
+}
+
+.tasks-see-more:hover {
+  background-color: var(--background-modifier-hover);
+}
+
+/* Paginación para tareas */
+.tasks-pagination {
+  display: flex;
+  justify-content: center;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.tasks-page-btn {
+  width: 2rem;
+  height: 2rem;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-color: var(--background-primary);
+  border-radius: 4px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.tasks-page-btn:hover {
+  background-color: var(--background-modifier-hover);
+}
+
+.tasks-page-btn.active {
+  background-color: var(--interactive-accent);
+  color: white;
+}
