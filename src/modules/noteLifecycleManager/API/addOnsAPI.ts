@@ -1060,7 +1060,8 @@ async generarArbolTareas(paginaActual, dv, profundidadMaxima = 3, visitadas = ne
     console.log(`Procesando tareas de: ${paginaActual.file.path} (profundidad: ${profundidadActual}, esReferenciaNidada: ${esReferenciaNidada})`);
     
     // Crear el contenedor principal
-    const contenedor = dv.el("div", "", { cls: "tasks-tree" });
+    const contenedor = document.createElement("div");
+    contenedor.className = "tasks-tree";
     
     if (profundidadActual === 0) {
         // Añadir título personalizado solo en la raíz
@@ -1069,8 +1070,11 @@ async generarArbolTareas(paginaActual, dv, profundidadMaxima = 3, visitadas = ne
             ? paginaActual.file.aliases[0] 
             : (paginaActual.titulo || paginaActual.file.name);
             
-        const titulo = dv.el("h3", `Tareas pendientes de ${tipoNota} "${alias}"`, { cls: "tasks-tree-title" });
-        contenedor.appendChild(titulo);
+            const titulo = document.createElement("h3");
+            titulo.className = "tasks-tree-title";
+            titulo.textContent = "Tareas pendientes";
+            contenedor.appendChild(titulo);
+     
     }
     
     // Si hemos llegado a la profundidad máxima, no seguimos explorando
@@ -1264,12 +1268,12 @@ async generarArbolTareas(paginaActual, dv, profundidadMaxima = 3, visitadas = ne
             const headerRef = this.crearEncabezadoReferencia(referencia, dv, tareas.length);
             itemRef.appendChild(headerRef);
             
+           
             // Crear contenedor colapsable para las tareas
-            const tareasContainer = dv.el("div", "", { 
-                cls: "tasks-list-container",
-                attr: { "data-path": referencia.file.path }
-            });
-            
+            const tareasContainer = document.createElement("div");
+            tareasContainer.className = "tasks-container";
+            // Añade un atributo de datos para identificar a qué nota pertenece este contenedor
+            tareasContainer.setAttribute("data-path", referencia.file.path);
             // Agregar las tareas de esta referencia
             this.agregarTareasAContenedor(tareas, tareasContainer, dv, referencia);
             
@@ -1419,14 +1423,16 @@ async extraerTareasDePagina(pagina, dv) {
  * @returns {HTMLElement} - Elemento HTML con el encabezado
  */
 crearEncabezadoReferencia(referencia, dv, numTareas) {
-    // Crear contenedor para el encabezado
-    const header = dv.el("div", "", { cls: "tasks-ref-header" });
-    
+  
+    const header = document.createElement("div");
+    header.className = "tasks-ref-header";
+
     // Añadir botón de expansión/colapso
-    const toggleBtn = dv.el("span", "▼", {
-        cls: "tasks-toggle-btn",
-        attr: { "data-state": "expanded", "title": "Colapsar/Expandir" }
-    });
+    const toggleBtn = document.createElement("span");
+    toggleBtn.textContent = "▼";
+    toggleBtn.className = "tasks-toggle-btn";
+    toggleBtn.setAttribute("data-state", "expanded");
+    toggleBtn.setAttribute("title", "Colapsar/Expandir");
     
     // Añadir handler para colapsar/expandir
     toggleBtn.addEventListener("click", function(event) {
@@ -1435,12 +1441,16 @@ crearEncabezadoReferencia(referencia, dv, numTareas) {
         this.setAttribute("data-state", newState);
         this.textContent = newState === "expanded" ? "▼" : "▶";
         
-        // Obtener el contenedor de tareas asociado
-        const path = referencia.file.path;
-        const tareasContainer = document.querySelector(`.tasks-list-container[data-path="${path}"]`);
-        
-        if (tareasContainer) {
-            tareasContainer.style.display = newState === "expanded" ? "block" : "none";
+        // Obtener el contenedor de tareas asociado - buscar el elemento hermano que sigue al padre de este botón
+        // El botón está dentro del header, y queremos encontrar el contenedor de tareas que es hermano del header
+        const headerElement = this.closest(".tasks-ref-header");
+        if (headerElement && headerElement.parentNode) {
+            // Buscar el contenedor de tareas que es hijo directo del mismo padre que el header
+            const tareasContainers = headerElement.parentNode.querySelectorAll(".tasks-container");
+            if (tareasContainers.length > 0) {
+                const tareasContainer = tareasContainers[0]; // El primer .tasks-container encontrado
+                tareasContainer.style.display = newState === "expanded" ? "block" : "none";
+            }
         }
         
         // Detener propagación para que no interfiera con otros clics
