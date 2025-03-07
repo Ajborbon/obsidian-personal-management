@@ -476,44 +476,60 @@ export class NoteFieldHandler implements NoteFieldHandler {
         return this.nota.aliases;
     }
 
-    async getRename(): Promise<string> {
-        debugger;
-        const newName = `${this.infoSubsistema.folder}/${this.infoSubsistema.type} - ${this.nota.id}.md`;
-        await FieldHandlerUtils.crearCarpeta(this.infoSubsistema.folder);
+// Actualización del método getRename en NoteFieldHandlerBase.ts
+// (Este es el método que se utilizará en la mayoría de las clases de manejo de notas)
 
-        const file = this.tp.file.config.target_file;
-        const existe = app.vault.getAbstractFileByPath(newName);
-
-        try {
-            if (existe instanceof TFile) {
-                const nombreFile = newName.split("/");
-                const borrar = await this.suggester(
-                    ["Sobreescribir Archivo Actual", "Detener creación del archivo."],
-                    [true, false],
-                    true,
-                    `¿${nombreFile.pop()} ya existe. Qué deseas hacer?`
-                );
-                if (borrar) {
-                    await app.vault.delete(existe);
-                    if (file instanceof TFile) {
-                        await app.vault.rename(file, newName);
-                        console.log("Archivo renombrado con éxito.");
-                        return newName;
-                    }
-                } else {
-                    console.log("Cancelando la creación del archivo.");
-                    throw new Error("Proceso cancelado por el usuario.");
-                }
-            } else {
-                if (file instanceof TFile) {
-                    await app.vault.rename(file, newName);
-                    console.log("Archivo renombrado con éxito.");
-                    return newName;
-                }
+async getRename(): Promise<string> {
+    const newName = `${this.infoSubsistema.folder}/${this.infoSubsistema.type} - ${this.nota.id}.md`;
+    await FieldHandlerUtils.crearCarpeta(this.infoSubsistema.folder);
+  
+    const file = this.tp.file.config.target_file;
+    const existe = app.vault.getAbstractFileByPath(newName);
+  
+    try {
+      if (existe instanceof TFile) {
+        const nombreFile = newName.split("/");
+        const borrar = await this.suggester(
+          ["Sobreescribir Archivo Actual", "Detener creación del archivo."],
+          [true, false],
+          true,
+          `¿${nombreFile.pop()} ya existe. Qué deseas hacer?`
+        );
+        if (borrar) {
+          await app.vault.delete(existe);
+          if (file instanceof TFile) {
+            await app.vault.rename(file, newName);
+            console.log("Archivo renombrado con éxito.");
+            
+            // NUEVA FUNCIONALIDAD: Abrir el archivo renombrado en una nueva pestaña
+            const nuevoArchivo = app.vault.getAbstractFileByPath(newName);
+            if (nuevoArchivo instanceof TFile) {
+              await app.workspace.getLeaf(true).openFile(nuevoArchivo);
             }
-        } catch (error) {
-            console.error("Error al cambiar el nombre", error);
-            throw error;
+            
+            return newName;
+          }
+        } else {
+          console.log("Cancelando la creación del archivo.");
+          throw new Error("Proceso cancelado por el usuario."); // Lanzamos una excepción para detener la creación
         }
+      } else {
+        if (file instanceof TFile) {
+          await app.vault.rename(file, newName);
+          console.log("Archivo renombrado con éxito.");
+          
+          // NUEVA FUNCIONALIDAD: Abrir el archivo renombrado en una nueva pestaña
+          const nuevoArchivo = app.vault.getAbstractFileByPath(newName);
+          if (nuevoArchivo instanceof TFile) {
+            await app.workspace.getLeaf(true).openFile(nuevoArchivo);
+          }
+          
+          return newName;
+        }
+      }
+    } catch (error) {
+      console.error("Error al cambiar el nombre", error);
+      throw error; // Lanzamos la excepción para detener la creación
     }
+  }
 }
