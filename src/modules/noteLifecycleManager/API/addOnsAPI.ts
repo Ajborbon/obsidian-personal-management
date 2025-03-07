@@ -347,25 +347,25 @@ generarArbolReferencias(paginaActual, dv, profundidadMaxima = 3, visitadas = new
                 nombreMostrado = referencia.file.name || "Sin nombre";
             }
             
-           // CORRECCIÓN AQUÍ - Mejor manejo de enlaces
-           const enlace = document.createElement("a");
-           enlace.textContent = nombreMostrado;
-           enlace.className = "internal-link";
-           
-           // En lugar de construir una URL obsidian://, usamos data-href para almacenar la ruta del archivo
-           enlace.setAttribute("data-href", referencia.file.path);
-           
-           // Usamos la API de Obsidian para manejar el clic y la apertura del archivo
-           enlace.addEventListener("click", (event) => {
-               event.preventDefault();
-               const path = event.target.getAttribute("data-href");
-               if (path) {
-                   // Esta es la forma correcta de abrir un archivo en Obsidian
-                   app.workspace.openLinkText(path, "", false);
-               }
-           });
-           
-           itemContainer.appendChild(enlace);
+           // CORRECCIÓN AQUÍ - Manejo de enlaces para abrir en nueva pestaña
+            const enlace = document.createElement("a");
+            enlace.textContent = nombreMostrado;
+            enlace.className = "internal-link";
+
+            // En lugar de construir una URL obsidian://, usamos data-href para almacenar la ruta del archivo
+            enlace.setAttribute("data-href", referencia.file.path);
+
+            // Usamos la API de Obsidian para manejar el clic y la apertura del archivo en nueva pestaña
+            enlace.addEventListener("click", (event) => {
+                event.preventDefault();
+                const path = event.target.getAttribute("data-href");
+                if (path) {
+                    // Modificación: el tercer parámetro en 'true' le indica a Obsidian que abra en una nueva hoja
+                    app.workspace.openLinkText(path, "", true);
+                }
+            });
+
+            itemContainer.appendChild(enlace);
             
             // Intentar obtener recursivamente referencias a esta referencia
             try {
@@ -2126,6 +2126,183 @@ crearTablaNotasVinculadas(notas) {
         errorElement.textContent = "Error al generar tabla: " + error.message;
         errorElement.style.color = "red";
         return errorElement;
+    }
+}
+
+//--- Selector de Estado
+
+/**
+ * Genera un selector visual de estado para la nota
+ * @param params Objeto con parámetros como notaActualPath y estadoActual 
+ * @returns Elemento DOM con el selector de estado
+ */
+async generarSelectorEstado(params) {
+    try {
+        // Extraer parámetros
+        const { notaActualPath, estadoActual } = params;
+        
+        if (!notaActualPath) {
+            console.error("No se proporcionó la ruta de la nota actual");
+            return null;
+        }
+        
+        // Obtener el archivo actual
+        const currentFile = app.vault.getAbstractFileByPath(notaActualPath);
+        if (!currentFile) {
+            console.error("No se pudo encontrar el archivo actual:", notaActualPath);
+            return null;
+        }
+        
+        // Configuración para los estados
+        const estados = [
+            { emoji: "🟢", label: "Avanzando", color: "#4caf50" },
+            { emoji: "🟡", label: "En Pausa", color: "#ffc107" },
+            { emoji: "🔴", label: "Detenida", color: "#f44336" },
+            { emoji: "🔵", label: "Archivada", color: "#2196f3" }
+        ];
+        
+        // Determinar el estado actual de la nota
+        const estadoInicial = estadoActual || "🟡"; // Valor por defecto
+        
+        // Crear el componente principal
+        const container = document.createElement("div");
+        container.className = "estado-selector-container";
+        container.style.display = "flex";
+        container.style.alignItems = "center";
+        container.style.gap = "10px";
+        container.style.maxWidth = "500px";
+        container.style.margin = "0 auto";
+        container.style.padding = "8px";
+        container.style.borderRadius = "4px";
+        container.style.backgroundColor = "var(--background-secondary-alt)";
+        
+        // Etiqueta "Estado:"
+        const labelEl = document.createElement("span");
+        labelEl.className = "estado-label";
+        labelEl.textContent = "Estado:";
+        labelEl.style.fontWeight = "500";
+        labelEl.style.fontSize = "0.9em";
+        container.appendChild(labelEl);
+        
+        // Crear contenedor para los botones
+        const optionsContainer = document.createElement("div");
+        optionsContainer.className = "estado-options";
+        optionsContainer.style.display = "flex";
+        optionsContainer.style.gap = "6px";
+        optionsContainer.style.flex = "1";
+        container.appendChild(optionsContainer);
+        
+        // Indicador del estado actual (aparece a la derecha)
+        const currentStateIndicator = document.createElement("div");
+        currentStateIndicator.className = "current-state-indicator";
+        currentStateIndicator.style.display = "flex";
+        currentStateIndicator.style.alignItems = "center";
+        currentStateIndicator.style.marginLeft = "8px";
+        currentStateIndicator.style.fontSize = "0.85em";
+        currentStateIndicator.style.opacity = "0.8";
+        currentStateIndicator.style.whiteSpace = "nowrap";
+        
+        const estadoInfo = estados.find(e => e.emoji === estadoInicial) || estados[0];
+        currentStateIndicator.textContent = estadoInfo.label;
+        container.appendChild(currentStateIndicator);
+        
+        // Función para actualizar el estado usando la API nativa de Obsidian
+        const updateState = async (newState) => {
+            try {
+                // Utilizar la API de Obsidian para modificar el frontmatter
+                await app.fileManager.processFrontMatter(currentFile, frontmatter => {
+                    frontmatter.estado = newState;
+                });
+                
+                // Actualizar la visualización del estado actual
+                const newEstadoInfo = estados.find(e => e.emoji === newState);
+                currentStateIndicator.textContent = newEstadoInfo.label;
+                
+                // Actualizar estilos de botones
+                optionsContainer.querySelectorAll("button").forEach(btn => {
+                    const btnEstado = btn.getAttribute("data-estado");
+                    const estadoData = estados.find(e => e.emoji === btnEstado);
+                    
+                    if (btnEstado === newState) {
+                        btn.style.backgroundColor = estadoData.color;
+                        btn.style.color = "white";
+                        btn.style.transform = "scale(1.1)";
+                        btn.style.boxShadow = "0 2px 4px rgba(0,0,0,0.2)";
+                    } else {
+                        btn.style.backgroundColor = `${estadoData.color}22`;
+                        btn.style.color = estadoData.color;
+                        btn.style.transform = "none";
+                        btn.style.boxShadow = "none";
+                    }
+                });
+                
+                // Mostrar notificación de éxito
+                new Notice(`Estado cambiado a ${newEstadoInfo.label}`);
+            } catch (error) {
+                console.error("Error al actualizar el estado:", error);
+                new Notice("Error al actualizar el estado. Consulta la consola para más detalles.");
+            }
+        };
+        
+        // Crear botones para cada estado
+        estados.forEach(estado => {
+            const boton = document.createElement("button");
+            boton.className = "estado-btn";
+            boton.setAttribute("data-estado", estado.emoji);
+            boton.setAttribute("title", estado.label);
+            boton.style.flex = "1";
+            boton.style.border = "none";
+            boton.style.borderRadius = "4px";
+            boton.style.padding = "6px 0";
+            boton.style.cursor = "pointer";
+            boton.style.transition = "all 0.2s ease";
+            boton.style.display = "flex";
+            boton.style.alignItems = "center";
+            boton.style.justifyContent = "center";
+            
+            // Establecer color según estado actual
+            if (estadoInicial === estado.emoji) {
+                boton.style.backgroundColor = estado.color;
+                boton.style.color = "white";
+                boton.style.transform = "scale(1.1)";
+                boton.style.boxShadow = "0 2px 4px rgba(0,0,0,0.2)";
+            } else {
+                boton.style.backgroundColor = `${estado.color}22`;
+                boton.style.color = estado.color;
+            }
+            
+            const emojiSpan = document.createElement("span");
+            emojiSpan.textContent = estado.emoji;
+            emojiSpan.style.fontSize = "18px";
+            boton.appendChild(emojiSpan);
+            
+            // Eventos de ratón
+            boton.addEventListener("mouseover", () => {
+                if (estadoInicial !== estado.emoji) {
+                    boton.style.backgroundColor = `${estado.color}44`;
+                    boton.style.transform = "translateY(-2px)";
+                }
+            });
+            
+            boton.addEventListener("mouseout", () => {
+                if (estadoInicial !== estado.emoji) {
+                    boton.style.backgroundColor = `${estado.color}22`;
+                    boton.style.transform = "none";
+                }
+            });
+            
+            // Evento de clic
+            boton.addEventListener("click", () => {
+                updateState(estado.emoji);
+            });
+            
+            optionsContainer.appendChild(boton);
+        });
+        
+        return container;
+    } catch (error) {
+        console.error("Error en generarSelectorEstado:", error);
+        return null;
     }
 }
 
