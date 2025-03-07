@@ -206,6 +206,7 @@ generarTextoRelaciones(pagina, dv) {
  * @param profundidadActual Profundidad actual de recursión
  * @returns Elemento HTML con la estructura de árbol
  */
+
 generarArbolReferencias(paginaActual, dv, profundidadMaxima = 3, visitadas = new Set(), profundidadActual = 0) {
     // Validar que paginaActual tenga las propiedades necesarias
     if (!paginaActual || !paginaActual.file) {
@@ -310,6 +311,9 @@ generarArbolReferencias(paginaActual, dv, profundidadMaxima = 3, visitadas = new
         return contenedor;
     }
     
+    // NUEVO: Ordenar las referencias según los criterios especificados
+    referenciasDirectas = this.ordenarReferencias(referenciasDirectas);
+    
     // Crear lista para mostrar referencias
     const lista = document.createElement("ul");
     lista.className = `backlinks-tree-level-${profundidadActual}`;
@@ -337,6 +341,16 @@ generarArbolReferencias(paginaActual, dv, profundidadMaxima = 3, visitadas = new
             tipoEl.textContent = `[${tipo}] `;
             itemContainer.appendChild(tipoEl);
             
+            // Añadir el estado entre el tipo y el enlace
+            const estado = referencia.estado || "";
+            if (estado) {
+                const estadoEl = document.createElement("span");
+                estadoEl.className = "backlinks-tree-estado";
+                estadoEl.textContent = `${estado} `;
+                estadoEl.style.marginRight = "4px";
+                itemContainer.appendChild(estadoEl);
+            }
+            
             // Determinar el texto para mostrar en el enlace
             let nombreMostrado = "";
             try {
@@ -347,7 +361,7 @@ generarArbolReferencias(paginaActual, dv, profundidadMaxima = 3, visitadas = new
                 nombreMostrado = referencia.file.name || "Sin nombre";
             }
             
-           // CORRECCIÓN AQUÍ - Manejo de enlaces para abrir en nueva pestaña
+           // Manejo de enlaces para abrir en nueva pestaña
             const enlace = document.createElement("a");
             enlace.textContent = nombreMostrado;
             enlace.className = "internal-link";
@@ -360,7 +374,7 @@ generarArbolReferencias(paginaActual, dv, profundidadMaxima = 3, visitadas = new
                 event.preventDefault();
                 const path = event.target.getAttribute("data-href");
                 if (path) {
-                    // Modificación: el tercer parámetro en 'true' le indica a Obsidian que abra en una nueva hoja
+                    // El tercer parámetro en 'true' le indica a Obsidian que abra en una nueva hoja
                     app.workspace.openLinkText(path, "", true);
                 }
             });
@@ -456,6 +470,71 @@ generarArbolReferencias(paginaActual, dv, profundidadMaxima = 3, visitadas = new
     }
     
     return contenedor;
+}
+
+/**
+ * Ordena un array de referencias según tres criterios jerárquicos:
+ * 1. Por tipo de nota (typeName)
+ * 2. Por estado (sin estado → 🟢 → 🟡 → 🔴 → 🔵)
+ * 3. Por fecha de creación (más reciente primero)
+ * 
+ * @param {Array} referencias - Array de referencias a ordenar
+ * @returns {Array} - Array ordenado de referencias
+ */
+ordenarReferencias(referencias) {
+    // Función para obtener el peso del estado para ordenamiento
+    const pesoEstado = (estado) => {
+        if (!estado) return 0; // Sin estado (primero)
+        switch (estado) {
+            case '🟢': return 1;
+            case '🟡': return 2;
+            case '🔴': return 3;
+            case '🔵': return 4;
+            default: return 5; // Cualquier otro estado
+        }
+    };
+    
+    // Ordenar referencias por los tres criterios
+    return [...referencias].sort((a, b) => {
+        // 1. Ordenar por typeName (tipo de nota)
+        const tipoA = a.typeName || '';
+        const tipoB = b.typeName || '';
+        if (tipoA !== tipoB) {
+            return tipoA.localeCompare(tipoB);
+        }
+        
+        // 2. Ordenar por estado
+        const estadoA = pesoEstado(a.estado);
+        const estadoB = pesoEstado(b.estado);
+        if (estadoA !== estadoB) {
+            return estadoA - estadoB;
+        }
+        
+        // 3. Ordenar por fecha de creación (más reciente primero)
+        // Intentar obtener fecha de creación del file.ctime (timestamp de creación)
+        let fechaA = a.file && a.file.ctime ? a.file.ctime : 0;
+        let fechaB = b.file && b.file.ctime ? b.file.ctime : 0;
+        
+        // Si no hay ctime, intenta obtener la fecha del frontmatter
+        if (!fechaA && a.fecha) {
+            try {
+                fechaA = new Date(a.fecha).getTime();
+            } catch (e) {
+                fechaA = 0;
+            }
+        }
+        
+        if (!fechaB && b.fecha) {
+            try {
+                fechaB = new Date(b.fecha).getTime();
+            } catch (e) {
+                fechaB = 0;
+            }
+        }
+        
+        // Ordenar descendente (más reciente primero)
+        return fechaB - fechaA;
+    });
 }
 
 
@@ -1253,7 +1332,7 @@ async generarArbolTareas(paginaActual, dv, profundidadMaxima = 3, visitadas = ne
         errorMsg.textContent = "Error al procesar referencias";
         errorMsg.className = "tasks-tree-error";
         contenedor.appendChild(errorMsg);
-        
+
         // Aún así, mostramos las tareas de la página actual si las hay
         if (tareas.length > 0) {
             this.agregarTareasAContenedor(tareas, contenedor, dv, paginaActual);
@@ -1589,6 +1668,16 @@ crearEncabezadoReferencia(referencia, dv, numTareas) {
         header.appendChild(tipoSpan);
     }
     
+    // Añadir el emoji de estado si existe
+    if (referencia.estado) {
+        const estadoEl = document.createElement("span");
+        estadoEl.className = "tasks-ref-state";
+        estadoEl.textContent = `${referencia.estado} `;
+        estadoEl.style.marginRight = "5px";
+        header.appendChild(estadoEl);
+    }
+
+
     // Crear el enlace a la nota
     try {
         const enlace = document.createElement("a");

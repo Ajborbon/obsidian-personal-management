@@ -1329,3 +1329,22 @@
 .backlinks-tree-item::before {
   display: none;
 }
+
+/* DE LA MODIFICACION DE MOSTRAR LOS ESTADOS EN EL ARBOL DE NOTAS */
+/* Tipo de nota */
+.backlinks-tree-type {
+  color: var(--text-faint);
+  font-style: italic;
+  margin-right: 5px;
+}
+
+/* Estado en el árbol de referencias */
+.backlinks-tree-estado {
+  font-weight: bold;
+  margin-right: 5px;
+}
+
+/* Colores específicos para cada estado */
+.backlinks-tree-container .backlinks-tree-estado {
+  vertical-align: middle;
+}
