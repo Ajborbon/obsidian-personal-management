@@ -1282,3 +1282,50 @@
   background-color: var(--interactive-accent);
   color: white;
 }
+
+/* Backlink tree con toggle --- */
+
+/* Estilos para elementos toggle en el árbol de referencias */
+.backlinks-tree-toggle {
+  display: inline-block;
+  margin-right: 5px;
+  cursor: pointer;
+  font-family: monospace;
+  font-size: 0.9em;
+  width: 16px;
+  height: 16px;
+  text-align: center;
+  line-height: 16px;
+  transition: transform 0.2s ease;
+  color: var(--text-muted);
+}
+
+.backlinks-tree-toggle.open {
+  transform: rotate(0deg);
+}
+
+.backlinks-tree-toggle:hover {
+  color: var(--text-normal);
+}
+
+.backlinks-tree-item-container {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+}
+
+.backlinks-tree-subcontainer {
+  margin-left: 16px;
+  padding-left: 5px;
+  border-left: 1px dashed var(--text-muted);
+}
+
+/* Ajustar el espaciado vertical entre elementos */
+.backlinks-tree-item {
+  margin: 4px 0;
+}
+
+/* Eliminar el pseudo-elemento que creaba la línea horizontal */
+.backlinks-tree-item::before {
+  display: none;
+}

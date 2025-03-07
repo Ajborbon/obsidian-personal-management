@@ -198,7 +198,7 @@ generarTextoRelaciones(pagina, dv) {
 
 
 /**
- * Genera un árbol de referencias a la nota actual de forma recursiva
+ * Genera un árbol de referencias a la nota actual de forma recursiva con elementos toggle
  * @param paginaActual La página actual
  * @param dv Objeto dataview para acceder a sus funciones
  * @param profundidadMaxima Profundidad máxima de recursión (defecto: 3)
@@ -214,7 +214,8 @@ generarArbolReferencias(paginaActual, dv, profundidadMaxima = 3, visitadas = new
     }
     
     // Crear el contenedor principal
-    const contenedor = dv.el("div", "", { cls: "backlinks-tree" });
+    const contenedor = document.createElement("div");
+    contenedor.className = "backlinks-tree";
     
     if (profundidadActual === 0) {
         // Añadir título personalizado solo en la raíz
@@ -223,7 +224,9 @@ generarArbolReferencias(paginaActual, dv, profundidadMaxima = 3, visitadas = new
             ? paginaActual.file.aliases[0] 
             : (paginaActual.titulo || paginaActual.file.name);
             
-        const titulo = dv.el("h3", `Referencias a ${tipoNota} "${alias}"`, { cls: "backlinks-tree-title" });
+        const titulo = document.createElement("h3");
+        titulo.className = "backlinks-tree-title";
+        titulo.textContent = `Referencias a ${tipoNota} "${alias}"`;
         contenedor.appendChild(titulo);
     }
     
@@ -241,7 +244,9 @@ generarArbolReferencias(paginaActual, dv, profundidadMaxima = 3, visitadas = new
         todasLasPaginas = dv.pages();
     } catch (e) {
         console.error("Error al obtener páginas:", e);
-        const errorMsg = dv.el("p", "Error al obtener páginas de Dataview", { cls: "backlinks-tree-error" });
+        const errorMsg = document.createElement("p");
+        errorMsg.className = "backlinks-tree-error";
+        errorMsg.textContent = "Error al obtener páginas de Dataview";
         contenedor.appendChild(errorMsg);
         return contenedor;
     }
@@ -287,7 +292,9 @@ generarArbolReferencias(paginaActual, dv, profundidadMaxima = 3, visitadas = new
         });
     } catch (e) {
         console.error("Error al filtrar referencias:", e);
-        const errorMsg = dv.el("p", "Error al procesar referencias", { cls: "backlinks-tree-error" });
+        const errorMsg = document.createElement("p");
+        errorMsg.className = "backlinks-tree-error";
+        errorMsg.textContent = "Error al procesar referencias";
         contenedor.appendChild(errorMsg);
         return contenedor;
     }
@@ -295,14 +302,17 @@ generarArbolReferencias(paginaActual, dv, profundidadMaxima = 3, visitadas = new
     // Si no hay referencias, mostrar mensaje
     if (referenciasDirectas.length === 0) {
         if (profundidadActual === 0) {
-            const mensaje = dv.el("p", "No se encontraron referencias a esta nota", { cls: "backlinks-tree-empty" });
+            const mensaje = document.createElement("p");
+            mensaje.className = "backlinks-tree-empty";
+            mensaje.textContent = "No se encontraron referencias a esta nota";
             contenedor.appendChild(mensaje);
         }
         return contenedor;
     }
     
     // Crear lista para mostrar referencias
-    const lista = dv.el("ul", "", { cls: `backlinks-tree-level-${profundidadActual}` });
+    const lista = document.createElement("ul");
+    lista.className = `backlinks-tree-level-${profundidadActual}`;
     
     // Añadir cada referencia a la lista
     for (const referencia of referenciasDirectas) {
@@ -313,12 +323,19 @@ generarArbolReferencias(paginaActual, dv, profundidadMaxima = 3, visitadas = new
             }
             
             // Crear elemento de lista
-            const item = dv.el("li", "", { cls: "backlinks-tree-item" });
+            const item = document.createElement("li");
+            item.className = "backlinks-tree-item";
             
-            // Añadir tipo y enlace
+            // Crear contenedor para el elemento toggle y su contenido
+            const itemContainer = document.createElement("div");
+            itemContainer.className = "backlinks-tree-item-container";
+            
+            // Añadir tipo y enlace al contenedor principal
             const tipo = referencia.typeName || "Nota";
-            const tipoEl = dv.el("span", `[${tipo}] `, { cls: "backlinks-tree-type" });
-            item.appendChild(tipoEl);
+            const tipoEl = document.createElement("span");
+            tipoEl.className = "backlinks-tree-type";
+            tipoEl.textContent = `[${tipo}] `;
+            itemContainer.appendChild(tipoEl);
             
             // Determinar el texto para mostrar en el enlace
             let nombreMostrado = "";
@@ -330,79 +347,88 @@ generarArbolReferencias(paginaActual, dv, profundidadMaxima = 3, visitadas = new
                 nombreMostrado = referencia.file.name || "Sin nombre";
             }
             
-            // Crear enlace usando el método correcto para enlaces clicables
-            try {
-                // Primero intentamos con fileLink
-                const enlace = dv.el("a", nombreMostrado, {
-                    attr: {
-                        href: referencia.file.path,
-                        "data-href": referencia.file.path,
-                        class: "internal-link"
-                    }
-                });
-                
-                // Asegurar que el enlace es clicable
-                enlace.addEventListener("click", (event) => {
-                    event.preventDefault();
-                    const target = event.target;
-                    const href = target.getAttribute("data-href");
-                    if (href) {
-                        // Intenta abrir con la API de Obsidian
-                        app.workspace.openLinkText(href, "", false);
-                    }
-                });
-                
-                item.appendChild(enlace);
-            } catch (e) {
-                console.error("Error al crear enlace con método primario:", e);
-                
-                // Plan B: usar createEl de Obsidian directamente
-                try {
-                    const enlace = document.createElement("a");
-                    enlace.textContent = nombreMostrado;
-                    enlace.href = `obsidian://open?vault=${encodeURIComponent(app.vault.getName())}&file=${encodeURIComponent(referencia.file.path)}`;
-                    enlace.classList.add("internal-link");
-                    item.appendChild(enlace);
-                } catch (e2) {
-                    console.error("Error al crear enlace con método alternativo:", e2);
-                    // Fallback final: texto plano
-                    const textoPlano = dv.el("span", nombreMostrado);
-                    item.appendChild(textoPlano);
-                }
-            }
+            // Crear enlace
+            const enlace = document.createElement("a");
+            enlace.textContent = nombreMostrado;
+            enlace.href = `obsidian://open?vault=${encodeURIComponent(app.vault.getName())}&file=${encodeURIComponent(referencia.file.path)}`;
+            enlace.className = "internal-link";
             
-            // Buscar recursivamente referencias a esta referencia
+            // Hacer clicable el enlace
+            enlace.addEventListener("click", (event) => {
+                event.preventDefault();
+                app.workspace.openLinkText(referencia.file.path, "", false);
+            });
+            
+            itemContainer.appendChild(enlace);
+            
+            // Intentar obtener recursivamente referencias a esta referencia
             try {
-                // Paso el set de visitadas como copia para no afectar otros niveles
+                // Nuevo conjunto de visitadas para no afectar otros niveles
                 const nuevoVisitadas = new Set([...visitadas]);
                 nuevoVisitadas.add(referencia.file.path);
                 
+                // Verificar si hay subreferencias antes de crear el toggle
                 const subReferencias = this.generarArbolReferencias(
                     referencia, dv, profundidadMaxima, 
                     nuevoVisitadas, profundidadActual + 1
                 );
                 
-                // Verificar que el resultado es un nodo DOM válido
-                if (subReferencias && subReferencias.nodeType) {
-                    // Verificar si tiene contenido útil
-                    if (subReferencias.children && subReferencias.children.length > 0) {
-                        // Verificar si hay más que solo el título
-                        const tieneContenidoUtil = subReferencias.children.length > 1 || 
-                            (subReferencias.children.length === 1 && 
-                             !subReferencias.children[0].classList.contains("backlinks-tree-title"));
+                // Si hay contenido útil en las subreferencias
+                if (subReferencias.children && subReferencias.children.length > 0) {
+                    // Verificar si hay más que solo el título
+                    const tieneContenidoUtil = subReferencias.children.length > 1 || 
+                        (subReferencias.children.length === 1 && 
+                         !subReferencias.children[0].classList.contains("backlinks-tree-title"));
+                    
+                    if (tieneContenidoUtil) {
+                        // Crear el elemento toggle (botón que indica si hay subreferencias)
+                        const toggleButton = document.createElement("span");
+                        toggleButton.className = "backlinks-tree-toggle";
+                        toggleButton.textContent = "►"; // Triángulo a la derecha (cerrado)
                         
-                        if (tieneContenidoUtil) {
-                            item.appendChild(subReferencias);
-                        }
+                        // Insertar el toggle al inicio del itemContainer
+                        itemContainer.insertBefore(toggleButton, itemContainer.firstChild);
+                        
+                        // Añadir contenedor para subreferencias que será toggleable
+                        const subContainer = document.createElement("div");
+                        subContainer.className = "backlinks-tree-subcontainer";
+                        subContainer.style.display = "none"; // Oculto por defecto
+                        subContainer.appendChild(subReferencias);
+                        
+                        // Añadir evento al toggle
+                        toggleButton.addEventListener("click", () => {
+                            if (subContainer.style.display === "none") {
+                                subContainer.style.display = "block";
+                                toggleButton.textContent = "▼"; // Triángulo hacia abajo (abierto)
+                                toggleButton.classList.add("open");
+                            } else {
+                                subContainer.style.display = "none";
+                                toggleButton.textContent = "►"; // Triángulo a la derecha (cerrado)
+                                toggleButton.classList.remove("open");
+                            }
+                        });
+                        
+                        // Añadir el subcontainer después del itemContainer
+                        item.appendChild(itemContainer);
+                        item.appendChild(subContainer);
+                    } else {
+                        // Si no hay subreferencias útiles, solo añadir el itemContainer
+                        item.appendChild(itemContainer);
                     }
+                } else {
+                    // Si no hay ninguna subreferencia, solo añadir el itemContainer
+                    item.appendChild(itemContainer);
                 }
             } catch (e) {
                 console.error("Error en la recursión para " + referencia.file.path, e);
-                const errorMsg = dv.el("span", " (Error al obtener subreferencias)", { cls: "backlinks-tree-error" });
-                item.appendChild(errorMsg);
+                const errorMsg = document.createElement("span");
+                errorMsg.className = "backlinks-tree-error";
+                errorMsg.textContent = " (Error al obtener subreferencias)";
+                itemContainer.appendChild(errorMsg);
+                item.appendChild(itemContainer);
             }
             
-            // Añadir el item a la lista
+            // Añadir el item completo a la lista
             lista.appendChild(item);
             
         } catch (e) {
@@ -414,12 +440,12 @@ generarArbolReferencias(paginaActual, dv, profundidadMaxima = 3, visitadas = new
     
     // Añadir la lista al contenedor
     try {
-        if (lista && lista.nodeType) {
-            contenedor.appendChild(lista);
-        }
+        contenedor.appendChild(lista);
     } catch (e) {
         console.error("Error al añadir lista al contenedor:", e);
-        const errorMsg = dv.el("p", "Error al generar estructura de árbol", { cls: "backlinks-tree-error" });
+        const errorMsg = document.createElement("p");
+        errorMsg.className = "backlinks-tree-error";
+        errorMsg.textContent = "Error al generar estructura de árbol";
         contenedor.appendChild(errorMsg);
     }
     
