@@ -99,17 +99,30 @@ export class VistaRegistroActivo extends ItemView {
             // Título
             activeContainer.createEl("h4", { text: "Registro de Tiempo en Ejecución", cls: "registro-tiempo-titulo" });
     
-            // Alias
             const aliasContainer = activeContainer.createEl("p", { cls: "registro-alias" });
-
-            // Primero intenta aliases[1], si no existe, usa aliases[0], y si tampoco existe, "Sin alias"
             const aliasText = registroEnEjecucion.aliases && registroEnEjecucion.aliases[1]
-            ? registroEnEjecucion.aliases[1]
-            : registroEnEjecucion.aliases && registroEnEjecucion.aliases[0]
-                ? registroEnEjecucion.aliases[0]
-                : "Sin alias";
+              ? registroEnEjecucion.aliases[1]
+              : registroEnEjecucion.aliases && registroEnEjecucion.aliases[0]
+                  ? registroEnEjecucion.aliases[0]
+                  : "Sin alias";
+            
+            // Crear un span para "Alias:" y el enlace para el texto del alias
+            const aliasLabel = aliasContainer.createEl("strong", { text: "Alias: " });
+            const aliasLink = aliasContainer.createEl("a", {
+              text: aliasText,
+              cls: "alias-link",
+              href: "#"
+            });
+            
+            // Agregar el evento de clic para abrir la nota en una nueva ventana
+            aliasLink.addEventListener("click", async (event) => {
+              event.preventDefault();
+              if (registroEnEjecucion.file instanceof TFile) {
+                // Abrir en una nueva hoja
+                await app.workspace.getLeaf('split').openFile(registroEnEjecucion.file);
+              }
+            });
 
-            aliasContainer.innerHTML = `<strong>Alias:</strong> ${aliasText}`;
             // Descripción (Visible en la Vista)
             const descripcionContainer = activeContainer.createEl("p", { cls: "registro-descripcion" });
             descripcionContainer.innerHTML = `<strong>Descripción:</strong> ${registroEnEjecucion.descripcion || "Sin descripción"}`;
@@ -246,9 +259,15 @@ export class VistaRegistroActivo extends ItemView {
  */
 alertaEjecutada25: boolean = false;
 
+/**
+ * Función para actualizar dinámicamente el tiempo en ejecución
+ * Modificada para soportar días con tildes como "Miércoles" y "Sábado"
+ */
 actualizarTiempoEnEjecucion(element: HTMLElement, horaInicio: string) {
     const extraerHora = (fechaStr: string): Date | null => {
-        const match = fechaStr.match(/(\d{4}-\d{2}-\d{2})\s+\w+\s+(\d{2}:\d{2})/);
+        // Regex modificado para ignorar el nombre del día (con o sin tildes)
+        // Captura solo la fecha y la hora
+        const match = fechaStr.match(/(\d{4}-\d{2}-\d{2})\s+\S+\s+(\d{2}:\d{2})/);
         if (match) {
             return new Date(`${match[1]}T${match[2]}:00`);
         }
@@ -275,7 +294,6 @@ actualizarTiempoEnEjecucion(element: HTMLElement, horaInicio: string) {
             element.classList.add("tiempo-rojo");            
         } else {
             element.classList.remove("tiempo-rojo");
-  
         }
     };
 

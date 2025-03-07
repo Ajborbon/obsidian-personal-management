@@ -1348,3 +1348,86 @@
 .backlinks-tree-container .backlinks-tree-estado {
   vertical-align: middle;
 }
+
+/* Estilos mejorados para el contenedor de registro activo */
+.active-time-container {
+  width: 100%;
+  box-sizing: border-box;
+  background-color: #ffeb3b; /* Amarillo suave */
+  padding: 12px;
+  border-radius: 8px;
+  margin-bottom: 12px;
+  font-size: 12px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+/* Título del registro más compacto */
+.registro-tiempo-titulo {
+  font-size: 16px;
+  font-weight: bold;
+  color: #333;
+  margin: 0 0 8px 0;
+  text-align: center;
+}
+
+/* Alias del registro con enlace */
+.registro-alias {
+  font-size: 14px;
+  color: #000;
+  margin: 6px 0;
+  word-break: break-word;
+}
+
+/* Estilo para el enlace del alias */
+.alias-link {
+  color: #0066cc;
+  text-decoration: none;
+  font-weight: 500;
+  transition: color 0.2s ease;
+  cursor: pointer;
+}
+
+.alias-link:hover {
+  color: #004499;
+  text-decoration: underline;
+}
+
+/* Descripción del registro */
+.registro-descripcion {
+  font-size: 12px;
+  color: #444;
+  background-color: #fff4c2; /* Fondo más claro */
+  padding: 6px;
+  border-radius: 4px;
+  margin: 6px auto;
+  word-wrap: break-word;
+}
+
+/* Tiempo en ejecución */
+.tiempo-ejecucion {
+  font-size: 15px;
+  font-weight: bold;
+  margin: 6px 0;
+  text-align: center;
+}
+
+/* Ajustes para modo oscuro */
+@media (prefers-color-scheme: dark) {
+  .active-time-container {
+    background-color: #444444;
+    color: #ffffff;
+  }
+  
+  .alias-link {
+    color: #6bb0ff;
+  }
+  
+  .alias-link:hover {
+    color: #9ccdff;
+  }
+  
+  .registro-descripcion {
+    background-color: #555555;
+    color: #ffffff;
+  }
+}
