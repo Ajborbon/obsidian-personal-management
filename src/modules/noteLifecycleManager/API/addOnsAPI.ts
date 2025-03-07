@@ -474,57 +474,90 @@ mostrarEnlacesSincronizados(dv, pagina) {
         // Obtener el frontmatter
         const meta = pagina.file.frontmatter;
         if (!meta) {
-            const mensaje = dv.el("p", "No se encontró frontmatter en esta nota.", { cls: "notion-links-message" });
-            contenedor.appendChild(mensaje);
+            // Si no hay frontmatter, no mostramos nada para ahorrar espacio
             return contenedor;
         }
         
         // Obtener el valor de typeName si existe
         const typeName = meta.typeName || "Elemento";
         
-        // Filtrar las claves que comiencen con "link-" y sean URLs válidas
-        const linkFields = Object.entries(meta)
-            .filter(([key, value]) => key.startsWith("link-") && typeof value === "string" && value.startsWith("http"))
-            .map(([key, value]) => ({
+        // Función para verificar si una URL es válida (más que solo https://)
+        const isValidUrl = (url) => {
+            return typeof url === 'string' && 
+                   url.startsWith('http') && 
+                   url.length > 8; // Más largo que solo "https://"
+        };
+        
+        // Recopilamos todos los enlaces relevantes
+        const enlaces = [];
+        
+        // 1. Enlaces que comienzan con "link-" (Notion)
+        Object.entries(meta)
+            .filter(([key, value]) => key.startsWith("link-") && isValidUrl(value))
+            .forEach(([key, value]) => enlaces.push({
+                label: "Notion",
                 url: value
             }));
         
-        // Renderizar el mensaje si se encuentra al menos un enlace válido
-        if (linkFields.length > 0) {
-            linkFields.forEach(field => {
-                // Crear un párrafo para cada enlace
-                const parrafo = document.createElement("p");
-                parrafo.classList.add("notion-link-item");
-                
-                // Crear texto
-                parrafo.textContent = `${typeName} sincronizado en Notion en `;
-                
-                // Crear enlace
-                const enlace = document.createElement("a");
-                enlace.href = field.url;
-                enlace.textContent = field.url;
-                enlace.target = "_blank"; // Abrir en nueva pestaña
-                enlace.rel = "noopener noreferrer"; // Seguridad para enlaces externos
-                
-                // Añadir el enlace al párrafo
-                parrafo.appendChild(enlace);
-                
-                // Añadir el párrafo al contenedor
-                contenedor.appendChild(parrafo);
+        // 2. Enlaces específicos según el tipo de elemento
+        if (typeName === "Campaña" && isValidUrl(meta.indicadores)) {
+            enlaces.push({
+                label: "Indicadores de campaña",
+                url: meta.indicadores
             });
-        } else {
-            const mensaje = dv.el("p", "No se encontraron enlaces sincronizados en Notion.", { cls: "notion-links-message" });
-            contenedor.appendChild(mensaje);
         }
+        
+        if (typeName === "Entregable") {
+            if (isValidUrl(meta.piezaNube)) {
+                enlaces.push({
+                    label: "Pieza en la nube",
+                    url: meta.piezaNube
+                });
+            }
+            
+            if (isValidUrl(meta.urlCanva)) {
+                enlaces.push({
+                    label: "Diseño en Canva",
+                    url: meta.urlCanva
+                });
+            }
+        }
+        
+        // Si no hay enlaces, no mostramos nada
+        if (enlaces.length === 0) {
+            return contenedor;
+        }
+        
+        // Mostrar cada enlace
+        enlaces.forEach(enlace => {
+            // Crear un párrafo para cada enlace
+            const parrafo = document.createElement("p");
+            parrafo.classList.add("notion-link-item");
+            
+            // Crear texto con la etiqueta específica
+            parrafo.textContent = `${typeName} - ${enlace.label} en `;
+            
+            // Crear enlace
+            const linkElement = document.createElement("a");
+            linkElement.href = enlace.url;
+            linkElement.textContent = enlace.url;
+            linkElement.target = "_blank"; // Abrir en nueva pestaña
+            linkElement.rel = "noopener noreferrer"; // Seguridad para enlaces externos
+            
+            // Añadir el enlace al párrafo
+            parrafo.appendChild(linkElement);
+            
+            // Añadir el párrafo al contenedor
+            contenedor.appendChild(parrafo);
+        });
+        
     } catch (error) {
         console.error("Error al procesar enlaces sincronizados:", error);
-        const errorMsg = dv.el("p", "Error al procesar enlaces sincronizados. Consulta la consola para más detalles.", { cls: "notion-links-error" });
-        contenedor.appendChild(errorMsg);
+        // No mostramos mensaje de error para ahorrar espacio
     }
     
     return contenedor;
 }
-
 // -------
 
 /**
@@ -1701,72 +1734,188 @@ navegarATarea(path, linea) {
 }
 
 
-// ---- NOTAS VINCULADAS CAMPAÑA + HITS
 /**
  * Obtiene y procesa notas vinculadas a una nota actual, con opciones de ordenamiento
  * @param params Objeto con parámetros como notaActualPath y sortOrder
  * @returns Objeto con la tabla HTML y metadatos
  */
 async obtenerNotasVinculadas(params) {
+    console.log("[DEBUG] Iniciando obtenerNotasVinculadas con parámetros:", params);
+    
     try {
         // Extraer parámetros
         const { notaActualPath, sortOrder = "hits" } = params;
+        console.log("[DEBUG] notaActualPath:", notaActualPath);
+        console.log("[DEBUG] sortOrder:", sortOrder);
         
         if (!notaActualPath) {
+            console.error("[ERROR] No se proporcionó la ruta de la nota actual");
             return { error: "No se proporcionó la ruta de la nota actual" };
         }
         
         // Obtener la nota actual
         const currentNote = app.vault.getAbstractFileByPath(notaActualPath);
+        console.log("[DEBUG] currentNote:", currentNote?.path || "No encontrada");
+        
         if (!currentNote) {
+            console.error("[ERROR] No se pudo encontrar la nota actual en la ruta:", notaActualPath);
             return { error: "No se pudo encontrar la nota actual" };
         }
         
         // Calcular la fecha actual (inicio del día)
         const today = window.moment().startOf("day");
+        console.log("[DEBUG] Fecha actual:", today.format("YYYY-MM-DD"));
         
         // Filtrar notas vinculadas
         const allFiles = app.vault.getMarkdownFiles();
+        console.log("[DEBUG] Total de archivos markdown:", allFiles.length);
+        
         let linkedNotes = [];
+        let processingErrors = 0;
+        let notesWithAsunto = 0;
+        let notesTypeEntregable = 0;
+        let possibleMatches = 0;
         
         for (const file of allFiles) {
             try {
+                console.log("[DEBUG] Procesando archivo:", file.path);
+                
                 const metadata = app.metadataCache.getFileCache(file)?.frontmatter;
                 
-                if (!metadata || metadata.typeName !== "Entregable" || !metadata.asunto) {
+                if (!metadata) {
+                    console.log("[DEBUG] Archivo sin frontmatter:", file.path);
                     continue;
                 }
+                
+                console.log("[DEBUG] Metadata typeName:", metadata.typeName);
+                console.log("[DEBUG] Metadata asunto:", JSON.stringify(metadata.asunto));
+                
+                if (metadata.typeName !== "Entregable") {
+                    console.log("[DEBUG] Archivo no es un Entregable, se salta");
+                    continue;
+                }
+                
+                notesTypeEntregable++;
+                
+                if (!metadata.asunto) {
+                    console.log("[DEBUG] Entregable sin asunto, se salta");
+                    continue;
+                }
+                
+                notesWithAsunto++;
                 
                 // Verificar si esta nota hace referencia a la nota actual
                 let isLinked = false;
                 
+                console.log("[DEBUG] Comprobando si referencia a la nota actual:", notaActualPath);
+                console.log("[DEBUG] Tipo de asunto:", typeof metadata.asunto);
+                
                 if (Array.isArray(metadata.asunto)) {
+                    console.log("[DEBUG] asunto es un array con", metadata.asunto.length, "elementos");
+                    
                     // Para cada elemento en el array asunto
                     for (const asunto of metadata.asunto) {
-                        if ((asunto.path && asunto.path === notaActualPath) || 
-                            (typeof asunto === 'string' && asunto.includes(notaActualPath))) {
-                            isLinked = true;
-                            break;
+                        console.log("[DEBUG] Elemento asunto:", JSON.stringify(asunto));
+                        
+                        if (asunto && typeof asunto === 'object' && asunto.path) {
+                            console.log("[DEBUG] asunto tiene path:", asunto.path);
+                            console.log("[DEBUG] ¿Coincide con notaActualPath?", asunto.path === notaActualPath);
+                            
+                            if (asunto.path === notaActualPath) {
+                                isLinked = true;
+                                possibleMatches++;
+                                console.log("[DEBUG] ¡COINCIDENCIA ENCONTRADA en path!");
+                                break;
+                            }
+                        } else if (typeof asunto === 'string') {
+                            console.log("[DEBUG] asunto es string:", asunto);
+                            console.log("[DEBUG] ¿Incluye notaActualPath?", asunto.includes(notaActualPath));
+                            
+                            if (asunto.includes(notaActualPath)) {
+                                isLinked = true;
+                                possibleMatches++;
+                                console.log("[DEBUG] ¡COINCIDENCIA ENCONTRADA en string!");
+                                break;
+                            }
+                            
+                            // También buscar en el contenido del enlace wiki
+                            const wikiLinkMatch = asunto.match(/\[\[(.*?)(?:\|(.*?))?\]\]/);
+                            if (wikiLinkMatch) {
+                                const linkPath = wikiLinkMatch[1];
+                                console.log("[DEBUG] Detectado enlace wiki, path:", linkPath);
+                                
+                                if (linkPath === currentNote.basename || linkPath === notaActualPath) {
+                                    isLinked = true;
+                                    possibleMatches++;
+                                    console.log("[DEBUG] ¡COINCIDENCIA ENCONTRADA en wikilink!");
+                                    break;
+                                }
+                            }
                         }
                     }
-                } else if (metadata.asunto.path === notaActualPath || 
-                           (typeof metadata.asunto === 'string' && metadata.asunto.includes(notaActualPath))) {
-                    isLinked = true;
+                } else if (typeof metadata.asunto === 'object' && metadata.asunto.path) {
+                    console.log("[DEBUG] asunto es un objeto con path:", metadata.asunto.path);
+                    console.log("[DEBUG] ¿Coincide con notaActualPath?", metadata.asunto.path === notaActualPath);
+                    
+                    if (metadata.asunto.path === notaActualPath) {
+                        isLinked = true;
+                        possibleMatches++;
+                        console.log("[DEBUG] ¡COINCIDENCIA ENCONTRADA en objeto!");
+                    }
+                } else if (typeof metadata.asunto === 'string') {
+                    console.log("[DEBUG] asunto es un string simple:", metadata.asunto);
+                    console.log("[DEBUG] ¿Incluye notaActualPath?", metadata.asunto.includes(notaActualPath));
+                    
+                    if (metadata.asunto.includes(notaActualPath)) {
+                        isLinked = true;
+                        possibleMatches++;
+                        console.log("[DEBUG] ¡COINCIDENCIA ENCONTRADA en string simple!");
+                    }
+                    
+                    // También buscar en el contenido del enlace wiki
+                    const wikiLinkMatch = metadata.asunto.match(/\[\[(.*?)(?:\|(.*?))?\]\]/);
+                    if (wikiLinkMatch) {
+                        const linkPath = wikiLinkMatch[1];
+                        console.log("[DEBUG] Detectado enlace wiki en string simple, path:", linkPath);
+                        
+                        // Comparar tanto con el nombre de archivo como con la ruta
+                        const matchesPath = linkPath === notaActualPath;
+                        const matchesBasename = linkPath === currentNote.basename;
+                        
+                        console.log("[DEBUG] ¿Coincide con ruta completa?", matchesPath);
+                        console.log("[DEBUG] ¿Coincide con nombre de archivo?", matchesBasename);
+                        
+                        if (matchesPath || matchesBasename) {
+                            isLinked = true;
+                            possibleMatches++;
+                            console.log("[DEBUG] ¡COINCIDENCIA ENCONTRADA en wikilink simple!");
+                        }
+                    }
                 }
                 
                 if (isLinked) {
+                    console.log("[DEBUG] ✅ Nota vinculada encontrada:", file.path);
+                    
                     // Procesar la nota
                     let hits = parseFloat(metadata.hits);
-                    if (isNaN(hits)) hits = 0;
+                    if (isNaN(hits)) {
+                        console.log("[DEBUG] hits no es un número, estableciendo a 0");
+                        hits = 0;
+                    }
                     
                     const alias = metadata.aliases?.[0] || file.basename;
                     const estado = metadata.estado || "Sin estado";
                     
                     let diferenciaDias = null;
                     if (metadata.publicacion) {
+                        console.log("[DEBUG] Tiene fecha de publicación:", metadata.publicacion);
                         const pubDate = window.moment(metadata.publicacion.toString(), "YYYY-MM-DD").startOf("day");
+                        
                         if (pubDate.isValid()) {
                             diferenciaDias = pubDate.diff(today, "days");
+                            console.log("[DEBUG] diferenciaDias calculado:", diferenciaDias);
+                        } else {
+                            console.log("[DEBUG] La fecha de publicación no es válida");
                         }
                     }
                     
@@ -1777,13 +1926,44 @@ async obtenerNotasVinculadas(params) {
                         diferenciaDias,
                         file
                     });
+                    
+                    console.log("[DEBUG] Nota añadida al resultado con alias:", alias);
+                } else {
+                    console.log("[DEBUG] No está vinculada, se omite");
                 }
             } catch (error) {
-                console.error(`Error procesando archivo ${file.path}:`, error);
+                processingErrors++;
+                console.error(`[ERROR] Error procesando archivo ${file.path}:`, error);
             }
         }
         
+        console.log(`[DEBUG] Proceso completado. Notas vinculadas encontradas: ${linkedNotes.length}`);
+        console.log(`[DEBUG] Estadísticas de procesamiento:`);
+        console.log(`[DEBUG] - Total archivos procesados: ${allFiles.length}`);
+        console.log(`[DEBUG] - Notas tipo Entregable: ${notesTypeEntregable}`);
+        console.log(`[DEBUG] - Notas con asunto: ${notesWithAsunto}`);
+        console.log(`[DEBUG] - Posibles coincidencias: ${possibleMatches}`);
+        console.log(`[DEBUG] - Errores de procesamiento: ${processingErrors}`);
+        
+        if (linkedNotes.length === 0) {
+            console.log("[DEBUG] No se encontraron notas vinculadas");
+            
+            // Crear mensaje de información
+            const infoElement = document.createElement("div");
+            infoElement.innerHTML = `<p>No se encontraron entregables vinculados a esta nota.</p>
+                                     <p><small>Estadísticas: ${notesTypeEntregable} entregables procesados, 
+                                     ${notesWithAsunto} con asunto, ${possibleMatches} posibles coincidencias.</small></p>`;
+            
+            return {
+                tablaElement: infoElement,
+                totalNotas: 0,
+                totalHits: 0
+            };
+        }
+        
         // Ordenar notas según el criterio
+        console.log("[DEBUG] Ordenando notas por:", sortOrder);
+        
         if (sortOrder === "hits") {
             linkedNotes.sort((a, b) => b.hits - a.hits);
         } else {
@@ -1795,17 +1975,31 @@ async obtenerNotasVinculadas(params) {
             });
         }
         
+        console.log("[DEBUG] Creando tabla HTML");
+        
         // Crear la tabla HTML
         const tablaElement = this.crearTablaNotasVinculadas(linkedNotes);
+        
+        const totalHits = linkedNotes.reduce((sum, nota) => sum + nota.hits, 0);
+        console.log("[DEBUG] Total hits:", totalHits);
         
         return {
             tablaElement,
             totalNotas: linkedNotes.length,
-            totalHits: linkedNotes.reduce((sum, nota) => sum + nota.hits, 0)
+            totalHits
         };
     } catch (error) {
-        console.error("Error en obtenerNotasVinculadas:", error);
-        return { error: "Error al procesar notas vinculadas: " + error.message };
+        console.error("[ERROR] Error en obtenerNotasVinculadas:", error);
+        
+        // Crear elemento de error
+        const errorElement = document.createElement("div");
+        errorElement.innerHTML = `<p style="color: red;">Error al procesar notas vinculadas: ${error.message}</p>
+                                 <p>Revisa la consola para más detalles.</p>`;
+        
+        return { 
+            error: "Error al procesar notas vinculadas: " + error.message,
+            tablaElement: errorElement
+        };
     }
 }
 
@@ -1852,17 +2046,22 @@ crearTablaNotasVinculadas(notas) {
         notas.forEach(nota => {
             const row = document.createElement('tr');
             
-            // Celda para el enlace de la nota
+            // Celda para el enlace de la nota - SOLUCIÓN CORREGIDA
             const cellNota = document.createElement('td');
             const link = document.createElement('a');
-            link.href = `obsidian://open?vault=${encodeURIComponent(app.vault.getName())}&file=${encodeURIComponent(nota.file.path)}`;
             link.className = 'internal-link';
             link.textContent = nota.alias;
             
-            // Hacer clicable el enlace (evento delegado a nivel de DOM)
+            // Usar data-href en lugar de href con obsidian://
+            link.setAttribute('data-href', nota.file.path);
+            
+            // Hacer clicable el enlace con el método seguro de Obsidian
             link.addEventListener('click', (event) => {
                 event.preventDefault();
-                app.workspace.openLinkText(nota.file.path, "", false);
+                const path = event.target.getAttribute('data-href');
+                if (path) {
+                    app.workspace.openLinkText(path, "", false);
+                }
             });
             
             cellNota.appendChild(link);
