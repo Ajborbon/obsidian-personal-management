@@ -128,8 +128,23 @@ export class VistaRegistroActivo extends ItemView {
             descripcionContainer.innerHTML = `<strong>Descripción:</strong> ${registroEnEjecucion.descripcion || "Sin descripción"}`;
     
             // Tiempo en ejecución
-            const tiempoContainer = activeContainer.createEl("p", { cls: "tiempo-ejecucion", text: "Tiempo transcurrido: Calculando..." });
-            this.actualizarTiempoEnEjecucion(tiempoContainer, registroEnEjecucion.horaInicio);
+            // Tiempo en ejecución con ícono para editar hora de inicio
+            const tiempoContainer = activeContainer.createEl("div", { cls: "tiempo-container" });
+            const tiempoEjecucion = tiempoContainer.createEl("p", { cls: "tiempo-ejecucion", text: "Tiempo transcurrido: Calculando..." });
+            this.actualizarTiempoEnEjecucion(tiempoEjecucion, registroEnEjecucion.horaInicio);
+
+            // Ícono para editar la hora de inicio
+            const editTimeIcon = tiempoContainer.createEl("span", { 
+                cls: "edit-time-icon", 
+                attr: { 
+                    'aria-label': 'Editar hora de inicio',
+                    'title': 'Editar hora de inicio'
+                }
+            });
+            editTimeIcon.innerHTML = "⏱️"; // Ícono de reloj
+            editTimeIcon.addEventListener("click", () => {
+                this.mostrarSelectorHoraInicio(registroEnEjecucion);
+            });
     
             // Contenedor de botones alineados
             const botonesContainer = activeContainer.createEl("div", { cls: "registro-botones-container" });
@@ -249,6 +264,8 @@ export class VistaRegistroActivo extends ItemView {
         } else {
             this.containerEl.createEl("p", { text: "No hay registros finalizados." });
         }
+
+        
     }
     
     /**
@@ -418,6 +435,166 @@ reescribirFrontmatter(content: string, frontmatter: Record<string, any>): string
 
     // Agregar una línea en blanco solo si hay contenido restante
     return nuevoFrontmatter + (contenidoRestante ? '\n' + contenidoRestante : '');
+}
+
+/**
+ * Muestra un selector de fecha y hora para modificar la hora de inicio del registro
+ * Versión corregida para posicionar correctamente el modal
+ */
+async mostrarSelectorHoraInicio(registro: any) {
+    // Extraer la fecha y hora del formato actual
+    let horaInicio = registro.horaInicio;
+    let fechaHora = this.extraerFechaHora(horaInicio);
+    
+    if (!fechaHora) {
+        new Notice("No se pudo extraer correctamente la fecha y hora de inicio");
+        return;
+    }
+    
+    // Formatear para el input datetime-local
+    const valorInicialInput = `${fechaHora.fecha}T${fechaHora.hora}`;
+    
+    // Creamos un overlay para el fondo oscuro
+    const overlay = document.createElement("div");
+    overlay.classList.add("time-selector-overlay");
+    document.body.appendChild(overlay);
+    
+    // Creamos el modal
+    const modal = document.createElement("div");
+    modal.classList.add("time-selector-modal");
+    
+    // Título
+    const titulo = document.createElement("h3");
+    titulo.textContent = "Modificar hora de inicio";
+    modal.appendChild(titulo);
+    
+    // Contenedor de información
+    const infoContainer = document.createElement("div");
+    infoContainer.classList.add("time-selector-info");
+    infoContainer.innerHTML = `
+        <p>Registro: <strong>${registro.aliases?.[0] || "Sin alias"}</strong></p>
+        <p>Hora actual: <strong>${horaInicio}</strong></p>
+    `;
+    modal.appendChild(infoContainer);
+    
+    // Input para seleccionar nueva fecha y hora
+    const inputContainer = document.createElement("div");
+    inputContainer.classList.add("time-selector-input-container");
+    
+    const label = document.createElement("label");
+    label.textContent = "Nueva hora de inicio:";
+    label.htmlFor = "new-start-time";
+    
+    const input = document.createElement("input");
+    input.type = "datetime-local";
+    input.id = "new-start-time";
+    input.value = valorInicialInput;
+    
+    inputContainer.appendChild(label);
+    inputContainer.appendChild(input);
+    modal.appendChild(inputContainer);
+    
+    // Botones
+    const buttonsContainer = document.createElement("div");
+    buttonsContainer.classList.add("time-selector-buttons");
+    
+    const cancelButton = document.createElement("button");
+    cancelButton.textContent = "Cancelar";
+    cancelButton.classList.add("time-selector-button", "cancel-button");
+    cancelButton.onclick = () => {
+        document.body.removeChild(modal);
+        document.body.removeChild(overlay);
+    };
+    
+    const saveButton = document.createElement("button");
+    saveButton.textContent = "Guardar";
+    saveButton.classList.add("time-selector-button", "save-button");
+    saveButton.onclick = async () => {
+        const nuevaFechaHora = input.value;
+        if (!nuevaFechaHora) {
+            new Notice("Por favor, seleccione una fecha y hora válida");
+            return;
+        }
+        
+        // Convertir de formato ISO a formato personalizado usado en el registro
+        // Formato: "YYYY-MM-DD dddd HH:mm"
+        const fecha = new Date(nuevaFechaHora);
+        
+        // Obtener el nombre del día de la semana en español
+        const diasSemana = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
+        const diaSemana = diasSemana[fecha.getDay()];
+        
+        // Construir la cadena con el formato requerido
+        const año = fecha.getFullYear();
+        const mes = String(fecha.getMonth() + 1).padStart(2, '0');
+        const dia = String(fecha.getDate()).padStart(2, '0');
+        const horas = String(fecha.getHours()).padStart(2, '0');
+        const minutos = String(fecha.getMinutes()).padStart(2, '0');
+        
+        const nuevaHoraFormateada = `${año}-${mes}-${dia} ${diaSemana} ${horas}:${minutos}`;
+        
+        // Actualizar la hora de inicio en el archivo
+        await this.actualizarHoraInicio(registro.file, nuevaHoraFormateada);
+        
+        // Cerrar el modal
+        document.body.removeChild(modal);
+        document.body.removeChild(overlay);
+        
+        // Refrescar la vista
+        this.actualizarVista();
+    };
+    
+    buttonsContainer.appendChild(cancelButton);
+    buttonsContainer.appendChild(saveButton);
+    modal.appendChild(buttonsContainer);
+    
+    // Añadir el modal al DOM
+    document.body.appendChild(modal);
+    
+    // CORREGIDO: Ya no tratamos de calcular la posición manualmente
+    // El modal se centrará automáticamente con transform: translate(-50%, -50%)
+    
+    // Enfocar el input
+    input.focus();
+}
+
+/**
+ * Extrae la fecha y hora de una cadena con formato "YYYY-MM-DD dddd HH:mm"
+ */
+extraerFechaHora(fechaStr: string): { fecha: string, hora: string } | null {
+    // Regex para extraer la fecha y la hora
+    const match = fechaStr.match(/(\d{4}-\d{2}-\d{2})\s+\S+\s+(\d{2}:\d{2})/);
+    if (match) {
+        return {
+            fecha: match[1],
+            hora: match[2]
+        };
+    }
+    return null;
+}
+
+/**
+ * Actualiza la hora de inicio en el frontmatter del archivo
+ */
+async actualizarHoraInicio(file: TFile, nuevaHoraInicio: string): Promise<void> {
+    try {
+        // Leer el contenido actual del archivo
+        const contenido = await this.app.vault.read(file);
+        
+        // Buscar y reemplazar la línea horaInicio en el frontmatter
+        const nuevoContenido = contenido.replace(
+            /horaInicio:\s*.*(?=\n)/,
+            `horaInicio: ${nuevaHoraInicio}`
+        );
+        
+        // Guardar el archivo modificado
+        await this.app.vault.modify(file, nuevoContenido);
+        
+        new Notice("Hora de inicio actualizada correctamente");
+    } catch (error) {
+        console.error("Error al actualizar la hora de inicio:", error);
+        new Notice("Error al actualizar la hora de inicio");
+    }
 }
     
 }
