@@ -347,19 +347,25 @@ generarArbolReferencias(paginaActual, dv, profundidadMaxima = 3, visitadas = new
                 nombreMostrado = referencia.file.name || "Sin nombre";
             }
             
-            // Crear enlace
-            const enlace = document.createElement("a");
-            enlace.textContent = nombreMostrado;
-            enlace.href = `obsidian://open?vault=${encodeURIComponent(app.vault.getName())}&file=${encodeURIComponent(referencia.file.path)}`;
-            enlace.className = "internal-link";
-            
-            // Hacer clicable el enlace
-            enlace.addEventListener("click", (event) => {
-                event.preventDefault();
-                app.workspace.openLinkText(referencia.file.path, "", false);
-            });
-            
-            itemContainer.appendChild(enlace);
+           // CORRECCIÓN AQUÍ - Mejor manejo de enlaces
+           const enlace = document.createElement("a");
+           enlace.textContent = nombreMostrado;
+           enlace.className = "internal-link";
+           
+           // En lugar de construir una URL obsidian://, usamos data-href para almacenar la ruta del archivo
+           enlace.setAttribute("data-href", referencia.file.path);
+           
+           // Usamos la API de Obsidian para manejar el clic y la apertura del archivo
+           enlace.addEventListener("click", (event) => {
+               event.preventDefault();
+               const path = event.target.getAttribute("data-href");
+               if (path) {
+                   // Esta es la forma correcta de abrir un archivo en Obsidian
+                   app.workspace.openLinkText(path, "", false);
+               }
+           });
+           
+           itemContainer.appendChild(enlace);
             
             // Intentar obtener recursivamente referencias a esta referencia
             try {
@@ -1693,5 +1699,236 @@ navegarATarea(path, linea) {
         }
     }
 }
+
+
+// ---- NOTAS VINCULADAS CAMPAÑA + HITS
+/**
+ * Obtiene y procesa notas vinculadas a una nota actual, con opciones de ordenamiento
+ * @param params Objeto con parámetros como notaActualPath y sortOrder
+ * @returns Objeto con la tabla HTML y metadatos
+ */
+async obtenerNotasVinculadas(params) {
+    try {
+        // Extraer parámetros
+        const { notaActualPath, sortOrder = "hits" } = params;
+        
+        if (!notaActualPath) {
+            return { error: "No se proporcionó la ruta de la nota actual" };
+        }
+        
+        // Obtener la nota actual
+        const currentNote = app.vault.getAbstractFileByPath(notaActualPath);
+        if (!currentNote) {
+            return { error: "No se pudo encontrar la nota actual" };
+        }
+        
+        // Calcular la fecha actual (inicio del día)
+        const today = window.moment().startOf("day");
+        
+        // Filtrar notas vinculadas
+        const allFiles = app.vault.getMarkdownFiles();
+        let linkedNotes = [];
+        
+        for (const file of allFiles) {
+            try {
+                const metadata = app.metadataCache.getFileCache(file)?.frontmatter;
+                
+                if (!metadata || metadata.typeName !== "Entregable" || !metadata.asunto) {
+                    continue;
+                }
+                
+                // Verificar si esta nota hace referencia a la nota actual
+                let isLinked = false;
+                
+                if (Array.isArray(metadata.asunto)) {
+                    // Para cada elemento en el array asunto
+                    for (const asunto of metadata.asunto) {
+                        if ((asunto.path && asunto.path === notaActualPath) || 
+                            (typeof asunto === 'string' && asunto.includes(notaActualPath))) {
+                            isLinked = true;
+                            break;
+                        }
+                    }
+                } else if (metadata.asunto.path === notaActualPath || 
+                           (typeof metadata.asunto === 'string' && metadata.asunto.includes(notaActualPath))) {
+                    isLinked = true;
+                }
+                
+                if (isLinked) {
+                    // Procesar la nota
+                    let hits = parseFloat(metadata.hits);
+                    if (isNaN(hits)) hits = 0;
+                    
+                    const alias = metadata.aliases?.[0] || file.basename;
+                    const estado = metadata.estado || "Sin estado";
+                    
+                    let diferenciaDias = null;
+                    if (metadata.publicacion) {
+                        const pubDate = window.moment(metadata.publicacion.toString(), "YYYY-MM-DD").startOf("day");
+                        if (pubDate.isValid()) {
+                            diferenciaDias = pubDate.diff(today, "days");
+                        }
+                    }
+                    
+                    linkedNotes.push({ 
+                        alias, 
+                        hits, 
+                        estado, 
+                        diferenciaDias,
+                        file
+                    });
+                }
+            } catch (error) {
+                console.error(`Error procesando archivo ${file.path}:`, error);
+            }
+        }
+        
+        // Ordenar notas según el criterio
+        if (sortOrder === "hits") {
+            linkedNotes.sort((a, b) => b.hits - a.hits);
+        } else {
+            const safeDiff = d => d == null ? Infinity : d;
+            linkedNotes.sort((a, b) => {
+                if (a.estado === "🔵" && b.estado !== "🔵") return 1;
+                if (b.estado === "🔵" && a.estado !== "🔵") return -1;
+                return safeDiff(a.diferenciaDias) - safeDiff(b.diferenciaDias);
+            });
+        }
+        
+        // Crear la tabla HTML
+        const tablaElement = this.crearTablaNotasVinculadas(linkedNotes);
+        
+        return {
+            tablaElement,
+            totalNotas: linkedNotes.length,
+            totalHits: linkedNotes.reduce((sum, nota) => sum + nota.hits, 0)
+        };
+    } catch (error) {
+        console.error("Error en obtenerNotasVinculadas:", error);
+        return { error: "Error al procesar notas vinculadas: " + error.message };
+    }
+}
+
+/**
+ * Crea una tabla HTML con las notas vinculadas
+ * @param notas Array de objetos con información de notas
+ * @returns Elemento HTML de la tabla
+ */
+crearTablaNotasVinculadas(notas) {
+    // Función auxiliar para determinar el color según los días hasta publicación
+    const colorKey = (nota) => {
+        if (nota.estado === "🔵") return "gray";
+        if (nota.diferenciaDias == null) return "inherit";
+        if (nota.diferenciaDias > 6) return "green";
+        if (nota.diferenciaDias >= 3) return "#e6b800";
+        if (nota.diferenciaDias >= 1) return "orange";
+        return "red";
+    };
+    
+    try {
+        // Crear el elemento tabla
+        const table = document.createElement('table');
+        table.className = 'dataview table';
+        table.style.width = '100%';
+        
+        // Crear encabezado
+        const thead = document.createElement('thead');
+        const headerRow = document.createElement('tr');
+        
+        const headers = ["Nota", "Hits", "Estado", "Días hasta Publicación"];
+        headers.forEach(header => {
+            const th = document.createElement('th');
+            th.textContent = header;
+            headerRow.appendChild(th);
+        });
+        
+        thead.appendChild(headerRow);
+        table.appendChild(thead);
+        
+        // Crear cuerpo de la tabla
+        const tbody = document.createElement('tbody');
+        
+        // Agregar filas de datos
+        notas.forEach(nota => {
+            const row = document.createElement('tr');
+            
+            // Celda para el enlace de la nota
+            const cellNota = document.createElement('td');
+            const link = document.createElement('a');
+            link.href = `obsidian://open?vault=${encodeURIComponent(app.vault.getName())}&file=${encodeURIComponent(nota.file.path)}`;
+            link.className = 'internal-link';
+            link.textContent = nota.alias;
+            
+            // Hacer clicable el enlace (evento delegado a nivel de DOM)
+            link.addEventListener('click', (event) => {
+                event.preventDefault();
+                app.workspace.openLinkText(nota.file.path, "", false);
+            });
+            
+            cellNota.appendChild(link);
+            row.appendChild(cellNota);
+            
+            // Celda para hits
+            const cellHits = document.createElement('td');
+            cellHits.textContent = nota.hits;
+            row.appendChild(cellHits);
+            
+            // Celda para estado
+            const cellEstado = document.createElement('td');
+            cellEstado.textContent = nota.estado;
+            row.appendChild(cellEstado);
+            
+            // Celda para días hasta publicación
+            const cellDias = document.createElement('td');
+            const color = colorKey(nota);
+            const diasTexto = (nota.diferenciaDias != null) 
+                ? `${nota.diferenciaDias} días` 
+                : "No definido";
+            
+            const spanDias = document.createElement('span');
+            spanDias.style.color = color;
+            spanDias.style.fontWeight = 'bold';
+            spanDias.textContent = diasTexto;
+            
+            cellDias.appendChild(spanDias);
+            row.appendChild(cellDias);
+            
+            tbody.appendChild(row);
+        });
+        
+        // Agregar fila de totales
+        const totalRow = document.createElement('tr');
+        
+        const totalLabelCell = document.createElement('td');
+        const totalLabel = document.createElement('strong');
+        totalLabel.textContent = 'Total';
+        totalLabelCell.appendChild(totalLabel);
+        totalRow.appendChild(totalLabelCell);
+        
+        const totalHits = notas.reduce((sum, nota) => sum + nota.hits, 0);
+        
+        const totalValueCell = document.createElement('td');
+        const totalValue = document.createElement('strong');
+        totalValue.textContent = totalHits.toString();
+        totalValueCell.appendChild(totalValue);
+        totalRow.appendChild(totalValueCell);
+        
+        // Celdas vacías para completar la fila
+        totalRow.appendChild(document.createElement('td')); // estado
+        totalRow.appendChild(document.createElement('td')); // días
+        
+        tbody.appendChild(totalRow);
+        table.appendChild(tbody);
+        
+        return table;
+    } catch (error) {
+        console.error("Error al crear tabla de notas vinculadas:", error);
+        const errorElement = document.createElement("div");
+        errorElement.textContent = "Error al generar tabla: " + error.message;
+        errorElement.style.color = "red";
+        return errorElement;
+    }
+}
+
 
   }
