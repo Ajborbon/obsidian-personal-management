@@ -1954,3 +1954,27 @@
       flex-direction: column;
   }
 }
+
+/* Estilos para los contadores de proyectos */
+.proyectos-contador {
+  display: inline-block;
+  background-color: var(--background-modifier-border);
+  color: var(--text-normal);
+  border-radius: 12px;
+  padding: 0 8px;
+  font-size: 0.85em;
+  margin-left: 8px;
+  font-weight: 600;
+}
+
+.theme-dark .proyectos-contador {
+  background-color: rgba(255, 255, 255, 0.1);
+  color: var(--text-muted);
+}
+
+/* Destacar área actual al hacer hover */
+.proyectos-area-header:hover .proyectos-contador,
+.proyectos-ai-header:hover .proyectos-contador {
+  background-color: var(--interactive-accent);
+  color: white;
+}
