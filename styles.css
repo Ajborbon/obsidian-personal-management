@@ -1622,3 +1622,335 @@
 .theme-dark .edit-time-icon:hover {
   background-color: rgba(0, 0, 0, 0.5);
 }
+
+
+/* Clases para el indice de proyectos */
+/* Estilos para el árbol de proyectos */
+.proyectos-tree-container {
+  margin: 16px 0;
+  font-size: 0.9em;
+  width: 100%;
+}
+
+.proyectos-tree-title {
+  margin-top: 0;
+  text-align: center;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--background-modifier-border);
+  color: var(--text-normal);
+  font-size: 1.3em;
+}
+
+.proyectos-areas-container {
+  margin-top: 12px;
+}
+
+.proyectos-area-vida, 
+.proyectos-sin-av {
+  margin-bottom: 12px;
+  border-radius: 6px;
+  background-color: var(--background-secondary);
+  overflow: hidden;
+}
+
+.proyectos-area-header, 
+.proyectos-ai-header {
+  padding: 8px 12px;
+  cursor: pointer;
+  user-select: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background-color: var(--background-secondary-alt);
+  transition: background-color 0.2s ease;
+}
+
+.proyectos-area-header:hover, 
+.proyectos-ai-header:hover {
+  background-color: var(--background-modifier-hover);
+}
+
+.proyectos-area-content, 
+.proyectos-ai-content {
+  padding: 10px 15px;
+}
+
+.toggle-icon {
+  font-family: monospace;
+  font-size: 0.9em;
+  color: var(--text-muted);
+  width: 12px;
+  transition: transform 0.2s ease;
+}
+
+.area-tipo, .ai-tipo {
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.area-link, .ai-link {
+  color: var(--text-normal);
+  text-decoration: none;
+  transition: color 0.2s ease;
+  font-weight: bold;
+}
+
+.area-link:hover, .ai-link:hover {
+  color: var(--text-accent);
+  text-decoration: underline;
+}
+
+.proyectos-area-interes, 
+.proyectos-sin-ai {
+  margin: 8px 0;
+  border-radius: 4px;
+  background-color: var(--background-primary);
+  overflow: hidden;
+}
+
+.proyectos-lista {
+  list-style-type: none;
+  padding-left: 5px;
+  margin: 0;
+}
+
+.proyectos-sublista {
+  list-style-type: none;
+  padding-left: 20px;
+  margin: 3px 0 3px 5px;
+  border-left: 1px dashed var(--background-modifier-border);
+}
+
+.proyectos-item {
+  padding: 4px 0;
+  margin: 2px 0;
+}
+
+.proyecto-contenido {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.proyecto-estado {
+  margin-right: 5px;
+}
+
+.proyecto-indent {
+  color: var(--text-faint);
+  font-family: monospace;
+}
+
+.proyecto-link {
+  color: var(--text-normal);
+  text-decoration: none;
+}
+
+.proyecto-link:hover {
+  color: var(--text-accent);
+  text-decoration: underline;
+}
+
+.proyecto-pendientes {
+  color: var(--text-accent);
+  font-size: 0.9em;
+  margin-left: 5px;
+}
+
+.proyecto-nivel {
+  color: var(--text-faint);
+  font-size: 0.85em;
+  margin-left: 5px;
+}
+
+.proyectos-ai-empty, 
+.proyectos-lista-empty,
+.proyectos-tree-empty {
+  color: var(--text-muted);
+  font-style: italic;
+  margin: 5px 0;
+  text-align: center;
+}
+
+.proyectos-tree-error {
+  color: var(--text-error);
+  border-left: 3px solid var(--text-error);
+  padding: 8px 12px;
+  margin: 10px 0;
+  background-color: var(--background-modifier-error);
+  border-radius: 4px;
+}
+
+/* Estilos para los controles de filtro en el dashboard */
+.proyectos-dashboard {
+  width: 100%;
+  margin-bottom: 20px;
+}
+
+.filtros-panel {
+  background-color: var(--background-secondary);
+  padding: 12px 16px;
+  border-radius: 8px;
+  margin-bottom: 16px;
+}
+
+.filtros-titulo {
+  margin-top: 0;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--background-modifier-border);
+  text-align: center;
+}
+
+.filtro-container {
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+}
+
+.filtro-label {
+  flex: 0 0 120px;
+  font-weight: 500;
+}
+
+.filtro-select {
+  flex: 1;
+  padding: 6px 8px;
+  border-radius: 4px;
+  border: 1px solid var(--background-modifier-border);
+  background-color: var(--background-primary);
+  color: var(--text-normal);
+}
+
+/* Estilos para los controles de checkbox y botones */
+.control-container {
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  padding: 5px 0;
+}
+
+.control-checkbox {
+  margin-right: 8px;
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+}
+
+.control-label {
+  cursor: pointer;
+  font-weight: 400;
+  display: inline-flex;
+  align-items: center;
+}
+
+.botones-expandir-container {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.control-btn {
+  flex: 1;
+  padding: 6px 10px;
+  border-radius: 4px;
+  background-color: var(--background-primary);
+  border: 1px solid var(--background-modifier-border);
+  color: var(--text-normal);
+  cursor: pointer;
+  transition: background 0.2s ease-in-out;
+}
+
+.expandir-btn:hover {
+  background-color: var(--interactive-accent-hover);
+  color: white;
+}
+
+.colapsar-btn:hover {
+  background-color: var(--background-modifier-hover);
+}
+
+.boton-container {
+  display: flex;
+  justify-content: center;
+  margin-top: 16px;
+}
+
+.aplicar-btn {
+  background-color: var(--interactive-accent);
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.aplicar-btn:hover {
+  background-color: var(--interactive-accent-hover);
+}
+
+/* Estilos para la animación de carga */
+.cargando {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 20px;
+}
+
+.spinner {
+  width: 30px;
+  height: 30px;
+  border: 3px solid rgba(0, 0, 0, 0.1);
+  border-radius: 50%;
+  border-top-color: var(--interactive-accent);
+  animation: spin 1s ease-in-out infinite;
+  margin-bottom: 10px;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.cargando-texto {
+  color: var(--text-muted);
+}
+
+.error-mensaje {
+  color: var(--text-error);
+  padding: 10px;
+  background-color: var(--background-modifier-error);
+  border-radius: 4px;
+}
+
+/* Ajustes para temas oscuros */
+.theme-dark .proyectos-area-vida,
+.theme-dark .proyectos-sin-av {
+  background-color: rgba(0, 0, 0, 0.2);
+}
+
+.theme-dark .proyectos-area-header,
+.theme-dark .proyectos-ai-header {
+  background-color: rgba(0, 0, 0, 0.3);
+}
+
+.theme-dark .proyectos-area-interes,
+.theme-dark .proyectos-sin-ai {
+  background-color: rgba(0, 0, 0, 0.1);
+}
+
+/* Estilos para la visualización responsive */
+@media (max-width: 768px) {
+  .filtro-label {
+      flex: 0 0 90px;
+  }
+  
+  .proyectos-tree-container {
+      font-size: 0.85em;
+  }
+  
+  .botones-expandir-container {
+      flex-direction: column;
+  }
+}

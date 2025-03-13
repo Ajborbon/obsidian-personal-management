@@ -2396,4 +2396,1287 @@ async generarSelectorEstado(params) {
 }
 
 
+// -- Arbol de proyectos GTD
+
+
+/* Genera un árbol jerárquico visual de proyectos organizados por Áreas de Vida y Áreas de Interés
+ * @param {Object} dv - El objeto dataview para acceder a sus funciones
+ * @param {Object} options - Opciones de configuración (tipo de proyectos, filtros adicionales)
+ * @returns {HTMLElement} - Elemento DOM con la estructura de árbol
+ */
+async generarArbolProyectos(dv, options = {}) {
+    try {
+        // Opciones por defecto
+        const config = {
+            tipoProyecto: options.tipoProyecto || "PGTD", // PGTD o PQ
+            estadoFiltro: options.estadoFiltro || "🟢",   // Por defecto solo muestra activos
+            soloMostrarConPendientes: options.soloMostrarConPendientes || false,
+            expandirPorDefecto: options.expandirPorDefecto || false,
+        };
+        
+        // Determinar la carpeta correcta basada en el tipo de proyecto
+        const carpetaKey = config.tipoProyecto === "PGTD" ? "folder_ProyectosGTD" : "folder_ProyectosQ";
+        const carpeta = this.plugin.settings[carpetaKey];
+        
+        if (!carpeta) {
+            console.error(`Carpeta para ${config.tipoProyecto} no configurada`);
+            const error = document.createElement("div");
+            error.className = "tree-error";
+            error.textContent = `Error: Carpeta para ${config.tipoProyecto} no configurada`;
+            return error;
+        }
+        
+        // Crear el contenedor principal
+        const contenedor = document.createElement("div");
+        contenedor.className = "proyectos-tree-container";
+        
+        // Crear el encabezado
+        const encabezado = document.createElement("h3");
+        encabezado.className = "proyectos-tree-title";
+        encabezado.textContent = `Estructura de Proyectos ${config.tipoProyecto}`;
+        contenedor.appendChild(encabezado);
+        
+        // 1. Obtener todos los proyectos del tipo solicitado
+        console.log(`Buscando proyectos en: ${carpeta}`);
+        let proyectos = dv.pages()
+            .filter(p => p.file.path.startsWith(carpeta) && 
+                         !p.file.path.includes("/Plantillas/") &&
+                         !p.file.path.includes("/Archivo/"));
+                         
+        // Guardar todos los proyectos en una variable para poder filtrar pero mantener la estructura
+        const todosLosProyectos = [...proyectos];
+                         
+        // Aplicar filtro de estado si está especificado y no es "todos"
+        if (config.estadoFiltro && config.estadoFiltro !== "") {
+            console.log(`Aplicando filtro de estado: ${config.estadoFiltro}`);
+            proyectos = proyectos.filter(p => p.estado === config.estadoFiltro);
+        }
+        
+        // Si no hay proyectos después de filtrar
+        if (proyectos.length === 0) {
+            const mensaje = document.createElement("p");
+            mensaje.className = "proyectos-tree-empty";
+            mensaje.textContent = `No se encontraron proyectos ${config.tipoProyecto}${config.estadoFiltro ? ` con estado ${config.estadoFiltro}` : ""}`;
+            contenedor.appendChild(mensaje);
+            return contenedor;
+        }
+        
+        console.log(`Proyectos encontrados: ${proyectos.length}`);
+        
+        // 2. Construir la estructura jerárquica para saber qué proyectos se deben mostrar
+        const proyectosAMostrar = this.determinarProyectosAMostrar(proyectos, todosLosProyectos, config);
+        
+        // 3. Construir la estructura jerárquica de proyectos con los que se van a mostrar
+        const { areasVida, proyectosSinAV } = this.construirEstructuraProyectos(proyectosAMostrar, dv);
+        
+        // 4. Renderizar el árbol de Áreas de Vida
+        const arbolAV = document.createElement("div");
+        arbolAV.className = "proyectos-areas-container";
+        
+        // Ordenar las Áreas de Vida por nombre
+        const areasVidaOrdenadas = [...areasVida.entries()]
+            .sort((a, b) => {
+                const nombreA = a[1].nombre || a[0];
+                const nombreB = b[1].nombre || b[0];
+                return nombreA.localeCompare(nombreB);
+            });
+        
+        // Renderizar cada Área de Vida y su contenido
+        for (const [avPath, avData] of areasVidaOrdenadas) {
+            const seccionAV = this.renderizarAreaVida(avPath, avData, dv, config);
+            arbolAV.appendChild(seccionAV);
+        }
+        
+        // 5. Renderizar proyectos sin Área de Vida si existen
+        if (proyectosSinAV.length > 0) {
+            const seccionSinAV = document.createElement("div");
+            seccionSinAV.className = "proyectos-sin-av";
+            
+            const tituloSinAV = document.createElement("div");
+            tituloSinAV.className = "proyectos-area-header sin-area";
+            tituloSinAV.innerHTML = `<span class="toggle-icon">►</span> <span class="area-tipo">Sin Área de Vida</span>`;
+            seccionSinAV.appendChild(tituloSinAV);
+            
+            const contenidoSinAV = document.createElement("div");
+            contenidoSinAV.className = "proyectos-area-content";
+            contenidoSinAV.style.display = "none"; // Inicialmente cerrado
+            
+            // Agrupar proyectos sin AV por Área de Interés
+            const areasPorAI = this.agruparProyectosPorAI(proyectosSinAV, dv);
+            
+            // Renderizar cada grupo de AI
+            for (const [aiPath, aiData] of areasPorAI.entries()) {
+                const seccionAI = this.renderizarAreaInteres(aiPath, aiData, dv, config);
+                contenidoSinAV.appendChild(seccionAI);
+            }
+            
+            // Proyectos sin AI dentro de los sin AV
+            const proyectosSinAI = proyectosSinAV.filter(p => 
+                !p.areaInteres || 
+                (Array.isArray(p.areaInteres) && p.areaInteres.length === 0) ||
+                (typeof p.areaInteres === 'string' && p.areaInteres.trim() === '')
+            );
+            
+            if (proyectosSinAI.length > 0) {
+                const seccionSinAI = document.createElement("div");
+                seccionSinAI.className = "proyectos-sin-ai";
+                
+                const tituloSinAI = document.createElement("div");
+                tituloSinAI.className = "proyectos-ai-header sin-ai";
+                tituloSinAI.innerHTML = `<span class="toggle-icon">►</span> <span class="ai-tipo">Sin Área de Interés</span>`;
+                seccionSinAI.appendChild(tituloSinAI);
+                
+                const contenidoSinAI = document.createElement("div");
+                contenidoSinAI.className = "proyectos-ai-content";
+                contenidoSinAI.style.display = "none"; // Inicialmente cerrado
+                
+                // Renderizar cada proyecto sin AI
+                const listaProyectos = this.renderizarListaProyectos(proyectosSinAI, dv, config);
+                contenidoSinAI.appendChild(listaProyectos);
+                
+                seccionSinAI.appendChild(contenidoSinAI);
+                contenidoSinAV.appendChild(seccionSinAI);
+            }
+            
+            seccionSinAV.appendChild(contenidoSinAV);
+            arbolAV.appendChild(seccionSinAV);
+            
+            // Agregar listener para colapsar/expandir
+            tituloSinAV.addEventListener("click", (event) => {
+                if (event.target.tagName !== 'A') {
+                    this.toggleSeccion(tituloSinAV, contenidoSinAV);
+                }
+            });
+        }
+        
+        contenedor.appendChild(arbolAV);
+        
+        // Agregar listeners para expandir/colapsar
+        this.agregarListenersProyectos(contenedor);
+        
+        return contenedor;
+    } catch (error) {
+        console.error("Error en generarArbolProyectos:", error);
+        const errorElement = document.createElement("div");
+        errorElement.className = "proyectos-tree-error";
+        errorElement.textContent = `Error al generar árbol de proyectos: ${error.message}`;
+        return errorElement;
+    }
+}
+
+/**
+ * Construye la estructura jerárquica de proyectos organizados por Áreas de Vida
+ * @param {Array} proyectos - Array de proyectos obtenidos de dataview
+ * @param {Object} dv - Objeto dataview
+ * @returns {Object} - Estructura organizada por áreas
+ */
+construirEstructuraProyectos(proyectos, dv) {
+    const areasVida = new Map();
+    const proyectosSinAV = [];
+    
+    // Procesar cada proyecto para organizarlo jerárquicamente
+    for (const proyecto of proyectos) {
+        let asignado = false;
+        
+        // Determinar a qué área de vida pertenece
+        if (proyecto.areaVida) {
+            let areaVidaPath;
+            let areaVidaNombre;
+            
+            // Manejar diferentes formatos de areaVida
+            if (typeof proyecto.areaVida === 'object' && proyecto.areaVida.path) {
+                areaVidaPath = proyecto.areaVida.path;
+                try {
+                    const avPage = dv.page(areaVidaPath);
+                    areaVidaNombre = avPage.titulo || avPage.file.name;
+                } catch (e) {
+                    areaVidaNombre = "Área de Vida " + areaVidaPath;
+                }
+            } else if (typeof proyecto.areaVida === 'string') {
+                // Manejar formato de área de vida como string, podría ser un wikilink
+                const wikiMatch = proyecto.areaVida.match(/\[\[(.*?)(?:\|(.*?))?\]\]/);
+                if (wikiMatch) {
+                    areaVidaPath = wikiMatch[1];
+                    areaVidaNombre = wikiMatch[2] || wikiMatch[1];
+                } else if (proyecto.areaVida !== "No es de ningún Area de Vida") {
+                    // Buscar la página por nombre
+                    try {
+                        const avPages = dv.pages('#"' + proyecto.areaVida + '"');
+                        if (avPages.length > 0) {
+                            areaVidaPath = avPages[0].file.path;
+                            areaVidaNombre = proyecto.areaVida;
+                        } else {
+                            areaVidaPath = proyecto.areaVida;
+                            areaVidaNombre = proyecto.areaVida;
+                        }
+                    } catch (e) {
+                        areaVidaPath = proyecto.areaVida;
+                        areaVidaNombre = proyecto.areaVida;
+                    }
+                }
+            }
+            
+            // Si hay un área de vida válida que no sea "No es de ningún Area de Vida"
+            if (areaVidaPath && areaVidaPath !== "No es de ningún Area de Vida") {
+                if (!areasVida.has(areaVidaPath)) {
+                    areasVida.set(areaVidaPath, {
+                        nombre: areaVidaNombre,
+                        proyectos: [],
+                        proyectosPorAI: new Map()
+                    });
+                }
+                
+                // Agregar el proyecto al área correspondiente
+                areasVida.get(areaVidaPath).proyectos.push(proyecto);
+                asignado = true;
+                
+                // Organizar por Área de Interés dentro del Área de Vida
+                if (proyecto.areaInteres) {
+                    const areasInteres = Array.isArray(proyecto.areaInteres) ? 
+                        proyecto.areaInteres : [proyecto.areaInteres];
+                    
+                    let asignadoAI = false;
+                    
+                    for (const ai of areasInteres) {
+                        let aiPath;
+                        let aiNombre;
+                        
+                        // Manejar diferentes formatos de areaInteres
+                        if (typeof ai === 'object' && ai.path) {
+                            aiPath = ai.path;
+                            try {
+                                const aiPage = dv.page(aiPath);
+                                aiNombre = aiPage.titulo || aiPage.file.name;
+                            } catch (e) {
+                                aiNombre = "Área de Interés " + aiPath;
+                            }
+                        } else if (typeof ai === 'string') {
+                            const wikiMatch = ai.match(/\[\[(.*?)(?:\|(.*?))?\]\]/);
+                            if (wikiMatch) {
+                                aiPath = wikiMatch[1];
+                                aiNombre = wikiMatch[2] || wikiMatch[1];
+                            } else {
+                                // Buscar la página por nombre
+                                try {
+                                    const aiPages = dv.pages('#"' + ai + '"');
+                                    if (aiPages.length > 0) {
+                                        aiPath = aiPages[0].file.path;
+                                        aiNombre = ai;
+                                    } else {
+                                        aiPath = ai;
+                                        aiNombre = ai;
+                                    }
+                                } catch (e) {
+                                    aiPath = ai;
+                                    aiNombre = ai;
+                                }
+                            }
+                        }
+                        
+                        if (aiPath) {
+                            const avData = areasVida.get(areaVidaPath);
+                            if (!avData.proyectosPorAI.has(aiPath)) {
+                                avData.proyectosPorAI.set(aiPath, {
+                                    nombre: aiNombre,
+                                    proyectos: []
+                                });
+                            }
+                            
+                            avData.proyectosPorAI.get(aiPath).proyectos.push(proyecto);
+                            asignadoAI = true;
+                        }
+                    }
+                    
+                    // Si no se asignó a ningún AI, agregar a proyectos sin AI
+                    if (!asignadoAI) {
+                        const avData = areasVida.get(areaVidaPath);
+                        if (!avData.proyectosSinAI) {
+                            avData.proyectosSinAI = [];
+                        }
+                        avData.proyectosSinAI.push(proyecto);
+                    }
+                } else {
+                    // Proyecto sin AI
+                    const avData = areasVida.get(areaVidaPath);
+                    if (!avData.proyectosSinAI) {
+                        avData.proyectosSinAI = [];
+                    }
+                    avData.proyectosSinAI.push(proyecto);
+                }
+            }
+        }
+        
+        if (!asignado) {
+            proyectosSinAV.push(proyecto);
+        }
+    }
+    
+    return { areasVida, proyectosSinAV };
+}
+
+/**
+ * Agrupa proyectos por Área de Interés
+ * @param {Array} proyectos - Array de proyectos
+ * @param {Object} dv - Objeto dataview
+ * @returns {Map} - Mapa de proyectos agrupados por AI
+ */
+agruparProyectosPorAI(proyectos, dv) {
+    const areasPorAI = new Map();
+    const proyectosSinAI = [];
+    
+    for (const proyecto of proyectos) {
+        let asignado = false;
+        
+        if (proyecto.areaInteres) {
+            const areasInteres = Array.isArray(proyecto.areaInteres) ? 
+                proyecto.areaInteres : [proyecto.areaInteres];
+            
+            for (const ai of areasInteres) {
+                let aiPath;
+                let aiNombre;
+                
+                // Manejar diferentes formatos de areaInteres
+                if (typeof ai === 'object' && ai.path) {
+                    aiPath = ai.path;
+                    try {
+                        const aiPage = dv.page(aiPath);
+                        aiNombre = aiPage.titulo || aiPage.file.name;
+                    } catch (e) {
+                        aiNombre = "Área de Interés " + aiPath;
+                    }
+                } else if (typeof ai === 'string') {
+                    const wikiMatch = ai.match(/\[\[(.*?)(?:\|(.*?))?\]\]/);
+                    if (wikiMatch) {
+                        aiPath = wikiMatch[1];
+                        aiNombre = wikiMatch[2] || wikiMatch[1];
+                    } else {
+                        // Buscar la página por nombre
+                        try {
+                            const aiPages = dv.pages('#"' + ai + '"');
+                            if (aiPages.length > 0) {
+                                aiPath = aiPages[0].file.path;
+                                aiNombre = ai;
+                            } else {
+                                aiPath = ai;
+                                aiNombre = ai;
+                            }
+                        } catch (e) {
+                            aiPath = ai;
+                            aiNombre = ai;
+                        }
+                    }
+                }
+                
+                if (aiPath) {
+                    if (!areasPorAI.has(aiPath)) {
+                        areasPorAI.set(aiPath, {
+                            nombre: aiNombre,
+                            proyectos: []
+                        });
+                    }
+                    
+                    areasPorAI.get(aiPath).proyectos.push(proyecto);
+                    asignado = true;
+                }
+            }
+        }
+        
+        if (!asignado) {
+            proyectosSinAI.push(proyecto);
+        }
+    }
+    
+    // Agregar proyectos sin AI como una categoría especial
+    if (proyectosSinAI.length > 0) {
+        areasPorAI.set("sin-ai", {
+            nombre: "Sin Área de Interés",
+            proyectos: proyectosSinAI
+        });
+    }
+    
+    return areasPorAI;
+}
+
+
+
+/**
+ * Renderiza una sección de Área de Interés con sus proyectos
+ * @param {string} aiPath - Ruta del archivo del Área de Interés
+ * @param {Object} aiData - Datos del Área de Interés
+ * @param {Object} dv - Objeto dataview
+ * @param {Object} config - Configuración
+ * @returns {HTMLElement} - Elemento DOM con la sección del AI
+ */
+renderizarAreaInteres(aiPath, aiData, dv, config) {
+    const seccionAI = document.createElement("div");
+    seccionAI.className = "proyectos-area-interes";
+    
+    // Encabezado del AI
+    const tituloAI = document.createElement("div");
+    tituloAI.className = "proyectos-ai-header";
+    
+    // Icono de toggle
+    const toggleIcono = document.createElement("span");
+    toggleIcono.className = "toggle-icon";
+    toggleIcono.textContent = "►"; // Por defecto cerrado
+    tituloAI.appendChild(toggleIcono);
+    
+    // Etiqueta de tipo
+    const tipoLabel = document.createElement("span");
+    tipoLabel.className = "ai-tipo";
+    tipoLabel.textContent = "📁 Área de Interés:";
+    tituloAI.appendChild(tipoLabel);
+    
+    // Enlace del AI
+    if (aiPath !== "sin-ai") {
+        try {
+            const enlaceAI = document.createElement("a");
+            enlaceAI.className = "ai-link";
+            enlaceAI.textContent = aiData.nombre || "Área de Interés";
+            enlaceAI.href = aiPath;
+            enlaceAI.setAttribute("data-href", aiPath);
+            enlaceAI.target = "_blank"; // Abrir en nueva pestaña
+            
+            // Hacer clicable el enlace usando la API de Obsidian
+            enlaceAI.addEventListener("click", (event) => {
+                event.preventDefault();
+                app.workspace.openLinkText(aiPath, "", true); // El true hace que se abra en nueva pestaña
+            });
+            
+            tituloAI.appendChild(enlaceAI);
+        } catch (e) {
+            const textoAI = document.createElement("span");
+            textoAI.textContent = aiData.nombre || "Área de Interés";
+            tituloAI.appendChild(textoAI);
+        }
+    } else {
+        const textoAI = document.createElement("span");
+        textoAI.textContent = aiData.nombre || "Sin Área de Interés";
+        tituloAI.appendChild(textoAI);
+    }
+    
+    seccionAI.appendChild(tituloAI);
+    
+    // Contenido del AI (proyectos)
+    const contenidoAI = document.createElement("div");
+    contenidoAI.className = "proyectos-ai-content";
+    contenidoAI.style.display = "none"; // Por defecto cerrado
+    
+    // Renderizar proyectos de esta AI
+    if (aiData.proyectos && aiData.proyectos.length > 0) {
+        const listaProyectos = this.renderizarListaProyectos(aiData.proyectos, dv, config);
+        contenidoAI.appendChild(listaProyectos);
+    } else {
+        const mensaje = document.createElement("p");
+        mensaje.className = "proyectos-ai-empty";
+        mensaje.textContent = "No hay proyectos en esta Área de Interés";
+        contenidoAI.appendChild(mensaje);
+    }
+    
+    seccionAI.appendChild(contenidoAI);
+    
+    // Agregar listener para colapsar/expandir
+    tituloAI.addEventListener("click", (event) => {
+        if (event.target.tagName !== 'A') {
+            this.toggleSeccion(tituloAI, contenidoAI);
+        }
+    });
+    
+    return seccionAI;
+}
+
+/**
+ * Renderiza una lista de proyectos
+ * @param {Array} proyectos - Array de proyectos
+ * @param {Object} dv - Objeto dataview
+ * @param {Object} config - Configuración
+ * @returns {HTMLElement} - Elemento DOM con la lista de proyectos
+ */
+renderizarListaProyectos(proyectos, dv, config) {
+    const lista = document.createElement("ul");
+    lista.className = "proyectos-lista";
+    
+    // Ordenar proyectos: primero por nivel (nivelP), luego por fecha (más reciente primero)
+    const ordenados = [...proyectos].sort((a, b) => {
+        const nivelA = a.nivelP || 0;
+        const nivelB = b.nivelP || 0;
+        
+        if (nivelA !== nivelB) {
+            return nivelA - nivelB; // Ascendente por nivel
+        }
+        
+        // Si los niveles son iguales, ordenar por fecha (descendente)
+        const fechaA = a.fecha ? new Date(a.fecha) : new Date(0);
+        const fechaB = b.fecha ? new Date(b.fecha) : new Date(0);
+        
+        return fechaB - fechaA;
+    });
+    
+    // Construir un mapa para relacionar proyectos padres e hijos
+    const proyectosMap = new Map();
+    const nodosRaiz = [];
+    
+    // Primero mapear todos los proyectos
+    for (const proyecto of ordenados) {
+        const path = proyecto.file.path;
+        
+        proyectosMap.set(path, {
+            proyecto,
+            hijos: []
+        });
+    }
+    
+    // Segundo paso: establecer relaciones padre-hijo
+    for (const proyecto of ordenados) {
+        const path = proyecto.file.path;
+        
+        // Si tiene proyectoGTD/proyectoQ como padre
+        const padresCampo = config.tipoProyecto === "PGTD" ? "proyectoGTD" : "proyectoQ";
+        
+        if (proyecto[padresCampo]) {
+            const padres = Array.isArray(proyecto[padresCampo]) ? 
+                            proyecto[padresCampo] : [proyecto[padresCampo]];
+            
+            let tieneRelacion = false;
+            
+            for (const padre of padres) {
+                let padrePath;
+                
+                if (typeof padre === 'object' && padre.path) {
+                    padrePath = padre.path;
+                } else if (typeof padre === 'string') {
+                    const wikiMatch = padre.match(/\[\[(.*?)(?:\|(.*?))?\]\]/);
+                    if (wikiMatch) {
+                        padrePath = wikiMatch[1];
+                    } else {
+                        // Buscar proyecto por nombre
+                        const proyectoEncontrado = ordenados.find(p => 
+                            p.titulo === padre || 
+                            (p.aliases && p.aliases.includes(padre)) ||
+                            p.file.name === padre
+                        );
+                        
+                        if (proyectoEncontrado) {
+                            padrePath = proyectoEncontrado.file.path;
+                        } else {
+                            padrePath = padre;
+                        }
+                    }
+                }
+                
+                if (padrePath && proyectosMap.has(padrePath)) {
+                    proyectosMap.get(padrePath).hijos.push(proyectosMap.get(path));
+                    tieneRelacion = true;
+                }
+            }
+            
+            if (!tieneRelacion) {
+                nodosRaiz.push(proyectosMap.get(path));
+            }
+        } else {
+            nodosRaiz.push(proyectosMap.get(path));
+        }
+    }
+    
+    // Renderizar proyectos jerárquicamente
+    for (const nodoRaiz of nodosRaiz) {
+        this.renderizarProyectoRecursivo(nodoRaiz, lista, 0, dv, config);
+    }
+    
+    // Si no hay proyectos después de filtrar
+    if (lista.children.length === 0) {
+        const mensaje = document.createElement("li");
+        mensaje.className = "proyectos-lista-empty";
+        mensaje.textContent = "No hay proyectos que cumplan con los criterios de filtro";
+        lista.appendChild(mensaje);
+    }
+    
+    return lista;
+}
+
+/**
+ * Renderiza un proyecto y sus subproyectos de forma recursiva
+ * @param {Object} nodo - Nodo del proyecto actual
+ * @param {HTMLElement} lista - Elemento lista donde agregar el proyecto
+ * @param {number} nivel - Nivel de indentación
+ * @param {Object} dv - Objeto dataview
+ * @param {Object} config - Configuración
+ */
+renderizarProyectoRecursivo(nodo, lista, nivel, dv, config) {
+    const { proyecto, hijos } = nodo;
+    
+    // Filtrar si se debe mostrar solo con tareas pendientes
+    if (config.soloMostrarConPendientes) {
+        const tieneTareasPendientes = (
+            proyecto.file.tasks && 
+            proyecto.file.tasks.filter(t => !t.completed).length > 0
+        );
+        
+        // Comprobar si alguno de sus hijos tiene tareas pendientes
+        const hijosConTareas = hijos.some(hijo => {
+            // Verificar tareas en este hijo
+            const hijoPendientes = hijo.proyecto.file.tasks && 
+                hijo.proyecto.file.tasks.filter(t => !t.completed).length > 0;
+            return hijoPendientes;
+        });
+        
+        if (!tieneTareasPendientes && !hijosConTareas && hijos.length === 0) {
+            return; // No mostrar este proyecto ni sus hijos
+        }
+    }
+    
+    // Crear item de lista para este proyecto
+    const item = document.createElement("li");
+    item.className = `proyectos-item nivel-${nivel}`;
+    
+    // Agregar indentación visual
+    const indentacion = nivel > 0 ? '→'.repeat(nivel) + ' ' : '';
+    
+    // Determinar el texto a mostrar (alias o nombre del archivo)
+    const textoMostrar = proyecto.titulo || 
+                       (proyecto.aliases && proyecto.aliases.length > 0 ? proyecto.aliases[0] : null) || 
+                       proyecto.file.name;
+    
+    // Construir el contenido del item
+    const contenido = document.createElement("div");
+    contenido.className = "proyecto-contenido";
+    
+    // Agregar estado como emoji
+    if (proyecto.estado) {
+        const estadoSpan = document.createElement("span");
+        estadoSpan.className = "proyecto-estado";
+        estadoSpan.textContent = proyecto.estado + " ";
+        contenido.appendChild(estadoSpan);
+    }
+    
+    // Agregar indentación como texto
+    if (indentacion) {
+        const indentSpan = document.createElement("span");
+        indentSpan.className = "proyecto-indent";
+        indentSpan.textContent = indentacion;
+        contenido.appendChild(indentSpan);
+    }
+    
+    // Crear enlace al proyecto
+    try {
+        const enlace = document.createElement("a");
+        enlace.className = "proyecto-link";
+        enlace.textContent = textoMostrar;
+        enlace.href = proyecto.file.path;
+        enlace.setAttribute("data-href", proyecto.file.path);
+        enlace.target = "_blank"; // Abrir en nueva pestaña
+        
+        // Hacer clicable el enlace
+        enlace.addEventListener("click", (event) => {
+            event.preventDefault();
+            app.workspace.openLinkText(proyecto.file.path, "", true); // El true hace que se abra en nueva pestaña
+        });
+        
+        contenido.appendChild(enlace);
+    } catch (e) {
+        const texto = document.createElement("span");
+        texto.textContent = textoMostrar;
+        contenido.appendChild(texto);
+    }
+    
+    // Agregar info adicional como tareas pendientes
+    if (proyecto.file.tasks) {
+        const tareasPendientes = proyecto.file.tasks.filter(t => !t.completed).length;
+        if (tareasPendientes > 0) {
+            const tareasSpan = document.createElement("span");
+            tareasSpan.className = "proyecto-pendientes";
+            tareasSpan.textContent = ` (${tareasPendientes} pendientes)`;
+            contenido.appendChild(tareasSpan);
+        }
+    }
+    
+    // Agregar nivel si es > 0
+    if (proyecto.nivelP && proyecto.nivelP > 0) {
+        const nivelSpan = document.createElement("span");
+        nivelSpan.className = "proyecto-nivel";
+        nivelSpan.textContent = ` [Nivel ${proyecto.nivelP}]`;
+        contenido.appendChild(nivelSpan);
+    }
+    
+    item.appendChild(contenido);
+    
+    // Agregar a la lista
+    lista.appendChild(item);
+    
+    // Procesar hijos recursivamente si tiene
+    if (hijos && hijos.length > 0) {
+        const sublista = document.createElement("ul");
+        sublista.className = "proyectos-sublista";
+        
+        // Procesar cada hijo
+        for (const hijo of hijos) {
+            this.renderizarProyectoRecursivo(hijo, sublista, nivel + 1, dv, config);
+        }
+        
+        // Solo agregar la sublista si tiene hijos después del filtrado
+        if (sublista.children.length > 0) {
+            item.appendChild(sublista);
+        }
+    }
+}
+
+/**
+ * Alterna entre mostrar y ocultar una sección
+ * @param {HTMLElement} header - Elemento de encabezado con el toggle
+ * @param {HTMLElement} content - Elemento de contenido a mostrar/ocultar
+ */
+toggleSeccion(header, content) {
+    const toggleIcon = header.querySelector('.toggle-icon');
+    const isVisible = content.style.display !== 'none';
+    
+    if (isVisible) {
+        content.style.display = 'none';
+        toggleIcon.textContent = '►';
+    } else {
+        content.style.display = 'block';
+        toggleIcon.textContent = '▼';
+    }
+}
+
+/**
+ * Expande todas las secciones en el árbol
+ * @param {HTMLElement} container - Contenedor principal
+ */
+expandirTodo(container) {
+    // Obtener todos los elementos togglables
+    const headers = container.querySelectorAll('.proyectos-area-header, .proyectos-ai-header');
+    
+    // Recorrer cada header y expandir su contenido
+    headers.forEach(header => {
+        const content = header.nextElementSibling;
+        if (content && (content.classList.contains('proyectos-area-content') || 
+                        content.classList.contains('proyectos-ai-content'))) {
+            content.style.display = 'block';
+            const toggleIcon = header.querySelector('.toggle-icon');
+            if (toggleIcon) {
+                toggleIcon.textContent = '▼';
+            }
+        }
+    });
+}
+
+
+/**
+ * Colapsa todas las secciones en el árbol
+ * @param {HTMLElement} container - Contenedor principal
+ */
+colapsarTodo(container) {
+    // Obtener todos los elementos togglables
+    const headers = container.querySelectorAll('.proyectos-area-header, .proyectos-ai-header');
+    
+    // Recorrer cada header y colapsar su contenido
+    headers.forEach(header => {
+        const content = header.nextElementSibling;
+        if (content && (content.classList.contains('proyectos-area-content') || 
+                        content.classList.contains('proyectos-ai-content'))) {
+            content.style.display = 'none';
+            const toggleIcon = header.querySelector('.toggle-icon');
+            if (toggleIcon) {
+                toggleIcon.textContent = '►';
+            }
+        }
+    });
+}
+
+/**
+ * Agrega listeners para expandir/colapsar secciones
+ * @param {HTMLElement} container - Contenedor principal
+ */
+agregarListenersProyectos(container) {
+    // Agregar listeners para los headers de Áreas de Vida
+    const headersAV = container.querySelectorAll('.proyectos-area-header');
+    headersAV.forEach(header => {
+        const content = header.nextElementSibling;
+        if (content && content.classList.contains('proyectos-area-content')) {
+            header.addEventListener('click', (event) => {
+                if (event.target.tagName !== 'A') {
+                    this.toggleSeccion(header, content);
+                }
+            });
+        }
+    });
+    
+    // Agregar listeners para los headers de Áreas de Interés
+    const headersAI = container.querySelectorAll('.proyectos-ai-header');
+    headersAI.forEach(header => {
+        const content = header.nextElementSibling;
+        if (content && content.classList.contains('proyectos-ai-content')) {
+            header.addEventListener('click', (event) => {
+                if (event.target.tagName !== 'A') {
+                    this.toggleSeccion(header, content);
+                }
+            });
+        }
+    });
+}
+
+
+/**
+ * Determina qué proyectos deben mostrarse teniendo en cuenta la estructura jerárquica
+ * @param {Array} proyectosFiltrados - Array de proyectos ya filtrados
+ * @param {Array} todosLosProyectos - Array con todos los proyectos
+ * @param {Object} config - Configuración
+ * @returns {Array} - Array de proyectos a mostrar
+ */
+determinarProyectosAMostrar(proyectosFiltrados, todosLosProyectos, config) {
+    // Si no hay filtro específico, mostrar todos
+    if (!config.estadoFiltro || config.estadoFiltro === "") {
+        return todosLosProyectos;
+    }
+    
+    // Conjunto para almacenar paths de proyectos a mostrar
+    const pathsAMostrar = new Set();
+    
+    // Primero agregamos los proyectos filtrados
+    proyectosFiltrados.forEach(p => pathsAMostrar.add(p.file.path));
+    
+    // Luego identificamos proyectos padres necesarios para mantener la estructura
+    let cambiosRealizados = true;
+    
+    // Pasada 1: Identificar padres directos de los proyectos filtrados
+    while (cambiosRealizados) {
+        cambiosRealizados = false;
+        
+        for (const proyecto of todosLosProyectos) {
+            // Si este proyecto ya está en la lista, pasamos al siguiente
+            if (pathsAMostrar.has(proyecto.file.path)) continue;
+            
+            // Campo de proyectos padres según el tipo
+            const padresCampo = config.tipoProyecto === "PGTD" ? "proyectoGTD" : "proyectoQ";
+            
+            // Revisar si alguno de sus hijos está en la lista
+            for (const otroProyecto of todosLosProyectos) {
+                if (!pathsAMostrar.has(otroProyecto.file.path)) continue;
+                
+                // Verificar si este proyecto es padre del otro
+                const padres = otroProyecto[padresCampo];
+                if (!padres) continue;
+                
+                const esReferenciadoComo = Array.isArray(padres) ? 
+                    padres.some(p => this.referenciaAlMismoProyecto(p, proyecto)) : 
+                    this.referenciaAlMismoProyecto(padres, proyecto);
+                
+                if (esReferenciadoComo) {
+                    pathsAMostrar.add(proyecto.file.path);
+                    cambiosRealizados = true;
+                    break;
+                }
+            }
+        }
+    }
+    
+    // Pasada 2: Identificar hijos directos de los proyectos filtrados
+    for (const proyecto of proyectosFiltrados) {
+        // Campo de proyectos padres según el tipo
+        const padresCampo = config.tipoProyecto === "PGTD" ? "proyectoGTD" : "proyectoQ";
+        
+        // Buscar proyectos que tengan a este como padre
+        for (const otroProyecto of todosLosProyectos) {
+            if (pathsAMostrar.has(otroProyecto.file.path)) continue;
+            
+            // Verificar si proyecto es padre de otroProyecto
+            const padres = otroProyecto[padresCampo];
+            if (!padres) continue;
+            
+            const esReferenciadoComo = Array.isArray(padres) ? 
+                padres.some(p => this.referenciaAlMismoProyecto(p, proyecto)) : 
+                this.referenciaAlMismoProyecto(padres, proyecto);
+            
+            if (esReferenciadoComo) {
+                pathsAMostrar.add(otroProyecto.file.path);
+            }
+        }
+    }
+    
+    // Retornar los proyectos que deben mostrarse
+    return todosLosProyectos.filter(p => pathsAMostrar.has(p.file.path));
+}
+
+
+
+/**
+ * Comprueba si una referencia (objeto o string) apunta al mismo proyecto
+ * @param {*} referencia - Puede ser objeto con path, string con wikilink, o nombre directo
+ * @param {Object} proyecto - Proyecto a comparar
+ * @returns {boolean} - true si la referencia apunta al proyecto
+ */
+referenciaAlMismoProyecto(referencia, proyecto) {
+    if (!referencia || !proyecto) return false;
+    
+    // Si es un objeto con path
+    if (typeof referencia === 'object' && referencia.path) {
+        return referencia.path === proyecto.file.path;
+    }
+    
+    // Si es un string, podría ser un wikilink o un nombre directo
+    if (typeof referencia === 'string') {
+        // Verificar si es un wikilink [[path|alias]]
+        const wikiMatch = referencia.match(/\[\[(.*?)(?:\|(.*?))?\]\]/);
+        if (wikiMatch) {
+            const path = wikiMatch[1];
+            return path === proyecto.file.path || 
+                   path === proyecto.file.basename || 
+                   path === proyecto.titulo;
+        }
+        
+        // Comparar con nombre, título o alias
+        return referencia === proyecto.file.path ||
+               referencia === proyecto.file.basename ||
+               referencia === proyecto.titulo ||
+               (proyecto.aliases && proyecto.aliases.includes(referencia));
+    }
+    
+    return false;
+}
+
+
+
+/**
+ * Construye la estructura jerárquica de proyectos organizados por Áreas de Vida
+ * @param {Array} proyectos - Array de proyectos obtenidos de dataview
+ * @param {Object} dv - Objeto dataview
+ * @returns {Object} - Estructura organizada por áreas
+ */
+construirEstructuraProyectos(proyectos, dv) {
+    const areasVida = new Map();
+    const proyectosSinAV = [];
+    
+    // Procesar cada proyecto para organizarlo jerárquicamente
+    for (const proyecto of proyectos) {
+        let asignado = false;
+        
+        // Determinar a qué área de vida pertenece
+        if (proyecto.areaVida) {
+            let areaVidaPath;
+            let areaVidaNombre;
+            
+            // Manejar diferentes formatos de areaVida
+            if (typeof proyecto.areaVida === 'object' && proyecto.areaVida.path) {
+                areaVidaPath = proyecto.areaVida.path;
+                try {
+                    const avPage = dv.page(areaVidaPath);
+                    areaVidaNombre = avPage.titulo || avPage.file.name;
+                } catch (e) {
+                    areaVidaNombre = "Área de Vida " + areaVidaPath;
+                }
+            } else if (typeof proyecto.areaVida === 'string') {
+                // Manejar formato de área de vida como string, podría ser un wikilink
+                const wikiMatch = proyecto.areaVida.match(/\[\[(.*?)(?:\|(.*?))?\]\]/);
+                if (wikiMatch) {
+                    areaVidaPath = wikiMatch[1];
+                    areaVidaNombre = wikiMatch[2] || wikiMatch[1];
+                } else if (proyecto.areaVida !== "No es de ningún Area de Vida") {
+                    // Buscar la página por nombre
+                    try {
+                        const avPages = dv.pages('#"' + proyecto.areaVida + '"');
+                        if (avPages.length > 0) {
+                            areaVidaPath = avPages[0].file.path;
+                            areaVidaNombre = proyecto.areaVida;
+                        } else {
+                            areaVidaPath = proyecto.areaVida;
+                            areaVidaNombre = proyecto.areaVida;
+                        }
+                    } catch (e) {
+                        areaVidaPath = proyecto.areaVida;
+                        areaVidaNombre = proyecto.areaVida;
+                    }
+                }
+            }
+            
+            // Si hay un área de vida válida que no sea "No es de ningún Area de Vida"
+            if (areaVidaPath && areaVidaPath !== "No es de ningún Area de Vida") {
+                if (!areasVida.has(areaVidaPath)) {
+                    areasVida.set(areaVidaPath, {
+                        nombre: areaVidaNombre,
+                        proyectos: [],
+                        proyectosPorAI: new Map()
+                    });
+                }
+                
+                // Agregar el proyecto al área correspondiente
+                areasVida.get(areaVidaPath).proyectos.push(proyecto);
+                asignado = true;
+                
+                // Organizar por Área de Interés dentro del Área de Vida
+                if (proyecto.areaInteres) {
+                    const areasInteres = Array.isArray(proyecto.areaInteres) ? 
+                        proyecto.areaInteres : [proyecto.areaInteres];
+                    
+                    let asignadoAI = false;
+                    
+                    for (const ai of areasInteres) {
+                        let aiPath;
+                        let aiNombre;
+                        
+                        // Manejar diferentes formatos de areaInteres
+                        if (typeof ai === 'object' && ai.path) {
+                            aiPath = ai.path;
+                            try {
+                                const aiPage = dv.page(aiPath);
+                                aiNombre = aiPage.titulo || aiPage.file.name;
+                            } catch (e) {
+                                aiNombre = "Área de Interés " + aiPath;
+                            }
+                        } else if (typeof ai === 'string') {
+                            const wikiMatch = ai.match(/\[\[(.*?)(?:\|(.*?))?\]\]/);
+                            if (wikiMatch) {
+                                aiPath = wikiMatch[1];
+                                aiNombre = wikiMatch[2] || wikiMatch[1];
+                            } else {
+                                // Buscar la página por nombre
+                                try {
+                                    const aiPages = dv.pages('#"' + ai + '"');
+                                    if (aiPages.length > 0) {
+                                        aiPath = aiPages[0].file.path;
+                                        aiNombre = ai;
+                                    } else {
+                                        aiPath = ai;
+                                        aiNombre = ai;
+                                    }
+                                } catch (e) {
+                                    aiPath = ai;
+                                    aiNombre = ai;
+                                }
+                            }
+                        }
+                        
+                        if (aiPath) {
+                            const avData = areasVida.get(areaVidaPath);
+                            if (!avData.proyectosPorAI.has(aiPath)) {
+                                avData.proyectosPorAI.set(aiPath, {
+                                    nombre: aiNombre,
+                                    proyectos: []
+                                });
+                            }
+                            
+                            avData.proyectosPorAI.get(aiPath).proyectos.push(proyecto);
+                            asignadoAI = true;
+                        }
+                    }
+                    
+                    // Si no se asignó a ningún AI, agregar a proyectos sin AI
+                    if (!asignadoAI) {
+                        const avData = areasVida.get(areaVidaPath);
+                        if (!avData.proyectosSinAI) {
+                            avData.proyectosSinAI = [];
+                        }
+                        avData.proyectosSinAI.push(proyecto);
+                    }
+                } else {
+                    // Proyecto sin AI
+                    const avData = areasVida.get(areaVidaPath);
+                    if (!avData.proyectosSinAI) {
+                        avData.proyectosSinAI = [];
+                    }
+                    avData.proyectosSinAI.push(proyecto);
+                }
+            }
+        }
+        
+        if (!asignado) {
+            proyectosSinAV.push(proyecto);
+        }
+    }
+    
+    return { areasVida, proyectosSinAV };
+}
+
+/**
+ * Agrupa proyectos por Área de Interés
+ * @param {Array} proyectos - Array de proyectos
+ * @param {Object} dv - Objeto dataview
+ * @returns {Map} - Mapa de proyectos agrupados por AI
+ */
+agruparProyectosPorAI(proyectos, dv) {
+    const areasPorAI = new Map();
+    const proyectosSinAI = [];
+    
+    for (const proyecto of proyectos) {
+        let asignado = false;
+        
+        if (proyecto.areaInteres) {
+            const areasInteres = Array.isArray(proyecto.areaInteres) ? 
+                proyecto.areaInteres : [proyecto.areaInteres];
+            
+            for (const ai of areasInteres) {
+                let aiPath;
+                let aiNombre;
+                
+                // Manejar diferentes formatos de areaInteres
+                if (typeof ai === 'object' && ai.path) {
+                    aiPath = ai.path;
+                    try {
+                        const aiPage = dv.page(aiPath);
+                        aiNombre = aiPage.titulo || aiPage.file.name;
+                    } catch (e) {
+                        aiNombre = "Área de Interés " + aiPath;
+                    }
+                } else if (typeof ai === 'string') {
+                    const wikiMatch = ai.match(/\[\[(.*?)(?:\|(.*?))?\]\]/);
+                    if (wikiMatch) {
+                        aiPath = wikiMatch[1];
+                        aiNombre = wikiMatch[2] || wikiMatch[1];
+                    } else {
+                        // Buscar la página por nombre
+                        try {
+                            const aiPages = dv.pages('#"' + ai + '"');
+                            if (aiPages.length > 0) {
+                                aiPath = aiPages[0].file.path;
+                                aiNombre = ai;
+                            } else {
+                                aiPath = ai;
+                                aiNombre = ai;
+                            }
+                        } catch (e) {
+                            aiPath = ai;
+                            aiNombre = ai;
+                        }
+                    }
+                }
+                
+                if (aiPath) {
+                    if (!areasPorAI.has(aiPath)) {
+                        areasPorAI.set(aiPath, {
+                            nombre: aiNombre,
+                            proyectos: []
+                        });
+                    }
+                    
+                    areasPorAI.get(aiPath).proyectos.push(proyecto);
+                    asignado = true;
+                }
+            }
+        }
+        
+        if (!asignado) {
+            proyectosSinAI.push(proyecto);
+        }
+    }
+    
+    // Agregar proyectos sin AI como una categoría especial
+    if (proyectosSinAI.length > 0) {
+        areasPorAI.set("sin-ai", {
+            nombre: "Sin Área de Interés",
+            proyectos: proyectosSinAI
+        });
+    }
+    
+    return areasPorAI;
+}
+
+/**
+ * Renderiza una sección de Área de Vida con sus proyectos
+ * @param {string} avPath - Ruta del archivo del Área de Vida
+ * @param {Object} avData - Datos del Área de Vida
+ * @param {Object} dv - Objeto dataview
+ * @param {Object} config - Configuración
+ * @returns {HTMLElement} - Elemento DOM con la sección del AV
+ */
+renderizarAreaVida(avPath, avData, dv, config) {
+    const seccionAV = document.createElement("div");
+    seccionAV.className = "proyectos-area-vida";
+    
+    // Encabezado del Área de Vida
+    const tituloAV = document.createElement("div");
+    tituloAV.className = "proyectos-area-header";
+    
+    // Icono de toggle
+    const toggleIcono = document.createElement("span");
+    toggleIcono.className = "toggle-icon";
+    toggleIcono.textContent = "►"; // Por defecto cerrado
+    tituloAV.appendChild(toggleIcono);
+    
+    // Etiqueta de tipo
+    const tipoLabel = document.createElement("span");
+    tipoLabel.className = "area-tipo";
+    tipoLabel.textContent = "🗂️ Área de Vida:";
+    tituloAV.appendChild(tipoLabel);
+    
+    // Enlace del AV
+    try {
+        const enlaceAV = document.createElement("a");
+        enlaceAV.className = "area-link";
+        enlaceAV.textContent = avData.nombre || "Área de Vida";
+        enlaceAV.href = avPath;
+        enlaceAV.setAttribute("data-href", avPath);
+        enlaceAV.target = "_blank"; // Abrir en nueva pestaña
+        
+        // Hacer clicable el enlace usando la API de Obsidian
+        enlaceAV.addEventListener("click", (event) => {
+            event.preventDefault();
+            app.workspace.openLinkText(avPath, "", true); // El true hace que se abra en nueva pestaña
+        });
+        
+        tituloAV.appendChild(enlaceAV);
+    } catch (e) {
+        const textoAV = document.createElement("span");
+        textoAV.textContent = avData.nombre || "Área de Vida";
+        tituloAV.appendChild(textoAV);
+    }
+    
+    seccionAV.appendChild(tituloAV);
+    
+    // Contenido del AV (AIs y proyectos)
+    const contenidoAV = document.createElement("div");
+    contenidoAV.className = "proyectos-area-content";
+    contenidoAV.style.display = "none"; // Por defecto cerrado
+    
+    // Renderizar Áreas de Interés dentro de esta AV
+    if (avData.proyectosPorAI && avData.proyectosPorAI.size > 0) {
+        // Ordenar AIs alfabéticamente
+        const aiOrdenadas = [...avData.proyectosPorAI.entries()]
+            .sort((a, b) => a[1].nombre.localeCompare(b[1].nombre));
+        
+        for (const [aiPath, aiData] of aiOrdenadas) {
+            const seccionAI = this.renderizarAreaInteres(aiPath, aiData, dv, config);
+            contenidoAV.appendChild(seccionAI);
+        }
+    }
+    
+    // Renderizar proyectos sin AI
+    if (avData.proyectosSinAI && avData.proyectosSinAI.length > 0) {
+        const seccionSinAI = document.createElement("div");
+        seccionSinAI.className = "proyectos-sin-ai";
+        
+        const tituloSinAI = document.createElement("div");
+        tituloSinAI.className = "proyectos-ai-header sin-ai";
+        tituloSinAI.innerHTML = `<span class="toggle-icon">►</span> <span class="ai-tipo">Sin Área de Interés</span>`;
+        seccionSinAI.appendChild(tituloSinAI);
+        
+        const contenidoSinAI = document.createElement("div");
+        contenidoSinAI.className = "proyectos-ai-content";
+        contenidoSinAI.style.display = "none"; // Por defecto cerrado
+        
+        // Renderizar cada proyecto sin AI
+        const listaProyectos = this.renderizarListaProyectos(avData.proyectosSinAI, dv, config);
+        contenidoSinAI.appendChild(listaProyectos);
+        
+        seccionSinAI.appendChild(contenidoSinAI);
+        contenidoAV.appendChild(seccionSinAI);
+        
+        // Agregar listener para colapsar/expandir
+        tituloSinAI.addEventListener("click", (event) => {
+            if (event.target.tagName !== 'A') {
+                this.toggleSeccion(tituloSinAI, contenidoSinAI);
+            }
+        });
+    }
+    
+    seccionAV.appendChild(contenidoAV);
+    
+    // Agregar listener para colapsar/expandir
+    tituloAV.addEventListener("click", (event) => {
+        if (event.target.tagName !== 'A') {
+            this.toggleSeccion(tituloAV, contenidoAV);
+        }
+    });
+    
+    return seccionAV;
+}
+
   }
