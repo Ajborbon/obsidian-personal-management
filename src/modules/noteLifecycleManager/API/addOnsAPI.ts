@@ -4646,4 +4646,706 @@ colapsarTodasLasTareas(container) {
 }
 
 
+//-- Tareas Inbox
+
+// Añadir al archivo src/modules/noteLifecycleManager/API/addOnsAPI.ts
+
+
+/**
+ * Genera un componente visual para mostrar tareas con etiqueta #inbox (bandeja de entrada)
+ * @param dv Objeto dataview para acceder a sus funciones
+ * @returns Elemento DOM con la vista de tareas de bandeja de entrada
+ */
+async mostrarTareasInbox(dv) {
+    try {
+        // Crear el contenedor principal
+        const container = document.createElement("div");
+        container.className = "tareas-inbox-container";
+        
+        // Añadir estilos personalizados si son necesarios
+        const styleEl = document.createElement("style");
+        styleEl.textContent = `
+        .tareas-inbox-container {
+            font-size: 0.95em;
+            width: 100%;
+            max-width: 100%;
+            margin: 0;
+            padding: 0;
+        }
+        
+        .inbox-heading {
+            margin-top: 1rem;
+            margin-bottom: 0.5rem;
+            border-bottom: 1px solid var(--background-modifier-border);
+            padding-bottom: 6px;
+            font-weight: 600;
+            font-size: 1.3em;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        
+        /* Estilos específicos para los toggle de inbox */
+        .inbox-toggle-icon {
+            display: inline-block;
+            width: 18px;
+            height: 18px;
+            text-align: center;
+            transition: transform 0.2s ease;
+            font-family: monospace;
+            margin-right: 4px;
+        }
+        
+        .inbox-toggle-icon.open {
+            transform: rotate(90deg);
+        }
+        
+        /* Asegurar que la lista de tareas se muestre/oculte correctamente */
+        .inbox-tarea-list {
+            display: none;
+        }
+        
+        .inbox-tarea-list.open {
+            display: block;
+        }
+        
+        /* Estilos para el botón de procesar inbox */
+        .process-btn {
+            position: relative;
+            padding-right: 22px !important;
+        }
+        
+        .process-btn::after {
+            content: "?";
+            position: absolute;
+            right: 5px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 12px;
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background-color: rgba(255, 255, 255, 0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        /* Tooltip para el botón procesar */
+        .process-btn-tooltip {
+            position: absolute;
+            background-color: var(--background-primary);
+            border: 1px solid var(--background-modifier-border);
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            max-width: 250px;
+            z-index: 100;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.2s ease, visibility 0.2s ease;
+            text-align: left;
+            color: var(--text-normal);
+            pointer-events: none;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            margin-bottom: 10px;
+        }
+        
+        .process-btn-tooltip.show {
+            opacity: 1;
+            visibility: visible;
+        }
+        
+        .inbox-tooltip-container {
+            position: relative;
+        }
+        `;
+        container.appendChild(styleEl);
+        
+        // Añadir encabezado principal
+        const heading = document.createElement("h3");
+        heading.className = "inbox-heading";
+        heading.innerHTML = '<span>📥 Tareas en Bandeja de Entrada</span>';
+        container.appendChild(heading);
+        
+        // Agregar controles para expandir/colapsar todo
+        const controlsDiv = document.createElement("div");
+        controlsDiv.className = "tareas-controls";
+        
+        const expandBtn = document.createElement("button");
+        expandBtn.className = "tareas-btn expand-btn";
+        expandBtn.textContent = "📂 Expandir Todo";
+        expandBtn.addEventListener("click", () => {
+            // Usar la función específica para inbox
+            this.expandirTodasTareasInbox(container);
+        });
+        
+        const collapseBtn = document.createElement("button");
+        collapseBtn.className = "tareas-btn collapse-btn";
+        collapseBtn.textContent = "📁 Colapsar Todo";
+        collapseBtn.addEventListener("click", () => {
+            // Usar la función específica para inbox
+            this.colapsarTodasTareasInbox(container);
+        });
+        
+        const refreshBtn = document.createElement("button");
+        refreshBtn.className = "tareas-btn refresh-btn";
+        refreshBtn.textContent = "🔄 Actualizar";
+        refreshBtn.addEventListener("click", async () => {
+            const nuevoContainer = await this.mostrarTareasInbox(dv);
+            container.parentNode.replaceChild(nuevoContainer, container);
+        });
+        
+        // Contenedor para el botón de procesar con tooltip
+        const tooltipContainer = document.createElement("div");
+        tooltipContainer.className = "inbox-tooltip-container";
+        
+        const procesarBtn = document.createElement("button");
+        procesarBtn.className = "tareas-btn process-btn";
+        procesarBtn.style.backgroundColor = "var(--interactive-accent)";
+        procesarBtn.style.color = "white";
+        procesarBtn.textContent = "🔍 Procesar Inbox";
+        
+        // Tooltip para explicar la función del botón
+        const tooltip = document.createElement("div");
+        tooltip.className = "process-btn-tooltip";
+        tooltip.innerHTML = `
+            <strong>¿Qué es procesar el inbox?</strong><br>
+            <p>Procesar tu bandeja de entrada significa revisar cada tarea y:</p>
+            <ol style="margin-left: 15px; padding-left: 0;">
+                <li>Categorizarla con contextos (#cx/...)</li>
+                <li>Asignarla a proyectos si es necesario</li>
+                <li>Establecer fechas si corresponde</li>
+                <li>Eliminar la etiqueta #inbox una vez procesada</li>
+            </ol>
+            <p>Haz clic en una tarea para abrirla y comenzar este proceso.</p>
+        `;
+        
+        // Eventos para mostrar/ocultar tooltip
+        procesarBtn.addEventListener("mouseenter", () => {
+            tooltip.classList.add("show");
+        });
+        
+        procesarBtn.addEventListener("mouseleave", () => {
+            tooltip.classList.remove("show");
+        });
+        
+        procesarBtn.addEventListener("click", () => {
+            // Al hacer clic, mostrar una guía más detallada
+            const notice = new app.Notice(
+                "Para procesar tu inbox: 1) Revisa cada tarea, 2) Categorízala, 3) Asígnale fecha si es necesario, 4) Quita #inbox", 
+                7000
+            );
+        });
+        
+        tooltipContainer.appendChild(procesarBtn);
+        tooltipContainer.appendChild(tooltip);
+        
+        controlsDiv.appendChild(expandBtn);
+        controlsDiv.appendChild(collapseBtn);
+        controlsDiv.appendChild(refreshBtn);
+        controlsDiv.appendChild(tooltipContainer);
+        container.appendChild(controlsDiv);
+        
+        // Añadir indicador de carga
+        const loadingDiv = document.createElement("div");
+        loadingDiv.className = "loading-indicator";
+        
+        const spinnerDiv = document.createElement("div");
+        spinnerDiv.className = "spinner";
+        loadingDiv.appendChild(spinnerDiv);
+        
+        const loadingText = document.createElement("div");
+        loadingText.textContent = "Buscando tareas en bandeja de entrada...";
+        loadingDiv.appendChild(loadingText);
+        
+        container.appendChild(loadingDiv);
+        
+        try {
+            // Obtener datos de tareas inbox a través de la API
+            const { tareasPorNota, totalTareas, totalNotas } = await this.plugin.tareasAPI.getTareasInbox();
+            
+            // Eliminar el indicador de carga
+            container.removeChild(loadingDiv);
+            
+            // Si no hay tareas en bandeja de entrada
+            if (totalTareas === 0) {
+                const emptyMessage = document.createElement("div");
+                emptyMessage.className = "empty-message";
+                emptyMessage.textContent = "¡Bandeja de entrada vacía! No se encontraron tareas con etiqueta #inbox.";
+                container.appendChild(emptyMessage);
+                return container;
+            }
+            
+            // Actualizar el encabezado con el contador
+            const statsBadge = document.createElement("span");
+            statsBadge.className = "stats-badge";
+            statsBadge.textContent = `${totalTareas} tareas en ${totalNotas} notas`;
+            heading.appendChild(statsBadge);
+            
+            // Crear contenedor principal de estadísticas
+            const statsContainer = document.createElement("div");
+            statsContainer.className = "inbox-stats-container";
+            statsContainer.style.display = "flex";
+            statsContainer.style.flexWrap = "wrap";
+            statsContainer.style.gap = "10px";
+            statsContainer.style.margin = "10px 0 20px";
+            
+            // Crear tarjetas de estadísticas
+            this.crearTarjetaEstadistica(statsContainer, "📥", "Tareas totales", totalTareas);
+            this.crearTarjetaEstadistica(statsContainer, "📝", "Notas con tareas", totalNotas);
+            
+            // Agregar stats container al contenedor principal
+            container.appendChild(statsContainer);
+            
+            // Ordenar notas por cantidad de tareas (descendente)
+            const notasOrdenadas = Array.from(tareasPorNota.values())
+                .sort((a, b) => b.tareas.length - a.tareas.length);
+            
+            // Crear grupos de tareas por nota
+            for (const notaInfo of notasOrdenadas) {
+                const grupoTareas = this.crearGrupoTareasInbox(notaInfo, dv);
+                container.appendChild(grupoTareas);
+            }
+            
+            // Expandir el primer grupo automáticamente
+            if (notasOrdenadas.length > 0) {
+                const primerGrupo = container.querySelector('.tarea-group');
+                if (primerGrupo) {
+                    const header = primerGrupo.querySelector('.tarea-group-header');
+                    const toggle = primerGrupo.querySelector('.tarea-group-toggle');
+                    const list = primerGrupo.querySelector('.tarea-list');
+                    
+                    toggle.classList.add('open');
+                    toggle.textContent = "▼";
+                    list.classList.add('open');
+                }
+            }
+            
+        } catch (error) {
+            // Eliminar el indicador de carga
+            container.removeChild(loadingDiv);
+            
+            // Mostrar mensaje de error
+            const errorMessage = document.createElement("div");
+            errorMessage.className = "error-message";
+            errorMessage.textContent = `Error al cargar tareas de bandeja de entrada: ${error.message}`;
+            container.appendChild(errorMessage);
+            
+            console.error("Error en mostrarTareasInbox:", error);
+        }
+        
+        return container;
+    } catch (error) {
+        console.error("Error general en mostrarTareasInbox:", error);
+        
+        // Devolver un mensaje de error
+        const errorContainer = document.createElement("div");
+        errorContainer.className = "error-message";
+        errorContainer.textContent = `Error al cargar tareas de bandeja de entrada: ${error.message}`;
+        return errorContainer;
+    }
+}
+
+/**
+ * Crea una tarjeta de estadística para mostrar en el dashboard de inbox
+ * @param container Contenedor donde agregar la tarjeta
+ * @param icono Emoji o ícono para la tarjeta
+ * @param titulo Título descriptivo
+ * @param valor Valor numérico o texto a mostrar
+ */
+crearTarjetaEstadistica(container, icono, titulo, valor) {
+    const tarjeta = document.createElement("div");
+    tarjeta.className = "stats-card";
+    tarjeta.style.flex = "1";
+    tarjeta.style.minWidth = "150px";
+    tarjeta.style.backgroundColor = "var(--background-secondary)";
+    tarjeta.style.padding = "15px";
+    tarjeta.style.borderRadius = "8px";
+    tarjeta.style.textAlign = "center";
+    tarjeta.style.display = "flex";
+    tarjeta.style.flexDirection = "column";
+    tarjeta.style.alignItems = "center";
+    tarjeta.style.justifyContent = "center";
+    
+    const iconoEl = document.createElement("div");
+    iconoEl.style.fontSize = "24px";
+    iconoEl.style.marginBottom = "5px";
+    iconoEl.textContent = icono;
+    
+    const tituloEl = document.createElement("div");
+    tituloEl.style.fontSize = "12px";
+    tituloEl.style.color = "var(--text-muted)";
+    tituloEl.style.marginBottom = "5px";
+    tituloEl.textContent = titulo;
+    
+    const valorEl = document.createElement("div");
+    valorEl.style.fontWeight = "bold";
+    valorEl.style.fontSize = "18px";
+    valorEl.textContent = valor;
+    
+    tarjeta.appendChild(iconoEl);
+    tarjeta.appendChild(tituloEl);
+    tarjeta.appendChild(valorEl);
+    
+    container.appendChild(tarjeta);
+}
+
+/**
+ * Crea un grupo de tareas inbox para una nota específica
+ * @param notaInfo Información de la nota y sus tareas
+ * @param dv Objeto dataview
+ * @returns Elemento DOM con el grupo de tareas
+ */
+crearGrupoTareasInbox(notaInfo, dv) {
+    const { titulo, ruta, tareas } = notaInfo;
+    
+    // Crear contenedor del grupo
+    const grupoDiv = document.createElement("div");
+    grupoDiv.className = "tarea-group";
+    
+    // Crear encabezado con toggle
+    const headerDiv = document.createElement("div");
+    headerDiv.className = "tarea-group-header";
+    
+    // Título con ícono de toggle
+    const titleDiv = document.createElement("div");
+    titleDiv.className = "tarea-group-title";
+    
+    // Usar la nueva clase para el toggle
+    const toggleSpan = document.createElement("span");
+    toggleSpan.className = "inbox-toggle-icon";
+    toggleSpan.textContent = "▶";
+    titleDiv.appendChild(toggleSpan);
+    
+    // Enlace a la nota
+    try {
+        const enlaceNota = document.createElement("a");
+        enlaceNota.className = "internal-link";
+        enlaceNota.textContent = titulo;
+        enlaceNota.href = ruta;
+        enlaceNota.setAttribute("data-href", ruta);
+        
+        // Agregar evento para abrir la nota
+        enlaceNota.addEventListener("click", (event) => {
+            event.preventDefault();
+            app.workspace.openLinkText(ruta, "", true); // Abrir en nueva pestaña
+        });
+        
+        titleDiv.appendChild(enlaceNota);
+    } catch (e) {
+        // Si falla la creación del enlace, mostrar solo texto
+        const textoNota = document.createElement("span");
+        textoNota.textContent = titulo;
+        titleDiv.appendChild(textoNota);
+    }
+    
+    headerDiv.appendChild(titleDiv);
+    
+    // Contador de tareas
+    const countSpan = document.createElement("span");
+    countSpan.className = "tarea-group-count";
+    countSpan.textContent = tareas.length.toString();
+    headerDiv.appendChild(countSpan);
+    
+    grupoDiv.appendChild(headerDiv);
+    
+    // Lista de tareas (inicialmente oculta) - usar la clase específica para inbox
+    const tareasList = document.createElement("div");
+    tareasList.className = "inbox-tarea-list";
+    
+    // Añadir cada tarea
+    for (const tarea of tareas) {
+        const tareaElement = this.crearTareaElementInbox(tarea, dv);
+        tareasList.appendChild(tareaElement);
+    }
+    
+    grupoDiv.appendChild(tareasList);
+    
+    // Guardar referencia a tareasList en el headerDiv para facilitar acceso
+    headerDiv.setAttribute('data-target', tareasList.id = `inbox-list-${Date.now()}-${Math.floor(Math.random()*1000)}`);
+    
+    // Agregar evento para mostrar/ocultar lista de tareas
+    headerDiv.addEventListener("click", (event) => {
+        // No colapsar si se hizo clic en un enlace
+        if (event.target.tagName === 'A') return;
+        
+        // Alternar clases de open/closed
+        toggleSpan.classList.toggle('open');
+        tareasList.classList.toggle('open');
+        
+        // Cambiar ícono
+        if (toggleSpan.classList.contains('open')) {
+            toggleSpan.textContent = "▼";
+        } else {
+            toggleSpan.textContent = "▶";
+        }
+    });
+    
+    return grupoDiv;
+}
+
+/**
+ * Crea un elemento DOM para una tarea de bandeja de entrada
+ * @param tarea Objeto con la información de la tarea
+ * @param dv Objeto dataview
+ * @returns Elemento DOM representando la tarea
+ */
+crearTareaElementInbox(tarea, dv) {
+    // Elemento principal
+    const tareaDiv = document.createElement("div");
+    tareaDiv.className = "tarea-item";
+    
+    // Indicador visual de procesamiento para tareas inbox
+    tareaDiv.style.borderLeft = "4px solid #E67E22"; // Color naranja para mostrar que está en inbox
+    
+    // Texto de la tarea
+    const textoDiv = document.createElement("div");
+    textoDiv.className = "tarea-texto";
+    
+    // Checkbox (visual, no funcional)
+    const checkboxSpan = document.createElement("span");
+    checkboxSpan.className = "tarea-checkbox";
+    checkboxSpan.textContent = "☐";
+    checkboxSpan.setAttribute("data-path", tarea.rutaArchivo);
+    checkboxSpan.setAttribute("data-line", tarea.lineInfo?.numero?.toString() || "0");
+    
+    // Hacer el checkbox clicable para navegar a la tarea
+    checkboxSpan.addEventListener("click", () => {
+        const path = checkboxSpan.getAttribute("data-path");
+        const line = parseInt(checkboxSpan.getAttribute("data-line") || "0", 10);
+        this.navegarATareaConResaltado(path, line, tarea.textoOriginal || tarea.texto, true);
+    });
+    
+    textoDiv.appendChild(checkboxSpan);
+    
+    // Contenido de la tarea
+    const contenidoSpan = document.createElement("span");
+    contenidoSpan.className = "tarea-contenido";
+    contenidoSpan.textContent = tarea.texto;
+    
+    // Hacer el contenido clicable para navegar a la tarea
+    contenidoSpan.setAttribute("data-path", tarea.rutaArchivo);
+    contenidoSpan.setAttribute("data-line", tarea.lineInfo?.numero?.toString() || "0");
+    contenidoSpan.style.cursor = "pointer";
+    
+    contenidoSpan.addEventListener("click", () => {
+        const path = contenidoSpan.getAttribute("data-path");
+        const line = parseInt(contenidoSpan.getAttribute("data-line") || "0", 10);
+        this.navegarATareaConResaltado(path, line, tarea.textoOriginal || tarea.texto, true);
+    });
+    
+    textoDiv.appendChild(contenidoSpan);
+    tareaDiv.appendChild(textoDiv);
+    
+    // Metadatos
+    const metadatosDiv = document.createElement("div");
+    metadatosDiv.className = "tarea-metadatos";
+    
+    // Ubicación (ruta y línea)
+    const ubicacionDiv = document.createElement("div");
+    ubicacionDiv.className = "tarea-meta-item";
+    
+    const iconoUbicacion = document.createElement("span");
+    iconoUbicacion.className = "meta-icon";
+    iconoUbicacion.textContent = "📍";
+    ubicacionDiv.appendChild(iconoUbicacion);
+    
+    const valorUbicacion = document.createElement("span");
+    valorUbicacion.className = "ubicacion-valor";
+    
+    // Si tenemos número de línea, mostrarlo
+    if (tarea.lineInfo?.numero) {
+        valorUbicacion.textContent = `Línea ${tarea.lineInfo.numero}`;
+    } else {
+        valorUbicacion.textContent = "Posición desconocida";
+    }
+    
+    ubicacionDiv.appendChild(valorUbicacion);
+    metadatosDiv.appendChild(ubicacionDiv);
+    
+    // Si tiene fechas, mostrarlas
+    if (tarea.fechaVencimiento || tarea.fechaScheduled || tarea.fechaStart) {
+        const fechasDiv = document.createElement("div");
+        fechasDiv.className = "tarea-meta-item";
+        
+        const iconoFecha = document.createElement("span");
+        iconoFecha.className = "meta-icon";
+        iconoFecha.textContent = "📅";
+        fechasDiv.appendChild(iconoFecha);
+        
+        const valorFechas = document.createElement("span");
+        
+        let textofechas = [];
+        if (tarea.fechaVencimiento) {
+            textofechas.push(`Vence: ${tarea.fechaVencimiento}`);
+        }
+        if (tarea.fechaScheduled) {
+            textofechas.push(`Programada: ${tarea.fechaScheduled}`);
+        }
+        if (tarea.fechaStart) {
+            textofechas.push(`Inicia: ${tarea.fechaStart}`);
+        }
+        
+        valorFechas.textContent = textofechas.join(' | ');
+        fechasDiv.appendChild(valorFechas);
+        
+        metadatosDiv.appendChild(fechasDiv);
+    }
+    
+    // Si tiene personas asignadas
+    if (tarea.etiquetas.personas?.length > 0) {
+        const personasDiv = document.createElement("div");
+        personasDiv.className = "tarea-meta-item";
+        
+        const iconoPersonas = document.createElement("span");
+        iconoPersonas.className = "meta-icon";
+        iconoPersonas.textContent = "👤";
+        personasDiv.appendChild(iconoPersonas);
+        
+        const valorPersonas = document.createElement("span");
+        valorPersonas.textContent = tarea.etiquetas.personas.join(' | ');
+        personasDiv.appendChild(valorPersonas);
+        
+        metadatosDiv.appendChild(personasDiv);
+    }
+    
+    // Si tiene contextos
+    if (tarea.etiquetas.contextos?.length > 0) {
+        const contextosDiv = document.createElement("div");
+        contextosDiv.className = "tarea-meta-item";
+        
+        const iconoContextos = document.createElement("span");
+        iconoContextos.className = "meta-icon";
+        iconoContextos.textContent = "🗂️";
+        contextosDiv.appendChild(iconoContextos);
+        
+        const valorContextos = document.createElement("span");
+        valorContextos.textContent = tarea.etiquetas.contextos.join(' | ');
+        contextosDiv.appendChild(valorContextos);
+        
+        metadatosDiv.appendChild(contextosDiv);
+    }
+    
+    // Otras etiquetas (excluyendo #inbox)
+    const otrasEtiquetas = tarea.etiquetas.otras.filter(tag => tag.toLowerCase() !== '#inbox');
+    if (otrasEtiquetas.length > 0) {
+        const etiquetasDiv = document.createElement("div");
+        etiquetasDiv.className = "tarea-meta-item";
+        
+        const iconoEtiquetas = document.createElement("span");
+        iconoEtiquetas.className = "meta-icon";
+        iconoEtiquetas.textContent = "🏷️";
+        etiquetasDiv.appendChild(iconoEtiquetas);
+        
+        const valorEtiquetas = document.createElement("span");
+        valorEtiquetas.textContent = otrasEtiquetas.join(' ');
+        etiquetasDiv.appendChild(valorEtiquetas);
+        
+        metadatosDiv.appendChild(etiquetasDiv);
+    }
+    
+    // Añadimos botones de acción para clasificar la tarea
+    const accionesDiv = document.createElement("div");
+    accionesDiv.className = "tarea-acciones";
+    accionesDiv.style.marginTop = "8px";
+    accionesDiv.style.display = "flex";
+    accionesDiv.style.gap = "8px";
+    accionesDiv.style.flexWrap = "wrap";
+    
+    // Botón para editar/abrir la tarea
+    const btnEditar = document.createElement("button");
+    btnEditar.className = "tarea-accion-btn";
+    btnEditar.textContent = "✏️ Editar";
+    btnEditar.style.fontSize = "12px";
+    btnEditar.style.padding = "3px 8px";
+    btnEditar.style.borderRadius = "4px";
+    btnEditar.style.border = "1px solid var(--background-modifier-border)";
+    btnEditar.style.backgroundColor = "var(--background-secondary)";
+    btnEditar.style.cursor = "pointer";
+    
+    btnEditar.addEventListener("click", () => {
+        const path = tareaDiv.querySelector("[data-path]").getAttribute("data-path");
+        const line = parseInt(tareaDiv.querySelector("[data-line]").getAttribute("data-line") || "0", 10);
+        this.navegarATareaConResaltado(path, line, tarea.textoOriginal || tarea.texto, true);
+    });
+    
+    accionesDiv.appendChild(btnEditar);
+    
+    // Añadir botones de acción rápida para clasificar por contextos comunes
+    const contextosComunes = ["#cx/trabajo", "#cx/personal", "#cx/hogar"];
+    
+    contextosComunes.forEach(contexto => {
+        const btnContexto = document.createElement("button");
+        btnContexto.className = "tarea-accion-btn contexto-btn";
+        btnContexto.textContent = contexto;
+        btnContexto.style.fontSize = "12px";
+        btnContexto.style.padding = "3px 8px";
+        btnContexto.style.borderRadius = "4px";
+        btnContexto.style.border = "1px solid var(--background-modifier-border)";
+        btnContexto.style.backgroundColor = "var(--background-secondary)";
+        btnContexto.style.cursor = "pointer";
+        
+        btnContexto.addEventListener("click", () => {
+            // De momento, simplemente abrir la tarea - una implementación más completa podría añadir
+            // el contexto directamente a la tarea, pero requeriría más integración con el plugin
+            const path = tareaDiv.querySelector("[data-path]").getAttribute("data-path");
+            const line = parseInt(tareaDiv.querySelector("[data-line]").getAttribute("data-line") || "0", 10);
+            this.navegarATareaConResaltado(path, line, tarea.textoOriginal || tarea.texto, true);
+            
+            new app.Notice(`Para añadir "${contexto}" a esta tarea, edítala en el archivo abierto.`, 5000);
+        });
+        
+        accionesDiv.appendChild(btnContexto);
+    });
+    
+    metadatosDiv.appendChild(accionesDiv);
+                tareaDiv.appendChild(metadatosDiv);
+    
+    return tareaDiv;
+}
+
+/**
+ * Expande todos los grupos de tareas inbox
+ * @param container Contenedor principal
+ */
+expandirTodasTareasInbox(container) {
+    const grupos = container.querySelectorAll('.tarea-group');
+    
+    grupos.forEach(grupo => {
+        const toggle = grupo.querySelector('.inbox-toggle-icon');
+        const listId = grupo.querySelector('.tarea-group-header')?.getAttribute('data-target');
+        const list = document.getElementById(listId);
+        
+        if (toggle && list) {
+            toggle.classList.add('open');
+            toggle.textContent = "▼";
+            list.classList.add('open');
+        }
+    });
+}
+
+/**
+ * Colapsa todos los grupos de tareas inbox
+ * @param container Contenedor principal
+ */
+colapsarTodasTareasInbox(container) {
+    const grupos = container.querySelectorAll('.tarea-group');
+    
+    grupos.forEach(grupo => {
+        const toggle = grupo.querySelector('.inbox-toggle-icon');
+        const listId = grupo.querySelector('.tarea-group-header')?.getAttribute('data-target');
+        const list = document.getElementById(listId);
+        
+        if (toggle && list) {
+            toggle.classList.remove('open');
+            toggle.textContent = "▶";
+            list.classList.remove('open');
+        }
+    });
+}
+
   }

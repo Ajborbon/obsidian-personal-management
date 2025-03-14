@@ -349,6 +349,25 @@ export function registerTaskManagerCommands(plugin: Plugin): void {
         });
         commandIds.push(tareasSinClasificarCommand.id);
 
+
+
+        // Añadir en src/modules/taskManager/commands.ts, dentro de la función registerTaskManagerCommands
+
+        // Comando para mostrar tareas de bandeja de entrada (#inbox)
+        const tareasInboxCommand = plugin.addCommand({
+            id: "mostrar-tareas-inbox",
+            name: "Mostrar Tareas en Bandeja de Entrada (#inbox)",
+            callback: async () => {
+                if (managementPlugin.tareasAPI) {
+                    await managementPlugin.tareasAPI.mostrarTareasInbox();
+                } else {
+                    new Notice("El módulo de tareas no está disponible.");
+                }
+            }
+        });
+        commandIds.push(tareasInboxCommand.id);
+
+
     // Guardar los IDs de los comandos en el plugin
     (plugin as any).registeredTaskManagerCommandIds = commandIds;
 }

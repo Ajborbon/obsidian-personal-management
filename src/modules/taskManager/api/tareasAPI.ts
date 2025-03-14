@@ -1926,5 +1926,230 @@ private renderizarTareaSinClasificar(tarea: Task): string {
     return contenido;
 }
 
+// -- Tareas Inbox
+
+// Añadir al archivo src/modules/taskManager/api/tareasAPI.ts
+
+/**
+ * Obtiene todas las tareas que tienen la etiqueta #inbox
+ * @returns {Promise<Object>} Objeto con tareas agrupadas por nota y contadores
+ */
+public async getTareasInbox(): Promise<{
+    tareasPorNota: Map<string, {
+        titulo: string,
+        ruta: string,
+        tareas: Task[]
+    }>,
+    totalTareas: number,
+    totalNotas: number
+}> {
+    try {
+        console.log("\n=== INICIANDO BÚSQUEDA DE TAREAS EN BANDEJA DE ENTRADA (#inbox) ===");
+        
+        // Mapa para agrupar tareas por archivo
+        const tareasPorNota = new Map<string, {
+            titulo: string,
+            ruta: string,
+            tareas: Task[]
+        }>();
+
+        // Mapa para guardar información de líneas por archivo (optimización)
+        const lineasPorArchivo = new Map<string, Map<string, LineInfo>>();
+        
+        // Obtener todas las tareas filtrando las que tengan #inbox
+        const tareas = await this.procesarTareas(
+            this.plugin.app.vault.getMarkdownFiles(),
+            async (tarea) => {
+                // Verificar si tiene la etiqueta #inbox
+                const tieneInbox = tarea.etiquetas.todas.some(tag => 
+                    tag.toLowerCase() === '#inbox');
+                
+                if (tieneInbox) {
+                    // Optimización: obtener información de líneas solo cuando sea necesario
+                    if (!lineasPorArchivo.has(tarea.rutaArchivo)) {
+                        try {
+                            const archivo = this.plugin.app.vault.getAbstractFileByPath(tarea.rutaArchivo) as TFile;
+                            if (archivo) {
+                                lineasPorArchivo.set(
+                                    tarea.rutaArchivo,
+                                    await this.taskUtils.encontrarLineasTarea(archivo)
+                                );
+                            }
+                        } catch (error) {
+                            console.error(`Error al buscar líneas en ${tarea.rutaArchivo}:`, error);
+                        }
+                    }
+                    
+                    // Agregar información de línea a la tarea
+                    const lineasArchivo = lineasPorArchivo.get(tarea.rutaArchivo);
+                    if (lineasArchivo) {
+                        const lineInfo = lineasArchivo.get(tarea.texto);
+                        if (lineInfo) {
+                            tarea.lineInfo = lineInfo;
+                        }
+                    }
+                    
+                    // Agrupar por archivo
+                    if (!tareasPorNota.has(tarea.rutaArchivo)) {
+                        tareasPorNota.set(tarea.rutaArchivo, {
+                            titulo: tarea.titulo,
+                            ruta: tarea.rutaArchivo,
+                            tareas: []
+                        });
+                    }
+                    
+                    tareasPorNota.get(tarea.rutaArchivo).tareas.push(tarea);
+                }
+                
+                return tieneInbox;
+            }
+        );
+        
+        // Contar totales
+        const totalTareas = tareas.length;
+        const totalNotas = tareasPorNota.size;
+        
+        console.log(`=== BÚSQUEDA COMPLETADA ===`);
+        console.log(`Total de tareas en bandeja de entrada (#inbox): ${totalTareas}`);
+        console.log(`Total de notas con tareas inbox: ${totalNotas}`);
+        
+        return {
+            tareasPorNota,
+            totalTareas,
+            totalNotas
+        };
+    } catch (error) {
+        console.error("Error en getTareasInbox:", error);
+        throw error;
+    }
+}
+
+/**
+ * Muestra una vista con todas las tareas en bandeja de entrada (#inbox) agrupadas por nota
+ * @returns {Promise<void>}
+ */
+public async mostrarTareasInbox(): Promise<void> {
+    try {
+        // Obtener tareas de la bandeja de entrada
+        const { tareasPorNota, totalTareas, totalNotas } = await this.getTareasInbox();
+        
+        if (totalTareas === 0) {
+            new Notice('No se encontraron tareas en la bandeja de entrada (#inbox).');
+            return;
+        }
+        
+        // Generar contenido del archivo
+        const contenido = this.generarVistaTareasInbox(tareasPorNota, totalTareas, totalNotas);
+        
+        // Guardar y abrir archivo
+        await this.guardarYAbrirArchivo(
+            `${this.plugin.settings.folder_SistemaGTD}/Tareas Bandeja de Entrada.md`,
+            contenido
+        );
+        
+        new Notice(`Se encontraron ${totalTareas} tareas en bandeja de entrada en ${totalNotas} notas`);
+    } catch (error) {
+        console.error("Error en mostrarTareasInbox:", error);
+        new Notice(`Error: ${error.message}`);
+    }
+}
+
+/**
+ * Genera el contenido de la vista de tareas en bandeja de entrada
+ * @param {Map} tareasPorNota - Mapa con las tareas agrupadas por nota
+ * @param {number} totalTareas - Total de tareas en bandeja de entrada
+ * @param {number} totalNotas - Total de notas con tareas en bandeja de entrada
+ * @returns {string} - Contenido markdown para el archivo
+ */
+private generarVistaTareasInbox(
+    tareasPorNota: Map<string, {
+        titulo: string,
+        ruta: string,
+        tareas: Task[]
+    }>,
+    totalTareas: number,
+    totalNotas: number
+): string {
+    const hoy = this.taskUtils.obtenerFechaLocal();
+    let contenido = `# Tareas en Bandeja de Entrada (#inbox)\n\n`;
+    
+    // Agregar botón de actualización
+    contenido += this.generarBotonActualizacion("mostrarTareasInbox");
+    
+    // Añadir información general
+    contenido += `> [!info] Actualizado: ${hoy.toLocaleDateString()} ${new Date().toLocaleTimeString()}\n`;
+    contenido += `> Total de tareas en bandeja de entrada: ${totalTareas}\n`;
+    contenido += `> Total de notas con tareas inbox: ${totalNotas}\n\n`;
+    
+    // Ordenar notas por cantidad de tareas (descendente)
+    const notasOrdenadas = Array.from(tareasPorNota.values())
+        .sort((a, b) => b.tareas.length - a.tareas.length);
+    
+    // Generar secciones por nota
+    for (const notaInfo of notasOrdenadas) {
+        contenido += `## [[${notaInfo.ruta}|${notaInfo.titulo}]] (${notaInfo.tareas.length})\n\n`;
+        
+        // Renderizar cada tarea
+        for (const tarea of notaInfo.tareas) {
+            contenido += this.renderizarTareaInbox(tarea);
+        }
+        
+        contenido += '\n';
+    }
+    
+    return contenido;
+}
+
+/**
+ * Renderiza una tarea de bandeja de entrada en formato markdown
+ * @param {Task} tarea - Tarea a renderizar
+ * @returns {string} - Representación markdown de la tarea
+ */
+private renderizarTareaInbox(tarea: Task): string {
+    let contenido = `- [ ] ${tarea.texto}\n`;
+    
+    // Fechas
+    const fechas = [];
+    if (tarea.fechaVencimiento) {
+        fechas.push(`📅 ${this.formatearFechaConContexto(tarea.fechaVencimiento, 'due')}`);
+    }
+    if (tarea.fechaScheduled) {
+        fechas.push(`⏳ ${this.formatearFechaConContexto(tarea.fechaScheduled, 'scheduled')}`);
+    }
+    if (tarea.fechaStart) {
+        fechas.push(`🛫 ${this.formatearFechaConContexto(tarea.fechaStart, 'start')}`);
+    }
+    
+    if (fechas.length > 0) {
+        contenido += `    - Fechas:\n        ${fechas.join('\n        ')}\n`;
+    }
+    
+    // Horarios
+    if (tarea.horaInicio || tarea.horaFin) {
+        contenido += `    - ⏰ Horario: ${tarea.horaInicio || '--:--'} - ${tarea.horaFin || '--:--'}\n`;
+    }
+    
+    // Agregar ubicación con información de línea
+    if (tarea.lineInfo?.numero) {
+        contenido += `    - 📍 Línea: ${tarea.lineInfo.numero}\n`;
+    }
+    
+    // Etiquetas
+    if (tarea.etiquetas.contextos?.length > 0) {
+        contenido += `    - 🗂️ Contextos: ${tarea.etiquetas.contextos.join(' | ')}\n`;
+    }
+    if (tarea.etiquetas.personas?.length > 0) {
+        contenido += `    - 👤 Personas: ${tarea.etiquetas.personas.join(' | ')}\n`;
+    }
+    
+    // Mostrar otras etiquetas, excluyendo #inbox que ya sabemos que tiene
+    const otrasEtiquetas = tarea.etiquetas.otras.filter(tag => tag.toLowerCase() !== '#inbox');
+    if (otrasEtiquetas.length > 0) {
+        contenido += `    - 🏷️ Otras etiquetas: ${otrasEtiquetas.join(' ')}\n`;
+    }
+    
+    return contenido;
+}
+
      
 }
