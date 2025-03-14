@@ -3776,11 +3776,7 @@ generarContextosHTML(arbolContextos, contextosConTareas, container) {
     procesarNodo(arbolContextos, 0, container);
 }
 
-/**
- * Crea un elemento HTML para una tarea con navegación interactiva
- * @param tarea Objeto de tarea a renderizar
- * @param container Contenedor donde añadir la tarea
- */
+// Reemplazo para crearTareaElement en la clase addOnsAPI
 crearTareaElement(tarea, container) {
     // Elemento principal de la tarea
     const tareaEl = document.createElement("div");
@@ -3822,21 +3818,51 @@ crearTareaElement(tarea, container) {
     const enlace = document.createElement("a");
     enlace.className = "internal-link tarea-link";
     enlace.textContent = tarea.titulo;
-    enlace.href = "javascript:void(0);"; // Previene comportamiento de enlace
     
-    // Guardar datos para navegación
-    enlace.dataset.path = tarea.rutaArchivo;
-    enlace.dataset.line = tarea.lineInfo?.numero || "0";
-    enlace.dataset.texto = tarea.textoOriginal || tarea.texto;
+    // Verificar si la ruta del archivo es válida
+    let rutaValida = tarea.rutaArchivo;
     
-    // Configurar evento de navegación
+    // Eliminar cualquier carácter wiki
+    if (rutaValida) {
+        // Limpiar posibles formatos wiki [[ruta|alias]]
+        const wikiMatch = rutaValida.match(/\[\[(.*?)(?:\|(.*?))?\]\]/);
+        if (wikiMatch) {
+            rutaValida = wikiMatch[1]; // Usar solo la ruta, no el alias
+        }
+        
+        // Asegurarse de que la ruta termina en .md si es un archivo markdown
+        if (!rutaValida.endsWith('.md') && app.vault.getAbstractFileByPath(rutaValida + '.md')) {
+            rutaValida += '.md';
+        }
+    }
+    
+    // Almacenar datos seguros para navegación
+    enlace.setAttribute('data-path', rutaValida || '');
+    enlace.setAttribute('data-line', tarea.lineInfo?.numero?.toString() || '0');
+    enlace.setAttribute('data-texto', tarea.textoOriginal || tarea.texto || '');
+    
+    // Usar el método seguro de Obsidian para la navegación
     enlace.addEventListener("click", (event) => {
         event.preventDefault();
-        this.navegarATareaConResaltado(
-            enlace.dataset.path,
-            parseInt(enlace.dataset.line, 10),
-            enlace.dataset.texto
-        );
+        
+        const path = enlace.getAttribute('data-path');
+        const line = parseInt(enlace.getAttribute('data-line'), 10);
+        const texto = enlace.getAttribute('data-texto');
+        
+        if (!path) {
+            new Notice('Ruta del archivo no disponible');
+            return;
+        }
+        
+        // Verificar que el archivo existe antes de intentar abrirlo
+        const file = app.vault.getAbstractFileByPath(path);
+        if (!file) {
+            new Notice(`Archivo no encontrado: ${path}`);
+            return;
+        }
+        
+        // Usar el método de navegación con resaltado y abrir en nueva pestaña
+        this.navegarATareaConResaltado(path, line, texto, true); // Pasamos true para indicar nueva pestaña
     });
     
     valorUbicacion.appendChild(enlace);
@@ -3874,7 +3900,6 @@ crearTareaElement(tarea, container) {
             fechasEl.appendChild(fechaEl);
         }
         
-        // Similar para scheduled y start...
         if (tarea.fechaScheduled) {
             const fechaEl = document.createElement("div");
             fechaEl.className = "tarea-fecha scheduled";
@@ -3952,31 +3977,34 @@ crearTareaElement(tarea, container) {
     container.appendChild(tareaEl);
 }
 
-/**
- * Versión mejorada de navegarATarea que incluye resaltado temporal
- * @param path Ruta del archivo
- * @param lineNumber Número de línea
- * @param textoTarea Texto de la tarea para búsqueda alternativa
- */
-async navegarATareaConResaltado(path, lineNumber, textoTarea) {
+// Método mejorado de navegación a tareas con validación adicional
+async navegarATareaConResaltado(path, lineNumber, textoTarea, nuevaPestaña = true) {
     try {
-        // Primero intentamos usar la función existente para la navegación básica
-        if (lineNumber > 0) {
-            this.navegarATarea(path, lineNumber);
-        } else {
-            this.navegarATarea(path, 0); // Abrimos el archivo sin especificar línea
+        // Verificar que la ruta es válida
+        const file = app.vault.getAbstractFileByPath(path);
+        if (!file) {
+            new Notice(`Archivo no encontrado: ${path}`);
+            return;
         }
         
-        // Luego nos ocupamos del resaltado avanzado
+        // Intentar abrir el archivo, opcionalmente en una nueva pestaña
+        const leaf = app.workspace.getLeaf(nuevaPestaña); // 'true' indica crear una nueva pestaña
+        await leaf.openFile(file);
+        
+        // Aplicar resaltado después de que el archivo se haya abierto completamente
         setTimeout(() => {
-            // Buscar una hoja de trabajo activa
-            const activeLeaf = app.workspace.activeLeaf;
-            if (!activeLeaf || !activeLeaf.view || !activeLeaf.view.editor) return;
-            
-            const editor = activeLeaf.view.editor;
+            const editor = leaf.view.editor;
+            if (!editor) return;
             
             if (lineNumber > 0) {
-                // Aplicar resaltado visual a la línea
+                // Mover cursor y pantalla a la línea
+                editor.setCursor({ line: lineNumber - 1, ch: 0 });
+                editor.scrollIntoView(
+                    { from: { line: lineNumber - 1, ch: 0 }, to: { line: lineNumber - 1, ch: 0 } },
+                    true
+                );
+                
+                // Aplicar resaltado visual 
                 this.resaltarLineaTemporalmente(editor, lineNumber - 1);
             } 
             // Si no tenemos número de línea pero tenemos texto, buscamos el texto
@@ -3985,52 +4013,65 @@ async navegarATareaConResaltado(path, lineNumber, textoTarea) {
                 const lineas = contenido.split('\n');
                 
                 for (let i = 0; i < lineas.length; i++) {
-                    if (lineas[i].includes(textoTarea)) {
-                        // Mover el cursor a la línea encontrada
+                    // Buscar texto limpio o con marcadores de tarea
+                    const textoLimpio = textoTarea.replace(/^-\s*\[[^\]]+\]\s*/, '').trim();
+                    const lineaLimpia = lineas[i].replace(/^-\s*\[[^\]]+\]\s*/, '').trim();
+                    
+                    if (lineas[i].includes(textoTarea) || lineaLimpia.includes(textoLimpio)) {
+                        // Mover cursor y pantalla a la línea encontrada
                         editor.setCursor({ line: i, ch: 0 });
                         editor.scrollIntoView(
-                            {from: {line: i, ch: 0}, to: {line: i, ch: 0}}, 
+                            { from: { line: i, ch: 0 }, to: { line: i, ch: lineas[i].length } },
                             true
                         );
                         
-                        // Seleccionar la línea
-                        editor.setSelection(
-                            { line: i, ch: 0 },
-                            { line: i, ch: lineas[i].length }
-                        );
-                        
-                        // Resaltar visualmente
+                        // Aplicar resaltado visual
                         this.resaltarLineaTemporalmente(editor, i);
                         break;
                     }
                 }
             }
-        }, 300); // Esperar un poco para que el archivo se abra completamente
+        }, 300);
     } catch (error) {
         console.error('Error en navegarATareaConResaltado:', error);
-        new Notice('Error al navegar y resaltar la tarea');
+        new Notice(`Error al navegar: ${error.message}`);
     }
 }
 
-/**
- * Aplica resaltado temporal a una línea del editor
- * @param editor Editor de CodeMirror
- * @param lineIndex Índice de la línea a resaltar
- */
+// Versión mejorada del resaltado de líneas
 resaltarLineaTemporalmente(editor, lineIndex) {
-    setTimeout(() => {
-        const lineDiv = editor.lineDiv;
-        if (lineDiv) {
-            const lineElements = lineDiv.querySelectorAll('.CodeMirror-line');
-            if (lineElements && lineElements.length > lineIndex) {
-                lineElements[lineIndex].classList.add('highlighted-line');
-                
-                setTimeout(() => {
-                    lineElements[lineIndex].classList.remove('highlighted-line');
-                }, 2000);
+    try {
+        // Usar CM6 o CM5 dependiendo del editor
+        if (editor.cm && editor.cm.state) {
+            // Editor moderno (CM6)
+            const lineDiv = editor.cm.dom.querySelector('.cm-content');
+            if (lineDiv) {
+                const lineElements = lineDiv.querySelectorAll('.cm-line');
+                if (lineElements && lineElements.length > lineIndex) {
+                    lineElements[lineIndex].classList.add('highlighted-line');
+                    
+                    setTimeout(() => {
+                        lineElements[lineIndex].classList.remove('highlighted-line');
+                    }, 2000);
+                }
+            }
+        } else {
+            // Editor clásico (CM5)
+            const lineDiv = editor.lineDiv || editor.getScrollerElement();
+            if (lineDiv) {
+                const lineElements = lineDiv.querySelectorAll('.CodeMirror-line');
+                if (lineElements && lineElements.length > lineIndex) {
+                    lineElements[lineIndex].classList.add('highlighted-line');
+                    
+                    setTimeout(() => {
+                        lineElements[lineIndex].classList.remove('highlighted-line');
+                    }, 2000);
+                }
             }
         }
-    }, 100);
+    } catch (error) {
+        console.error('Error al resaltar línea:', error);
+    }
 }
 
 /**
