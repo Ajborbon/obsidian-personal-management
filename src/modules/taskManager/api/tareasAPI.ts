@@ -1692,7 +1692,8 @@ private generarVistaContextosGTD(
     contenido += `> **Total de tareas:** ${totalTareas}\n\n`;
     
     // Añadir controles para expandir/colapsar todo
-    contenido += `\`\`\`dataviewjs
+   // Añadir controles para expandir/colapsar todo
+contenido += `\`\`\`dataviewjs
 // Controles para expandir/colapsar todo
 const containerControles = this.container.createEl('div', {cls: 'contextos-controles'});
 
@@ -1709,6 +1710,7 @@ containerControles.createEl('hr', {cls: 'separador'});
 
 // Funcionalidad para expandir todo
 btnExpandir.addEventListener('click', () => {
+    // CAMBIO: Mejorar el selector para asegurar que afecta a todos los elementos details
     document.querySelectorAll('.contexto-details').forEach(details => {
         details.setAttribute('open', 'true');
     });
@@ -1716,6 +1718,7 @@ btnExpandir.addEventListener('click', () => {
 
 // Funcionalidad para colapsar todo
 btnColapsar.addEventListener('click', () => {
+    // CAMBIO: Mejorar el selector para asegurar que afecta a todos los elementos details
     document.querySelectorAll('.contexto-details').forEach(details => {
         details.removeAttribute('open');
     });
@@ -1810,6 +1813,7 @@ btn.addEventListener('click', async () => {
 }
 
 // Método para generar el HTML mejorado con etiquetas <details> y <summary> para contextos
+// // 1. Modificar el método generarDetallesContextosGTD para que todos los grupos inicien colapsados
 private generarDetallesContextosGTD(
     arbolContextos: Map<string, any>, 
     contextosConTareas: Map<string, Task[]>
@@ -1839,7 +1843,8 @@ private generarDetallesContextosGTD(
             
             if (mostrarSeccion) {
                 // Crear sección de detalle con summary mejorado
-                contenido += `${indentacion}<details class="contexto-details nivel-${nivel}" ${nivel === 0 ? 'open' : ''}>\n`;
+                // CAMBIO: Remover atributo 'open' para que todos inicien colapsados
+                contenido += `${indentacion}<details class="contexto-details nivel-${nivel}">\n`;
                 
                 // Nombre del contexto y contador de tareas
                 contenido += `${indentacion}  <summary class="contexto-summary">\n`;
@@ -1897,6 +1902,7 @@ private formatearNombreContexto(contexto: string): string {
 }
 
 // Método para renderizar una tarea con formato mejorado
+// 3. Modificar el método renderizarTareaContextoMejorada para asegurar que los enlaces abran en nueva pestaña
 private renderizarTareaContextoMejorada(tarea: Task, indentacion: string = ''): string {
     let contenido = `${indentacion}<div class="tarea-item ${tarea.isBlocked ? 'tarea-bloqueada' : ''}">\n`;
     
@@ -1909,14 +1915,73 @@ private renderizarTareaContextoMejorada(tarea: Task, indentacion: string = ''): 
     // Sección de metadatos
     contenido += `${indentacion}  <div class="tarea-metadatos">\n`;
     
-    // Ubicación con enlace
+    // Ubicación con enlace - MODIFICADO para abrir en nueva pestaña Y posicionar en la línea de la tarea
     contenido += `${indentacion}    <div class="tarea-ubicacion">\n`;
     contenido += `${indentacion}      <span class="metadato-icono">📍</span>\n`;
-    contenido += `${indentacion}      <span class="metadato-valor">[[${tarea.rutaArchivo}|${tarea.titulo}]]`;
+    
+    // CAMBIO: Utilizar los atributos data para almacenar información necesaria
+    // y un manejador de eventos para controlar la navegación
+    contenido += `${indentacion}      <span class="metadato-valor">\n`;
+    contenido += `${indentacion}        <a class="internal-link tarea-link" 
+                  href="${tarea.rutaArchivo}" 
+                  data-path="${tarea.rutaArchivo}" 
+                  data-line="${tarea.lineInfo?.numero || 0}"
+                  data-texto="${this.escaparHTML(tarea.textoOriginal || tarea.texto)}"
+                  onclick="
+                    event.preventDefault();
+                    (async function() {
+                      try {
+                        // Abrir archivo en nueva pestaña
+                        const leaf = app.workspace.getLeaf(true);
+                        const file = app.vault.getAbstractFileByPath('${tarea.rutaArchivo}');
+                        
+                        if (!file) {
+                          new Notice('Archivo no encontrado: ${tarea.rutaArchivo}');
+                          return;
+                        }
+                        
+                        await leaf.openFile(file);
+                        
+                        // Asegurar que el editor está disponible
+                        setTimeout(() => {
+                          const view = leaf.view;
+                          if (view.editor) {
+                            const editor = view.editor;
+                            const lineNumber = ${tarea.lineInfo?.numero || 0};
+                            
+                            if (lineNumber > 0) {
+                              // Mover cursor a la línea y centrar la vista
+                              editor.setCursor({ line: lineNumber - 1, ch: 0 });
+                              editor.scrollIntoView({from: {line: lineNumber - 1, ch: 0}, to: {line: lineNumber - 1, ch: 0}}, true);
+                              
+                              // Seleccionar la línea entera
+                              const lineText = editor.getLine(lineNumber - 1);
+                              editor.setSelection(
+                                { line: lineNumber - 1, ch: 0 },
+                                { line: lineNumber - 1, ch: lineText.length }
+                              );
+                              
+                              // Resaltar temporalmente la línea
+                              const lineDomElement = editor.lineAtHeight(editor.heightAtLine(lineNumber - 1));
+                              if (lineDomElement) {
+                                editor.addHighlight(lineDomElement, 'highlighted-line');
+                                setTimeout(() => editor.removeHighlight(lineDomElement, 'highlighted-line'), 2000);
+                              }
+                            }
+                          }
+                        }, 300); // Pequeño retraso para asegurar que el editor está listo
+                      } catch (error) {
+                        console.error('Error al navegar a la tarea:', error);
+                        new Notice('Error al navegar a la tarea');
+                      }
+                    })();
+                  ">${tarea.titulo}</a>`;
+    
+    // Añadir número de línea como info adicional (opcional)
     if (tarea.lineInfo?.numero) {
-        contenido += ` (línea ${tarea.lineInfo.numero})`;
+        contenido += ` <span class="linea-info">(línea ${tarea.lineInfo.numero})</span>`;
     }
-    contenido += `</span>\n`;
+    contenido += `\n${indentacion}      </span>\n`;
     contenido += `${indentacion}    </div>\n`;
     
     // Fechas si existen
@@ -1992,7 +2057,9 @@ private renderizarTareaContextoMejorada(tarea: Task, indentacion: string = ''): 
 }
 
 // Método para escapar caracteres HTML para prevenir problemas de renderizado
+// Método auxiliar para escapar texto HTML (ya existente o para añadir)
 private escaparHTML(texto: string): string {
+    if (!texto) return '';
     return texto
         .replace(/&/g, "&amp;")
         .replace(/</g, "&lt;")

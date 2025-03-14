@@ -2532,3 +2532,24 @@
     padding: 5px;
   }
 }
+
+.highlighted-line {
+  background-color: rgba(var(--interactive-accent-rgb), 0.3) !important;
+  transition: background-color 1s ease-out;
+}
+
+.tarea-link {
+  color: var(--interactive-accent);
+  text-decoration: none;
+  transition: all 0.2s ease;
+}
+
+.tarea-link:hover {
+  text-decoration: underline;
+  color: var(--interactive-accent-hover);
+}
+
+.linea-info {
+  font-size: 0.85em;
+  color: var(--text-muted);
+}
