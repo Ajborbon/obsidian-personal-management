@@ -1650,6 +1650,7 @@ btn.addEventListener('click', async () => {
 
         // Añadir este método a la clase TareasAPI en src/modules/taskManager/api/tareasAPI.ts
 
+// Método para mostrar contextos GTD con sintaxis markdown en lugar de HTML
 public async mostrarContextosGTD(): Promise<void> {
     try {
         const { contextosConTareas, totalContextos, totalTareas } = await this.getTareasContextos();
@@ -1659,7 +1660,8 @@ public async mostrarContextosGTD(): Promise<void> {
             return;
         }
 
-        const contenido = this.generarVistaContextosGTD(contextosConTareas, totalContextos, totalTareas);
+        // Generar contenido usando markdown estándar de Obsidian
+        const contenido = this.generarVistaContextosGTDMarkdown(contextosConTareas, totalContextos, totalTareas);
 
         await this.guardarYAbrirArchivo(
             `${this.plugin.settings.folder_SistemaGTD}/Contextos GTD.md`,
@@ -1671,6 +1673,235 @@ public async mostrarContextosGTD(): Promise<void> {
         console.error("Error en mostrarContextosGTD:", error);
         new Notice(`Error: ${error.message}`);
     }
+}
+
+// Método para generar la vista de contextos GTD con markdown
+private generarVistaContextosGTDMarkdown(
+    contextosConTareas: Map<string, Task[]>,
+    totalContextos: number,
+    totalTareas: number
+): string {
+    const hoy = this.taskUtils.obtenerFechaLocal();
+    let contenido = `# Contextos GTD\n\n`;
+    
+    // Añadir botón de actualización usando dataviewjs
+    contenido += `\`\`\`dataviewjs
+const gp = app.plugins.plugins['obsidian-personal-management'];
+if (!gp) {
+    dv.paragraph("⚠️ Plugin de Gestión Personal no encontrado");
+    return;
+}
+
+const btn = this.container.createEl('button', {text: '🔄 Actualizar Vista'});
+btn.style.cssText = 'padding: 8px 16px; background-color: #2c3e50; color: white; border: none; border-radius: 4px; cursor: pointer; margin: 0 auto; display: block;';
+
+btn.addEventListener('mouseenter', () => btn.style.backgroundColor = '#34495e');
+btn.addEventListener('mouseleave', () => btn.style.backgroundColor = '#2c3e50');
+
+btn.addEventListener('click', async () => {
+    try {
+        new Notice('Actualizando vista...');
+        await gp.tareasAPI.mostrarContextosGTD();
+    } catch (error) {
+        console.error('Error:', error);
+        new Notice('Error al actualizar contextos');
+    }
+});
+\`\`\`\n\n`;
+
+    // Información general
+    contenido += `> [!info] Resumen\n`;
+    contenido += `> **Actualizado:** ${hoy.toLocaleDateString()} ${new Date().toLocaleTimeString()}\n`;
+    contenido += `> **Total de contextos:** ${totalContextos}\n`;
+    contenido += `> **Total de tareas:** ${totalTareas}\n\n`;
+
+    // Construir el árbol de contextos
+    const arbolContextos = this.construirArbolContextos(contextosConTareas);
+    
+    // Generar índice/resumen de contextos
+    contenido += `## Resumen de Contextos\n\n`;
+    
+    // Generar resumen con indentación
+    let resumen = "";
+    this.generarResumenContextosMarkdown(arbolContextos, 0, resumen);
+    contenido += resumen + "\n\n";
+    
+    // Generar detalles de contextos con sus tareas
+    contenido += `## Contextos y Tareas\n\n`;
+    
+    // Función recursiva para procesar contextos y generar secciones
+    const procesarContextos = (nodo: Map<string, any>, nivel: number = 0): string => {
+        let resultado = "";
+        
+        // Ordenar contextos por cantidad de tareas
+        const sortedKeys = Array.from(nodo.keys()).sort((a, b) => {
+            const tareasA = nodo.get(a).tareas.length;
+            const tareasB = nodo.get(b).tareas.length;
+            return tareasB - tareasA;
+        });
+        
+        for (const contexto of sortedKeys) {
+            const info = nodo.get(contexto);
+            const cantidadTareas = info.tareas.length;
+            const tieneSubcontextos = info.subcontextos.size > 0;
+            
+            // Solo mostrar si tiene tareas o subcontextos
+            if (cantidadTareas > 0 || (tieneSubcontextos && this.tieneAlgunaTarea(info.subcontextos))) {
+                // Determinar nivel de encabezado basado en profundidad
+                const nivelH = Math.min(nivel + 3, 6); // h3, h4, h5, h6 como máximo
+                resultado += `${"#".repeat(nivelH)} ${this.formatearNombreContexto(contexto)} (${cantidadTareas})\n`;
+                resultado += `[[#Resumen de Contextos|⬆️]]\n\n`;
+                
+                // Mostrar tareas si hay alguna
+                if (cantidadTareas > 0) {
+                    // Ordenar las tareas por peso/prioridad
+                    const tareasOrdenadas = TaskWeightCalculator.sortTasks(info.tareas);
+                    
+                    // Renderizar cada tarea
+                    tareasOrdenadas.forEach(tarea => {
+                        resultado += this.renderizarTareaContextoMarkdown(tarea);
+                    });
+                    
+                    resultado += "\n";
+                }
+                
+                // Procesar subcontextos recursivamente
+                if (tieneSubcontextos) {
+                    resultado += procesarContextos(info.subcontextos, nivel + 1);
+                }
+            }
+        }
+        
+        return resultado;
+    };
+    
+    // Generar detalles de contextos
+    contenido += procesarContextos(arbolContextos);
+    
+    return contenido;
+}
+
+// Método para verificar si un nodo o sus descendientes tienen tareas
+private tieneAlgunaTarea(nodo: Map<string, any>): boolean {
+    for (const [_, info] of nodo.entries()) {
+        if (info.tareas.length > 0) {
+            return true;
+        }
+        
+        if (info.subcontextos.size > 0 && this.tieneAlgunaTarea(info.subcontextos)) {
+            return true;
+        }
+    }
+    
+    return false;
+}
+
+// Método para generar el resumen de contextos con indentación
+private generarResumenContextosMarkdown(arbol: Map<string, any>, nivel: number, resultado: string): string {
+    let res = resultado;
+    
+    // Ordenar contextos por cantidad de tareas
+    const sortedKeys = Array.from(arbol.keys()).sort((a, b) => {
+        const tareasA = arbol.get(a).tareas.length;
+        const tareasB = arbol.get(b).tareas.length;
+        return tareasB - tareasA;
+    });
+    
+    for (const contexto of sortedKeys) {
+        const info = arbol.get(contexto);
+        const cantidadTareas = info.tareas.length;
+        const rutaCompleta = info.rutaCompleta;
+        
+        // Indentación con espacios
+        const indentacion = "    ".repeat(nivel);
+        
+        // Formato de elemento de lista
+        if (cantidadTareas > 0) {
+            // Crear identificador de encabezado usando la ruta completa
+            const headerId = this.crearHeaderId(rutaCompleta || contexto);
+            res += `${indentacion}- [[#${headerId}|${this.formatearNombreContexto(contexto)}]] (${cantidadTareas} tareas)\n`;
+        } else if (this.tieneAlgunaTarea(info.subcontextos)) {
+            res += `${indentacion}- **${this.formatearNombreContexto(contexto)}**\n`;
+        }
+        
+        // Procesar subcontextos si tienen tareas
+        if (info.subcontextos.size > 0) {
+            res = this.generarResumenContextosMarkdown(info.subcontextos, nivel + 1, res);
+        }
+    }
+    
+    return res;
+}
+
+// Método para crear un ID de encabezado compatible con markdown
+private crearHeaderId(texto: string): string {
+    // Eliminar caracteres no permitidos y reemplazar espacios
+    return texto.toLowerCase()
+        .replace(/[^\w\s-]/g, '')  // Quitar caracteres especiales
+        .replace(/\s+/g, '-')      // Reemplazar espacios con guiones
+        .replace(/--+/g, '-');     // Evitar guiones múltiples
+}
+
+// Método para renderizar una tarea individual con markdown
+private renderizarTareaContextoMarkdown(tarea: Task): string {
+    let contenido = `- [ ] ${tarea.texto}\n`;
+    
+    // Crear indentación para metadatos
+    const metadatosIndent = "    ";
+    
+    // Renderizar ubicación (con apertura en nueva pestaña)
+    contenido += `${metadatosIndent}📍 **Ubicación:** [[${tarea.rutaArchivo}|${tarea.titulo}]]`;
+    
+    // Añadir número de línea si está disponible
+    if (tarea.lineInfo?.numero) {
+        contenido += ` (línea ${tarea.lineInfo.numero})`;
+    }
+    contenido += "\n";
+    
+    // Fechas relevantes
+    if (tarea.fechaVencimiento || tarea.fechaScheduled || tarea.fechaStart) {
+        contenido += `${metadatosIndent}⏰ **Fechas:**\n`;
+        
+        if (tarea.fechaVencimiento) {
+            contenido += `${metadatosIndent}${metadatosIndent}📅 ${this.formatearFechaConContexto(tarea.fechaVencimiento, 'due')}\n`;
+        }
+        
+        if (tarea.fechaScheduled) {
+            contenido += `${metadatosIndent}${metadatosIndent}⏳ ${this.formatearFechaConContexto(tarea.fechaScheduled, 'scheduled')}\n`;
+        }
+        
+        if (tarea.fechaStart) {
+            contenido += `${metadatosIndent}${metadatosIndent}🛫 ${this.formatearFechaConContexto(tarea.fechaStart, 'start')}\n`;
+        }
+    }
+    
+    // Horarios
+    if (tarea.horaInicio || tarea.horaFin) {
+        contenido += `${metadatosIndent}⌚ **Horario:** ${tarea.horaInicio || '--:--'} - ${tarea.horaFin || '--:--'}\n`;
+    }
+    
+    // Personas asignadas
+    if (tarea.etiquetas.personas?.length > 0) {
+        contenido += `${metadatosIndent}👤 **Asignado a:** ${tarea.etiquetas.personas.map(p => 
+            this.formatearNombrePersona(`#px-${p}`)
+        ).join(' | ')}\n`;
+    }
+    
+    // Dependencias
+    if (tarea.dependencyId) {
+        contenido += `${metadatosIndent}↳ **Depende de:** `;
+        if (tarea.dependencyTitle) {
+            contenido += `[[${tarea.dependencyLocation}|${tarea.dependencyTitle}]]`;
+            if (tarea.dependencyTexto) {
+                contenido += `: "${tarea.dependencyTexto}"`;
+            }
+        } else {
+            contenido += `tarea ID: ${tarea.dependencyId}`;
+        }
+        contenido += ` ${tarea.isBlocked ? '⏳' : '✅'}\n`;
+    }
+    
+    return contenido;
 }
 
 // Método para generar la vista mejorada con HTML/CSS para los Contextos GTD
