@@ -333,6 +333,22 @@ export function registerTaskManagerCommands(plugin: Plugin): void {
         });
         commandIds.push(tareasContextosCommand.id);
 
+        // Añadir este comando dentro de la función registerTaskManagerCommands:
+
+        // Comando para mostrar tareas sin clasificar
+        const tareasSinClasificarCommand = plugin.addCommand({
+            id: "mostrar-tareas-sin-clasificar",
+            name: "Mostrar Tareas Sin Clasificar",
+            callback: async () => {
+                if (managementPlugin.tareasAPI) {
+                    await managementPlugin.tareasAPI.mostrarTareasSinClasificar();
+                } else {
+                    new Notice("El módulo de tareas no está disponible.");
+                }
+            }
+        });
+        commandIds.push(tareasSinClasificarCommand.id);
+
     // Guardar los IDs de los comandos en el plugin
     (plugin as any).registeredTaskManagerCommandIds = commandIds;
 }

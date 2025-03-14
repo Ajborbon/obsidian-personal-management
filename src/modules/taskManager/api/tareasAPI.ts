@@ -1713,5 +1713,218 @@ private formatearNombreContexto(contexto: string): string {
     return contexto;
 }
 
+
+
+// ---------- Taeas huerfanas
+
+// Método para TareasAPI que busca tareas sin contextos, personas, fechas o clasificación GTD
+
+/**
+ * Obtiene todas las tareas que no tienen asignado contexto, persona, fechas o clasificación GTD
+ * @returns {Promise<Object>} Objeto con tareas agrupadas por nota y contadores
+ */
+public async getTareasSinClasificar(): Promise<{
+    tareasPorNota: Map<string, {
+        titulo: string,
+        ruta: string,
+        tareas: Task[]
+    }>,
+    totalTareas: number,
+    totalNotas: number
+}> {
+    try {
+        console.log("\n=== INICIANDO BÚSQUEDA DE TAREAS SIN CLASIFICAR ===");
+        
+        // Mapa para agrupar tareas por archivo
+        const tareasPorNota = new Map<string, {
+            titulo: string,
+            ruta: string,
+            tareas: Task[]
+        }>();
+
+        // Mapa para guardar información de líneas por archivo (optimización)
+        const lineasPorArchivo = new Map<string, Map<string, LineInfo>>();
+        
+        // Obtener todas las tareas sin filtro inicial
+        const tareas = await this.procesarTareas(
+            this.plugin.app.vault.getMarkdownFiles(),
+            async (tarea) => {
+                // Verificar que la tarea no tenga:
+                // 1. Contextos (#cx-)
+                const sinContextos = !tarea.etiquetas.contextos || tarea.etiquetas.contextos.length === 0;
+                
+                // 2. Personas asignadas (#px-)
+                const sinPersonas = !tarea.etiquetas.personas || tarea.etiquetas.personas.length === 0;
+                
+                // 3. Fechas (Due, Start, Scheduled)
+                const sinFechas = !tarea.fechaVencimiento && !tarea.fechaStart && !tarea.fechaScheduled;
+                
+                // 4. Clasificación GTD (#GTD-)
+                const sinGTD = !tarea.etiquetas.todas.some(tag => tag.startsWith('#GTD-'));
+                
+                // 5. No está clasificada para inbox (#inbox)
+                const noInbox = !tarea.etiquetas.todas.some(tag => tag.toLowerCase() === '#inbox');
+                
+                // Comprobar si cumple todos los criterios (sin clasificaciones)
+                const sinClasificar = sinContextos && sinPersonas && sinFechas && sinGTD && noInbox;
+                
+                // Si la tarea cumple los criterios, agregar información de línea
+                if (sinClasificar) {
+                    // Optimización: obtener información de líneas solo cuando sea necesario
+                    if (!lineasPorArchivo.has(tarea.rutaArchivo)) {
+                        try {
+                            const archivo = this.plugin.app.vault.getAbstractFileByPath(tarea.rutaArchivo) as TFile;
+                            if (archivo) {
+                                lineasPorArchivo.set(
+                                    tarea.rutaArchivo,
+                                    await this.taskUtils.encontrarLineasTarea(archivo)
+                                );
+                            }
+                        } catch (error) {
+                            console.error(`Error al buscar líneas en ${tarea.rutaArchivo}:`, error);
+                        }
+                    }
+                    
+                    // Agregar información de línea a la tarea
+                    const lineasArchivo = lineasPorArchivo.get(tarea.rutaArchivo);
+                    if (lineasArchivo) {
+                        const lineInfo = lineasArchivo.get(tarea.texto);
+                        if (lineInfo) {
+                            tarea.lineInfo = lineInfo;
+                        }
+                    }
+                    
+                    // Agrupar por archivo
+                    if (!tareasPorNota.has(tarea.rutaArchivo)) {
+                        tareasPorNota.set(tarea.rutaArchivo, {
+                            titulo: tarea.titulo,
+                            ruta: tarea.rutaArchivo,
+                            tareas: []
+                        });
+                    }
+                    
+                    tareasPorNota.get(tarea.rutaArchivo).tareas.push(tarea);
+                }
+                
+                return sinClasificar;
+            }
+        );
+        
+        // Contar totales
+        const totalTareas = tareas.length;
+        const totalNotas = tareasPorNota.size;
+        
+        console.log(`=== BÚSQUEDA COMPLETADA ===`);
+        console.log(`Total de tareas sin clasificar: ${totalTareas}`);
+        console.log(`Total de notas con tareas sin clasificar: ${totalNotas}`);
+        
+        return {
+            tareasPorNota,
+            totalTareas,
+            totalNotas
+        };
+    } catch (error) {
+        console.error("Error en getTareasSinClasificar:", error);
+        throw error;
+    }
+}
+
+/**
+ * Muestra una vista con todas las tareas sin clasificar agrupadas por nota
+ * @returns {Promise<void>}
+ */
+public async mostrarTareasSinClasificar(): Promise<void> {
+    try {
+        // Obtener tareas sin clasificar
+        const { tareasPorNota, totalTareas, totalNotas } = await this.getTareasSinClasificar();
+        
+        if (totalTareas === 0) {
+            new Notice('No se encontraron tareas sin clasificar.');
+            return;
+        }
+        
+        // Generar contenido del archivo
+        const contenido = this.generarVistaTareasSinClasificar(tareasPorNota, totalTareas, totalNotas);
+        
+        // Guardar y abrir archivo
+        await this.guardarYAbrirArchivo(
+            `${this.plugin.settings.folder_SistemaGTD}/Tareas Sin Clasificar.md`,
+            contenido
+        );
+        
+        new Notice(`Se encontraron ${totalTareas} tareas sin clasificar en ${totalNotas} notas`);
+    } catch (error) {
+        console.error("Error en mostrarTareasSinClasificar:", error);
+        new Notice(`Error: ${error.message}`);
+    }
+}
+
+/**
+ * Genera el contenido de la vista de tareas sin clasificar
+ * @param {Map} tareasPorNota - Mapa con las tareas agrupadas por nota
+ * @param {number} totalTareas - Total de tareas sin clasificar
+ * @param {number} totalNotas - Total de notas con tareas sin clasificar
+ * @returns {string} - Contenido markdown para el archivo
+ */
+private generarVistaTareasSinClasificar(
+    tareasPorNota: Map<string, {
+        titulo: string,
+        ruta: string,
+        tareas: Task[]
+    }>,
+    totalTareas: number,
+    totalNotas: number
+): string {
+    const hoy = this.taskUtils.obtenerFechaLocal();
+    let contenido = `# Tareas Sin Clasificar\n\n`;
+    
+    // Agregar botón de actualización
+    contenido += this.generarBotonActualizacion("mostrarTareasSinClasificar");
+    
+    // Añadir información general
+    contenido += `> [!info] Actualizado: ${hoy.toLocaleDateString()} ${new Date().toLocaleTimeString()}\n`;
+    contenido += `> Total de tareas sin clasificar: ${totalTareas}\n`;
+    contenido += `> Total de notas con tareas sin clasificar: ${totalNotas}\n\n`;
+    
+    // Ordenar notas por cantidad de tareas (descendente)
+    const notasOrdenadas = Array.from(tareasPorNota.values())
+        .sort((a, b) => b.tareas.length - a.tareas.length);
+    
+    // Generar secciones por nota
+    for (const notaInfo of notasOrdenadas) {
+        contenido += `## [[${notaInfo.ruta}|${notaInfo.titulo}]] (${notaInfo.tareas.length})\n\n`;
+        
+        // Renderizar cada tarea
+        for (const tarea of notaInfo.tareas) {
+            contenido += this.renderizarTareaSinClasificar(tarea);
+        }
+        
+        contenido += '\n';
+    }
+    
+    return contenido;
+}
+
+/**
+ * Renderiza una tarea sin clasificar en formato markdown
+ * @param {Task} tarea - Tarea a renderizar
+ * @returns {string} - Representación markdown de la tarea
+ */
+private renderizarTareaSinClasificar(tarea: Task): string {
+    let contenido = `- [ ] ${tarea.texto}\n`;
+    
+    // Agregar metainformación
+    if (tarea.lineInfo?.numero) {
+        contenido += `    - 📍 Línea: ${tarea.lineInfo.numero}\n`;
+    }
+    
+    // Agregar etiquetas si tiene alguna (aunque no sean de las categorías buscadas)
+    if (tarea.etiquetas.todas.length > 0) {
+        contenido += `    - 🏷️ Etiquetas: ${tarea.etiquetas.todas.join(' ')}\n`;
+    }
+    
+    return contenido;
+}
+
      
 }

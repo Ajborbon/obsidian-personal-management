@@ -4086,4 +4086,564 @@ formatearNombreContexto(contexto) {
     return contexto;
 }
 
+
+
+// --- Taeas Huerfanas
+
+// Método para addOnsAPI que muestra tareas sin clasificar en un componente visual
+
+/**
+ * Genera un componente visual para mostrar tareas sin clasificar (sin contexto, personas,
+ * fechas o clasificación GTD)
+ * @param dv Objeto dataview para acceder a sus funciones
+ * @returns Elemento DOM con la vista de tareas sin clasificar
+ */
+async mostrarTareasSinClasificar(dv) {
+    try {
+        // Crear el contenedor principal
+        const container = document.createElement("div");
+        container.className = "tareas-sin-clasificar-container";
+        
+        // Añadir estilos personalizados para la visualización
+        const styleEl = document.createElement("style");
+        styleEl.textContent = `
+        .tareas-sin-clasificar-container {
+            font-size: 0.95em;
+            width: 100%;
+            max-width: 100%;
+            margin: 0;
+            padding: 0;
+        }
+        
+        .tareas-heading {
+            margin-top: 1rem;
+            margin-bottom: 0.5rem;
+            border-bottom: 1px solid var(--background-modifier-border);
+            padding-bottom: 6px;
+            font-weight: 600;
+            font-size: 1.3em;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        
+        .stats-badge {
+            background-color: var(--interactive-accent);
+            color: white;
+            border-radius: 12px;
+            padding: 2px 10px;
+            font-size: 0.8em;
+            font-weight: normal;
+        }
+        
+        .tarea-group {
+            background-color: var(--background-secondary);
+            border-radius: 8px;
+            margin-bottom: 1rem;
+            overflow: hidden;
+        }
+        
+        .tarea-group-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 12px;
+            background-color: var(--background-secondary-alt);
+            cursor: pointer;
+            user-select: none;
+        }
+        
+        .tarea-group-header:hover {
+            background-color: var(--background-modifier-hover);
+        }
+        
+        .tarea-group-title {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 500;
+        }
+        
+        .tarea-group-toggle {
+            font-family: monospace;
+            transition: transform 0.2s ease;
+        }
+        
+        .tarea-group-toggle.open {
+            transform: rotate(90deg);
+        }
+        
+        .tarea-group-count {
+            background-color: var(--interactive-accent);
+            color: white;
+            border-radius: 12px;
+            padding: 1px 8px;
+            font-size: 0.85em;
+        }
+        
+        .tarea-list {
+            padding: 0 12px 12px;
+            display: none;
+        }
+        
+        .tarea-list.open {
+            display: block;
+        }
+        
+        .tarea-item {
+            margin: 8px 0;
+            padding: 8px;
+            border-radius: 6px;
+            background-color: var(--background-primary);
+            border: 1px solid var(--background-modifier-border);
+            transition: all 0.2s ease;
+        }
+        
+        .tarea-item:hover {
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            transform: translateY(-2px);
+            border-color: var(--interactive-accent);
+        }
+        
+        .tarea-texto {
+            margin-bottom: 6px;
+            display: flex;
+            gap: 8px;
+            align-items: flex-start;
+        }
+        
+        .tarea-checkbox {
+            color: var(--text-faint);
+            font-size: 1.1em;
+            flex-shrink: 0;
+            cursor: pointer;
+        }
+        
+        .tarea-contenido {
+            flex-grow: 1;
+            line-height: 1.4;
+        }
+        
+        .tarea-metadatos {
+            margin-left: 28px;
+            font-size: 0.9em;
+            color: var(--text-muted);
+        }
+        
+        .tarea-meta-item {
+            margin-bottom: 3px;
+            display: flex;
+            align-items: baseline;
+        }
+        
+        .meta-icon {
+            margin-right: 6px;
+            width: 16px;
+            text-align: center;
+        }
+        
+        .loading-indicator {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+            color: var(--text-muted);
+        }
+        
+        .spinner {
+            border: 3px solid rgba(0, 0, 0, 0.1);
+            border-radius: 50%;
+            border-top: 3px solid var(--interactive-accent);
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin-bottom: 1rem;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .error-message {
+            color: var(--text-error);
+            background-color: rgba(var(--text-error-rgb), 0.1);
+            padding: 10px;
+            border-radius: 6px;
+            text-align: center;
+            margin: 10px 0;
+        }
+        
+        .tareas-controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 1rem;
+            justify-content: center;
+        }
+        
+        .tareas-btn {
+            background-color: var(--background-secondary-alt);
+            border: 1px solid var(--background-modifier-border);
+            border-radius: 6px;
+            padding: 6px 12px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .tareas-btn:hover {
+            background-color: var(--background-modifier-hover);
+        }
+        
+        .expand-btn:hover {
+            background-color: var(--interactive-accent);
+            color: white;
+        }
+        
+        .empty-message {
+            color: var(--text-muted);
+            text-align: center;
+            padding: 2rem;
+            font-style: italic;
+        }
+        `;
+        container.appendChild(styleEl);
+        
+        // Añadir encabezado principal
+        const heading = document.createElement("h3");
+        heading.className = "tareas-heading";
+        heading.textContent = "Tareas Sin Clasificar";
+        container.appendChild(heading);
+        
+        // Agregar controles para expandir/colapsar todo
+        const controlsDiv = document.createElement("div");
+        controlsDiv.className = "tareas-controls";
+        
+        const expandBtn = document.createElement("button");
+        expandBtn.className = "tareas-btn expand-btn";
+        expandBtn.textContent = "📂 Expandir Todo";
+        expandBtn.addEventListener("click", () => this.expandirTodasLasTareas(container));
+        
+        const collapseBtn = document.createElement("button");
+        collapseBtn.className = "tareas-btn collapse-btn";
+        collapseBtn.textContent = "📁 Colapsar Todo";
+        collapseBtn.addEventListener("click", () => this.colapsarTodasLasTareas(container));
+        
+        const refreshBtn = document.createElement("button");
+        refreshBtn.className = "tareas-btn refresh-btn";
+        refreshBtn.textContent = "🔄 Actualizar";
+        refreshBtn.addEventListener("click", async () => {
+            const nuevoContainer = await this.mostrarTareasSinClasificar(dv);
+            container.parentNode.replaceChild(nuevoContainer, container);
+        });
+        
+        controlsDiv.appendChild(expandBtn);
+        controlsDiv.appendChild(collapseBtn);
+        controlsDiv.appendChild(refreshBtn);
+        container.appendChild(controlsDiv);
+        
+        // Añadir indicador de carga
+        const loadingDiv = document.createElement("div");
+        loadingDiv.className = "loading-indicator";
+        
+        const spinnerDiv = document.createElement("div");
+        spinnerDiv.className = "spinner";
+        loadingDiv.appendChild(spinnerDiv);
+        
+        const loadingText = document.createElement("div");
+        loadingText.textContent = "Buscando tareas sin clasificar...";
+        loadingDiv.appendChild(loadingText);
+        
+        container.appendChild(loadingDiv);
+        
+        try {
+            // Obtener datos de tareas sin clasificar a través de la API
+            const { tareasPorNota, totalTareas, totalNotas } = await this.plugin.tareasAPI.getTareasSinClasificar();
+            
+            // Eliminar el indicador de carga
+            container.removeChild(loadingDiv);
+            
+            // Si no hay tareas sin clasificar
+            if (totalTareas === 0) {
+                const emptyMessage = document.createElement("div");
+                emptyMessage.className = "empty-message";
+                emptyMessage.textContent = "¡Felicidades! No se encontraron tareas sin clasificar.";
+                container.appendChild(emptyMessage);
+                return container;
+            }
+            
+            // Actualizar el encabezado con el contador
+            const statsBadge = document.createElement("span");
+            statsBadge.className = "stats-badge";
+            statsBadge.textContent = `${totalTareas} tareas en ${totalNotas} notas`;
+            heading.appendChild(statsBadge);
+            
+            // Ordenar notas por cantidad de tareas (descendente)
+            const notasOrdenadas = Array.from(tareasPorNota.values())
+                .sort((a, b) => b.tareas.length - a.tareas.length);
+            
+            // Crear grupos de tareas por nota
+            for (const notaInfo of notasOrdenadas) {
+                const grupoTareas = this.crearGrupoTareas(notaInfo, dv);
+                container.appendChild(grupoTareas);
+            }
+            
+            // Expandir el primer grupo automáticamente
+            if (notasOrdenadas.length > 0) {
+                const primerGrupo = container.querySelector('.tarea-group');
+                if (primerGrupo) {
+                    const header = primerGrupo.querySelector('.tarea-group-header');
+                    const toggle = primerGrupo.querySelector('.tarea-group-toggle');
+                    const list = primerGrupo.querySelector('.tarea-list');
+                    
+                    toggle.classList.add('open');
+                    list.classList.add('open');
+                }
+            }
+            
+        } catch (error) {
+            // Eliminar el indicador de carga
+            container.removeChild(loadingDiv);
+            
+            // Mostrar mensaje de error
+            const errorMessage = document.createElement("div");
+            errorMessage.className = "error-message";
+            errorMessage.textContent = `Error al cargar tareas sin clasificar: ${error.message}`;
+            container.appendChild(errorMessage);
+            
+            console.error("Error en mostrarTareasSinClasificar:", error);
+        }
+        
+        return container;
+    } catch (error) {
+        console.error("Error general en mostrarTareasSinClasificar:", error);
+        
+        // Devolver un mensaje de error
+        const errorContainer = document.createElement("div");
+        errorContainer.className = "error-message";
+        errorContainer.textContent = `Error al cargar tareas sin clasificar: ${error.message}`;
+        return errorContainer;
+    }
+}
+
+/**
+ * Crea un grupo de tareas para una nota específica
+ * @param notaInfo Información de la nota y sus tareas
+ * @param dv Objeto dataview
+ * @returns Elemento DOM con el grupo de tareas
+ */
+crearGrupoTareas(notaInfo, dv) {
+    const { titulo, ruta, tareas } = notaInfo;
+    
+    // Crear contenedor del grupo
+    const grupoDiv = document.createElement("div");
+    grupoDiv.className = "tarea-group";
+    
+    // Crear encabezado con toggle
+    const headerDiv = document.createElement("div");
+    headerDiv.className = "tarea-group-header";
+    
+    // Título con ícono de toggle
+    const titleDiv = document.createElement("div");
+    titleDiv.className = "tarea-group-title";
+    
+    const toggleSpan = document.createElement("span");
+    toggleSpan.className = "tarea-group-toggle";
+    toggleSpan.textContent = "▶";
+    titleDiv.appendChild(toggleSpan);
+    
+    // Enlace a la nota
+    try {
+        const enlaceNota = document.createElement("a");
+        enlaceNota.className = "internal-link";
+        enlaceNota.textContent = titulo;
+        enlaceNota.href = ruta;
+        enlaceNota.setAttribute("data-href", ruta);
+        
+        // Agregar evento para abrir la nota
+        enlaceNota.addEventListener("click", (event) => {
+            event.preventDefault();
+            app.workspace.openLinkText(ruta, "", true); // Abrir en nueva pestaña
+        });
+        
+        titleDiv.appendChild(enlaceNota);
+    } catch (e) {
+        // Si falla la creación del enlace, mostrar solo texto
+        const textoNota = document.createElement("span");
+        textoNota.textContent = titulo;
+        titleDiv.appendChild(textoNota);
+    }
+    
+    headerDiv.appendChild(titleDiv);
+    
+    // Contador de tareas
+    const countSpan = document.createElement("span");
+    countSpan.className = "tarea-group-count";
+    countSpan.textContent = tareas.length.toString();
+    headerDiv.appendChild(countSpan);
+    
+    grupoDiv.appendChild(headerDiv);
+    
+    // Lista de tareas (inicialmente oculta)
+    const tareasList = document.createElement("div");
+    tareasList.className = "tarea-list";
+    
+    // Añadir cada tarea
+    for (const tarea of tareas) {
+        const tareaElement = this.crearTareaElementHuerfana(tarea, dv);
+        tareasList.appendChild(tareaElement);
+    }
+    
+    grupoDiv.appendChild(tareasList);
+    
+    // Agregar evento para mostrar/ocultar lista de tareas
+    headerDiv.addEventListener("click", (event) => {
+        // No colapsar si se hizo clic en un enlace
+        if (event.target.tagName === 'A') return;
+        
+        toggleSpan.classList.toggle('open');
+        tareasList.classList.toggle('open');
+        
+        if (toggleSpan.classList.contains('open')) {
+            toggleSpan.textContent = "▼";
+        } else {
+            toggleSpan.textContent = "▶";
+        }
+    });
+    
+    return grupoDiv;
+}
+
+/**
+ * Crea un elemento DOM para una tarea sin clasificar
+ * @param tarea Objeto con la información de la tarea
+ * @param dv Objeto dataview
+ * @returns Elemento DOM representando la tarea
+ */
+crearTareaElementHuerfana(tarea, dv) {
+    // Elemento principal
+    const tareaDiv = document.createElement("div");
+    tareaDiv.className = "tarea-item";
+    
+    // Texto de la tarea
+    const textoDiv = document.createElement("div");
+    textoDiv.className = "tarea-texto";
+    
+    // Checkbox (visual, no funcional)
+    const checkboxSpan = document.createElement("span");
+    checkboxSpan.className = "tarea-checkbox";
+    checkboxSpan.textContent = "☐";
+    checkboxSpan.setAttribute("data-path", tarea.rutaArchivo);
+    checkboxSpan.setAttribute("data-line", tarea.lineInfo?.numero?.toString() || "0");
+    
+    // Hacer el checkbox clicable para navegar a la tarea
+    checkboxSpan.addEventListener("click", () => {
+        const path = checkboxSpan.getAttribute("data-path");
+        const line = parseInt(checkboxSpan.getAttribute("data-line") || "0", 10);
+        this.navegarATareaConResaltado(path, line, tarea.textoOriginal || tarea.texto, true);
+    });
+    
+    textoDiv.appendChild(checkboxSpan);
+    
+    // Contenido de la tarea
+    const contenidoSpan = document.createElement("span");
+    contenidoSpan.className = "tarea-contenido";
+    contenidoSpan.textContent = tarea.texto;
+    
+    // Hacer el contenido clicable para navegar a la tarea
+    contenidoSpan.setAttribute("data-path", tarea.rutaArchivo);
+    contenidoSpan.setAttribute("data-line", tarea.lineInfo?.numero?.toString() || "0");
+    contenidoSpan.style.cursor = "pointer";
+    
+    contenidoSpan.addEventListener("click", () => {
+        const path = contenidoSpan.getAttribute("data-path");
+        const line = parseInt(contenidoSpan.getAttribute("data-line") || "0", 10);
+        this.navegarATareaConResaltado(path, line, tarea.textoOriginal || tarea.texto, true);
+    });
+    
+    textoDiv.appendChild(contenidoSpan);
+    tareaDiv.appendChild(textoDiv);
+    
+    // Metadatos
+    const metadatosDiv = document.createElement("div");
+    metadatosDiv.className = "tarea-metadatos";
+    
+    // Ubicación (ruta y línea)
+    const ubicacionDiv = document.createElement("div");
+    ubicacionDiv.className = "tarea-meta-item";
+    
+    const iconoUbicacion = document.createElement("span");
+    iconoUbicacion.className = "meta-icon";
+    iconoUbicacion.textContent = "📍";
+    ubicacionDiv.appendChild(iconoUbicacion);
+    
+    const valorUbicacion = document.createElement("span");
+    
+    // Si tenemos número de línea, mostrarlo
+    if (tarea.lineInfo?.numero) {
+        valorUbicacion.textContent = `Línea ${tarea.lineInfo.numero}`;
+    } else {
+        valorUbicacion.textContent = "Posición desconocida";
+    }
+    
+    ubicacionDiv.appendChild(valorUbicacion);
+    metadatosDiv.appendChild(ubicacionDiv);
+    
+    // Si tiene etiquetas mostrarlas (aunque no sean de las categorías buscadas)
+    if (tarea.etiquetas.todas.length > 0) {
+        const etiquetasDiv = document.createElement("div");
+        etiquetasDiv.className = "tarea-meta-item";
+        
+        const iconoEtiquetas = document.createElement("span");
+        iconoEtiquetas.className = "meta-icon";
+        iconoEtiquetas.textContent = "🏷️";
+        etiquetasDiv.appendChild(iconoEtiquetas);
+        
+        const valorEtiquetas = document.createElement("span");
+        valorEtiquetas.textContent = tarea.etiquetas.todas.join(' ');
+        etiquetasDiv.appendChild(valorEtiquetas);
+        
+        metadatosDiv.appendChild(etiquetasDiv);
+    }
+    
+    tareaDiv.appendChild(metadatosDiv);
+    
+    return tareaDiv;
+}
+
+/**
+ * Expande todos los grupos de tareas
+ * @param container Contenedor principal
+ */
+expandirTodasLasTareas(container) {
+    const grupos = container.querySelectorAll('.tarea-group');
+    
+    grupos.forEach(grupo => {
+        const toggle = grupo.querySelector('.tarea-group-toggle');
+        const list = grupo.querySelector('.tarea-list');
+        
+        toggle.classList.add('open');
+        toggle.textContent = "▼";
+        list.classList.add('open');
+    });
+}
+
+/**
+ * Colapsa todos los grupos de tareas
+ * @param container Contenedor principal
+ */
+colapsarTodasLasTareas(container) {
+    const grupos = container.querySelectorAll('.tarea-group');
+    
+    grupos.forEach(grupo => {
+        const toggle = grupo.querySelector('.tarea-group-toggle');
+        const list = grupo.querySelector('.tarea-list');
+        
+        toggle.classList.remove('open');
+        toggle.textContent = "▶";
+        list.classList.remove('open');
+    });
+}
+
+
   }
