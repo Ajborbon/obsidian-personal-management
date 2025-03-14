@@ -333,6 +333,24 @@ export function registerTaskManagerCommands(plugin: Plugin): void {
         });
         commandIds.push(tareasContextosCommand.id);
 
+
+        // Añadir esta función en taskManager/commands.ts
+        // Importar las dependencias necesarias al inicio del archivo
+
+        // Añadir esta definición de comando al final de la función registerTaskManagerCommands
+        const contextosGTDCommand = plugin.addCommand({
+            id: "mostrar-contextos-gtd",
+            name: "Mostrar Contextos GTD (Mejorado)",
+            callback: async () => {
+                if (managementPlugin.tareasAPI) {
+                    await managementPlugin.tareasAPI.mostrarContextosGTD();
+                } else {
+                    new Notice("El módulo de tareas no está disponible.");
+                }
+            }
+        });
+        commandIds.push(contextosGTDCommand.id);
+
     // Guardar los IDs de los comandos en el plugin
     (plugin as any).registeredTaskManagerCommandIds = commandIds;
 }

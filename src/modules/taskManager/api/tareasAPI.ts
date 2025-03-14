@@ -1644,5 +1644,361 @@ btn.addEventListener('click', async () => {
     
             return contenido;
         }
+
+
+        // -- Contextos GTD
+
+        // Añadir este método a la clase TareasAPI en src/modules/taskManager/api/tareasAPI.ts
+
+public async mostrarContextosGTD(): Promise<void> {
+    try {
+        const { contextosConTareas, totalContextos, totalTareas } = await this.getTareasContextos();
+        
+        if (totalContextos === 0) {
+            new Notice('No se encontraron tareas con contextos asignados.');
+            return;
+        }
+
+        const contenido = this.generarVistaContextosGTD(contextosConTareas, totalContextos, totalTareas);
+
+        await this.guardarYAbrirArchivo(
+            `${this.plugin.settings.folder_SistemaGTD}/Contextos GTD.md`,
+            contenido
+        );
+        
+        new Notice(`Se encontraron ${totalTareas} tareas en ${totalContextos} contextos`);
+    } catch (error) {
+        console.error("Error en mostrarContextosGTD:", error);
+        new Notice(`Error: ${error.message}`);
+    }
+}
+
+// Método para generar la vista mejorada con HTML/CSS para los Contextos GTD
+private generarVistaContextosGTD(
+    contextosConTareas: Map<string, Task[]>,
+    totalContextos: number,
+    totalTareas: number
+): string {
+    const hoy = this.taskUtils.obtenerFechaLocal();
+    let contenido = `# Contextos GTD\n\n`;
+    
+    // Añadir botón de actualización con estilo mejorado
+    contenido += this.generarBotonActualizacionMejorado("mostrarContextosGTD");
+    
+    // Información general con estilo mejorado
+    contenido += `> [!info] Resumen\n`;
+    contenido += `> **Actualizado:** ${hoy.toLocaleDateString()} ${new Date().toLocaleTimeString()}\n`;
+    contenido += `> **Total de contextos:** ${totalContextos}\n`;
+    contenido += `> **Total de tareas:** ${totalTareas}\n\n`;
+    
+    // Añadir controles para expandir/colapsar todo
+    contenido += `\`\`\`dataviewjs
+// Controles para expandir/colapsar todo
+const containerControles = this.container.createEl('div', {cls: 'contextos-controles'});
+
+// Botón para expandir todo
+const btnExpandir = containerControles.createEl('button', {text: '📂 Expandir Todo'});
+btnExpandir.style.cssText = 'margin-right: 10px; padding: 5px 10px; background-color: #2c3e50; color: white; border: none; border-radius: 4px; cursor: pointer;';
+
+// Botón para colapsar todo
+const btnColapsar = containerControles.createEl('button', {text: '📁 Colapsar Todo'});
+btnColapsar.style.cssText = 'padding: 5px 10px; background-color: #34495e; color: white; border: none; border-radius: 4px; cursor: pointer;';
+
+// Añadir separador
+containerControles.createEl('hr', {cls: 'separador'});
+
+// Funcionalidad para expandir todo
+btnExpandir.addEventListener('click', () => {
+    document.querySelectorAll('.contexto-details').forEach(details => {
+        details.setAttribute('open', 'true');
+    });
+});
+
+// Funcionalidad para colapsar todo
+btnColapsar.addEventListener('click', () => {
+    document.querySelectorAll('.contexto-details').forEach(details => {
+        details.removeAttribute('open');
+    });
+});
+\`\`\`\n\n`;
+
+    // Construir el árbol de contextos para la organización jerárquica
+    const arbolContextos = this.construirArbolContextos(contextosConTareas);
+    
+    // Añadir CSS para la visualización de contextos
+    contenido += this.generarEstilosContextosGTD();
+    
+    // Generar vista jerárquica de contextos con acordeones anidados
+    contenido += `## Contextos y Tareas\n\n`;
+    contenido += this.generarDetallesContextosGTD(arbolContextos, contextosConTareas);
+    
+    return contenido;
+}
+
+// Método para generar los estilos CSS específicos para esta vista
+private generarEstilosContextosGTD(): string {
+    return `\`\`\`dataviewjs
+// Aplicar estilos personalizados dentro de esta página
+const estilos = this.container.createEl('style');
+estilos.textContent = \`
+    /* Los estilos se definirán en styles.css */
+\`;
+\`\`\`\n\n`;
+}
+
+// Genera un botón de actualización mejorado visualmente
+private generarBotonActualizacionMejorado(metodo: string, parametros?: any): string {
+    return `\`\`\`dataviewjs
+const gp = app.plugins.plugins['obsidian-personal-management'];
+if (!gp) {
+    dv.paragraph("⚠️ Plugin de Gestión Personal no encontrado");
+    return;
+}
+
+const btnContainer = this.container.createEl('div', {cls: 'actualizacion-btn-container'});
+const btn = btnContainer.createEl('button', {cls: 'actualizacion-btn'});
+
+// Añadir icono y texto
+const iconoSpan = btn.createEl('span', {cls: 'actualizacion-icono', text: '🔄'});
+const textoSpan = btn.createEl('span', {cls: 'actualizacion-texto', text: 'Actualizar Vista'});
+
+// Estilo del botón
+btn.style.cssText = 'display: flex; align-items: center; justify-content: center; gap: 8px; padding: 8px 16px; background-color: #2c3e50; color: white; border: none; border-radius: 4px; cursor: pointer; transition: background-color 0.2s, transform 0.1s; width: 100%; max-width: 250px; margin: 10px auto;';
+iconoSpan.style.cssText = 'font-size: 1.2em;';
+
+// Efectos hover
+btn.addEventListener('mouseenter', () => {
+    btn.style.backgroundColor = '#34495e';
+    btn.style.transform = 'translateY(-2px)';
+});
+btn.addEventListener('mouseleave', () => {
+    btn.style.backgroundColor = '#2c3e50';
+    btn.style.transform = 'translateY(0)';
+});
+
+// Añadir funcionalidad
+btn.addEventListener('click', async () => {
+    try {
+        btn.style.opacity = '0.7';
+        btn.textContent = '⏳ Actualizando...';
+        btn.disabled = true;
+        
+        new Notice('Actualizando vista de contextos...');
+        await gp.tareasAPI.${metodo}(${parametros ? JSON.stringify(parametros) : ''});
+        
+        // Estos cambios no se verán porque la página se recargará
+        btn.style.opacity = '1';
+        btn.disabled = false;
+        btn.textContent = '✅ Actualizado';
+    } catch (error) {
+        console.error('Error:', error);
+        new Notice('Error al actualizar contextos');
+        
+        btn.style.opacity = '1';
+        btn.disabled = false;
+        btn.textContent = '❌ Error';
+        
+        // Restaurar el botón después de un tiempo
+        setTimeout(() => {
+            btn.innerHTML = '';
+            const iconoRestore = btn.createEl('span', {cls: 'actualizacion-icono', text: '🔄'});
+            const textoRestore = btn.createEl('span', {cls: 'actualizacion-texto', text: 'Actualizar Vista'});
+        }, 2000);
+    }
+});
+\`\`\`\n\n`;
+}
+
+// Método para generar el HTML mejorado con etiquetas <details> y <summary> para contextos
+private generarDetallesContextosGTD(
+    arbolContextos: Map<string, any>, 
+    contextosConTareas: Map<string, Task[]>
+): string {
+    let contenido = '';
+    
+    // Función recursiva para procesar el árbol de contextos
+    const procesarNodo = (nodo: Map<string, any>, nivel: number = 0) => {
+        const sortedKeys = Array.from(nodo.keys()).sort((a, b) => {
+            // Ordenar por cantidad de tareas (descendente)
+            const tareasA = nodo.get(a).tareas.length;
+            const tareasB = nodo.get(b).tareas.length;
+            return tareasB - tareasA;
+        });
+        
+        sortedKeys.forEach(contexto => {
+            const info = nodo.get(contexto);
+            const rutaCompleta = info.rutaCompleta;
+            const cantidadTareas = info.tareas.length;
+            const tieneSubcontextos = info.subcontextos.size > 0;
+            
+            // Sangría HTML basada en nivel
+            const indentacion = '  '.repeat(nivel);
+            
+            // Determinar si debemos mostrar esta sección
+            const mostrarSeccion = cantidadTareas > 0 || tieneSubcontextos;
+            
+            if (mostrarSeccion) {
+                // Crear sección de detalle con summary mejorado
+                contenido += `${indentacion}<details class="contexto-details nivel-${nivel}" ${nivel === 0 ? 'open' : ''}>\n`;
+                
+                // Nombre del contexto y contador de tareas
+                contenido += `${indentacion}  <summary class="contexto-summary">\n`;
+                contenido += `${indentacion}    <div class="contexto-header">\n`;
+                contenido += `${indentacion}      <div class="contexto-nombre">${this.formatearNombreContexto(contexto)}</div>\n`;
+                if (cantidadTareas > 0) {
+                    contenido += `${indentacion}      <div class="contexto-contador">${cantidadTareas}</div>\n`;
+                }
+                contenido += `${indentacion}    </div>\n`;
+                contenido += `${indentacion}  </summary>\n\n`;
+                
+                // Contenido de las tareas si hay alguna
+                if (cantidadTareas > 0) {
+                    contenido += `${indentacion}  <div class="contexto-tareas">\n`;
+                    
+                    // Añadir las tareas ordenadas por peso/prioridad
+                    const tareasOrdenadas = TaskWeightCalculator.sortTasks(info.tareas);
+                    tareasOrdenadas.forEach(tarea => {
+                        contenido += this.renderizarTareaContextoMejorada(tarea, indentacion + '    ');
+                    });
+                    
+                    contenido += `${indentacion}  </div>\n\n`;
+                }
+                
+                // Procesar subcontextos recursivamente
+                if (tieneSubcontextos) {
+                    contenido += `${indentacion}  <div class="subcontextos-container">\n`;
+                    procesarNodo(info.subcontextos, nivel + 1);
+                    contenido += `${indentacion}  </div>\n`;
+                }
+                
+                contenido += `${indentacion}</details>\n\n`;
+            }
+        });
+    };
+    
+    // Comenzar el procesamiento con el nivel 0
+    procesarNodo(arbolContextos, 0);
+    
+    // Si no hay contextos, mostrar mensaje
+    if (contenido === '') {
+        contenido = '> [!note] No se encontraron contextos con tareas\n> Considera añadir etiquetas `#cx/contexto` a tus tareas\n';
+    }
+    
+    return contenido;
+}
+
+// Método para formatear el nombre del contexto de manera más legible
+private formatearNombreContexto(contexto: string): string {
+    // Si es un contexto con jerarquía (tiene →), obtener solo la última parte
+    if (contexto.includes(' → ')) {
+        return contexto.split(' → ').pop() || contexto;
+    }
+    return contexto;
+}
+
+// Método para renderizar una tarea con formato mejorado
+private renderizarTareaContextoMejorada(tarea: Task, indentacion: string = ''): string {
+    let contenido = `${indentacion}<div class="tarea-item ${tarea.isBlocked ? 'tarea-bloqueada' : ''}">\n`;
+    
+    // Checkbox y texto principal
+    contenido += `${indentacion}  <div class="tarea-texto">\n`;
+    contenido += `${indentacion}    <span class="tarea-checkbox">☐</span>\n`;
+    contenido += `${indentacion}    <span class="tarea-contenido">${this.escaparHTML(tarea.texto)}</span>\n`;
+    contenido += `${indentacion}  </div>\n`;
+    
+    // Sección de metadatos
+    contenido += `${indentacion}  <div class="tarea-metadatos">\n`;
+    
+    // Ubicación con enlace
+    contenido += `${indentacion}    <div class="tarea-ubicacion">\n`;
+    contenido += `${indentacion}      <span class="metadato-icono">📍</span>\n`;
+    contenido += `${indentacion}      <span class="metadato-valor">[[${tarea.rutaArchivo}|${tarea.titulo}]]`;
+    if (tarea.lineInfo?.numero) {
+        contenido += ` (línea ${tarea.lineInfo.numero})`;
+    }
+    contenido += `</span>\n`;
+    contenido += `${indentacion}    </div>\n`;
+    
+    // Fechas si existen
+    if (tarea.fechaVencimiento || tarea.fechaScheduled || tarea.fechaStart) {
+        contenido += `${indentacion}    <div class="tarea-fechas">\n`;
+        
+        if (tarea.fechaVencimiento) {
+            contenido += `${indentacion}      <div class="tarea-fecha vencimiento">\n`;
+            contenido += `${indentacion}        <span class="metadato-icono">📅</span>\n`;
+            contenido += `${indentacion}        <span class="metadato-valor">${this.formatearFechaConContexto(tarea.fechaVencimiento, 'due')}</span>\n`;
+            contenido += `${indentacion}      </div>\n`;
+        }
+        
+        if (tarea.fechaScheduled) {
+            contenido += `${indentacion}      <div class="tarea-fecha scheduled">\n`;
+            contenido += `${indentacion}        <span class="metadato-icono">⏳</span>\n`;
+            contenido += `${indentacion}        <span class="metadato-valor">${this.formatearFechaConContexto(tarea.fechaScheduled, 'scheduled')}</span>\n`;
+            contenido += `${indentacion}      </div>\n`;
+        }
+        
+        if (tarea.fechaStart) {
+            contenido += `${indentacion}      <div class="tarea-fecha start">\n`;
+            contenido += `${indentacion}        <span class="metadato-icono">🛫</span>\n`;
+            contenido += `${indentacion}        <span class="metadato-valor">${this.formatearFechaConContexto(tarea.fechaStart, 'start')}</span>\n`;
+            contenido += `${indentacion}      </div>\n`;
+        }
+        
+        contenido += `${indentacion}    </div>\n`;
+    }
+    
+    // Horarios si existen
+    if (tarea.horaInicio || tarea.horaFin) {
+        contenido += `${indentacion}    <div class="tarea-horario">\n`;
+        contenido += `${indentacion}      <span class="metadato-icono">⏰</span>\n`;
+        contenido += `${indentacion}      <span class="metadato-valor">${tarea.horaInicio || '--:--'} - ${tarea.horaFin || '--:--'}</span>\n`;
+        contenido += `${indentacion}    </div>\n`;
+    }
+    
+    // Personas asignadas si existen
+    if (tarea.etiquetas.personas?.length > 0) {
+        contenido += `${indentacion}    <div class="tarea-personas">\n`;
+        contenido += `${indentacion}      <span class="metadato-icono">👤</span>\n`;
+        contenido += `${indentacion}      <span class="metadato-valor">${tarea.etiquetas.personas.map(p => 
+            this.formatearNombrePersona(`#px-${p}`)
+        ).join(' | ')}</span>\n`;
+        contenido += `${indentacion}    </div>\n`;
+    }
+    
+    // Dependencias si existen
+    if (tarea.dependencyId) {
+        contenido += `${indentacion}    <div class="tarea-dependencia ${tarea.isBlocked ? 'bloqueada' : 'disponible'}">\n`;
+        contenido += `${indentacion}      <span class="metadato-icono">${tarea.isBlocked ? '⛔' : '✅'}</span>\n`;
+        contenido += `${indentacion}      <span class="metadato-valor">`;
+        if (tarea.dependencyTitle) {
+            contenido += `Depende de: [[${tarea.dependencyLocation}|${tarea.dependencyTitle}]]`;
+            if (tarea.dependencyTexto) {
+                contenido += `: "${tarea.dependencyTexto}"`;
+            }
+        } else {
+            contenido += `Depende de tarea ID: ${tarea.dependencyId}`;
+        }
+        contenido += `</span>\n`;
+        contenido += `${indentacion}    </div>\n`;
+    }
+    
+    // Cerrar sección de metadatos
+    contenido += `${indentacion}  </div>\n`;
+    
+    // Cerrar contenedor de tarea
+    contenido += `${indentacion}</div>\n`;
+    
+    return contenido;
+}
+
+// Método para escapar caracteres HTML para prevenir problemas de renderizado
+private escaparHTML(texto: string): string {
+    return texto
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+}
      
 }

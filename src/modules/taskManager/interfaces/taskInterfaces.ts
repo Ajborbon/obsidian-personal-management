@@ -60,3 +60,11 @@ export interface LineInfo {
     numero: number;
     texto: string;
 }
+
+// En src/modules/taskManager/interfaces/taskInterfaces.ts
+// Asegúrate de que esté definido el tipo LineInfo si no existe ya:
+
+export interface LineInfo {
+    numero: number;
+    texto: string;
+}
