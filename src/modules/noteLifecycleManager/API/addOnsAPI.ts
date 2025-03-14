@@ -4701,12 +4701,12 @@ async mostrarTareasInbox(dv) {
         const expandBtn = document.createElement("button");
         expandBtn.className = "tareas-btn expand-btn";
         expandBtn.textContent = "📂 Expandir Todo";
-        expandBtn.addEventListener("click", () => this.expandirTodasLasTareas(container));
+        expandBtn.addEventListener("click", () => this.expandirTodasLasTareasInbox(container));
         
         const collapseBtn = document.createElement("button");
         collapseBtn.className = "tareas-btn collapse-btn";
         collapseBtn.textContent = "📁 Colapsar Todo";
-        collapseBtn.addEventListener("click", () => this.colapsarTodasLasTareas(container));
+        collapseBtn.addEventListener("click", () => this.colapsarTodasLasTareasInbox(container));
         
         const refreshBtn = document.createElement("button");
         refreshBtn.className = "tareas-btn refresh-btn";
@@ -4876,93 +4876,7 @@ crearTarjetaEstadistica(container, icono, titulo, valor) {
     container.appendChild(tarjeta);
 }
 
-/**
- * Crea un grupo de tareas inbox para una nota específica
- * @param notaInfo Información de la nota y sus tareas
- * @param dv Objeto dataview
- * @returns Elemento DOM con el grupo de tareas
- */
-crearGrupoTareasInbox(notaInfo, dv) {
-    const { titulo, ruta, tareas } = notaInfo;
-    
-    // Crear contenedor del grupo
-    const grupoDiv = document.createElement("div");
-    grupoDiv.className = "tarea-group";
-    
-    // Crear encabezado con toggle
-    const headerDiv = document.createElement("div");
-    headerDiv.className = "tarea-group-header";
-    
-    // Título con ícono de toggle
-    const titleDiv = document.createElement("div");
-    titleDiv.className = "tarea-group-title";
-    
-    const toggleSpan = document.createElement("span");
-    toggleSpan.className = "tarea-group-toggle";
-    toggleSpan.textContent = "▶";
-    titleDiv.appendChild(toggleSpan);
-    
-    // Enlace a la nota
-    try {
-        const enlaceNota = document.createElement("a");
-        enlaceNota.className = "internal-link";
-        enlaceNota.textContent = titulo;
-        enlaceNota.href = ruta;
-        enlaceNota.setAttribute("data-href", ruta);
-        
-        // Agregar evento para abrir la nota
-        enlaceNota.addEventListener("click", (event) => {
-            event.preventDefault();
-            app.workspace.openLinkText(ruta, "", true); // Abrir en nueva pestaña
-        });
-        
-        titleDiv.appendChild(enlaceNota);
-    } catch (e) {
-        // Si falla la creación del enlace, mostrar solo texto
-        const textoNota = document.createElement("span");
-        textoNota.textContent = titulo;
-        titleDiv.appendChild(textoNota);
-    }
-    
-    headerDiv.appendChild(titleDiv);
-    
-    // Contador de tareas
-    const countSpan = document.createElement("span");
-    countSpan.className = "tarea-group-count";
-    countSpan.textContent = tareas.length.toString();
-    headerDiv.appendChild(countSpan);
-    
-    grupoDiv.appendChild(headerDiv);
-    
-    // Lista de tareas (inicialmente oculta)
-    const tareasList = document.createElement("div");
-    tareasList.className = "tarea-list";
-    
-    // Añadir cada tarea
-    for (const tarea of tareas) {
-        const tareaElement = this.crearTareaElementInbox(tarea, dv);
-        tareasList.appendChild(tareaElement);
-    }
-    
-    grupoDiv.appendChild(tareasList);
-    
-    // Agregar evento para mostrar/ocultar lista de tareas
-    headerDiv.addEventListener("click", (event) => {
-        // No colapsar si se hizo clic en un enlace
-        if (event.target.tagName === 'A') return;
-        
-        toggleSpan.classList.toggle('open');
-        tareasList.classList.toggle('open');
-        
-        if (toggleSpan.classList.contains('open')) {
-            toggleSpan.textContent = "▼";
-        } else {
-            toggleSpan.textContent = "▶";
-        }
-    });
-    
-    return grupoDiv;
-}
+
 
 /**
  * Crea un elemento DOM para una tarea de bandeja de entrada
@@ -5182,6 +5096,143 @@ crearTareaElementInbox(tarea, dv) {
     tareaDiv.appendChild(metadatosDiv);
     
     return tareaDiv;
+}
+
+
+/**
+ * Expande todos los grupos de tareas
+ * @param container Contenedor principal
+ */
+expandirTodasLasTareasInbox(container) {
+    // Obtener todos los toggles de grupos de tareas
+    const toggles = container.querySelectorAll('.tarea-group-toggle');
+    const listas = container.querySelectorAll('.tarea-list');
+    
+    // Expandir cada uno
+    toggles.forEach((toggle, index) => {
+        toggle.classList.add('open');
+        toggle.textContent = "▼";
+        
+        // Asegurarse de que la lista correspondiente esté visible
+        if (listas[index]) {
+            listas[index].classList.add('open');
+            listas[index].style.display = "block"; // Asegurar visibilidad directamente
+        }
+    });
+}
+
+/**
+ * Colapsa todos los grupos de tareas
+ * @param container Contenedor principal
+ */
+colapsarTodasLasTareasInbox(container) {
+    // Obtener todos los toggles de grupos de tareas
+    const toggles = container.querySelectorAll('.tarea-group-toggle');
+    const listas = container.querySelectorAll('.tarea-list');
+    
+    // Colapsar cada uno
+    toggles.forEach((toggle, index) => {
+        toggle.classList.remove('open');
+        toggle.textContent = "▶";
+        
+        // Asegurarse de que la lista correspondiente esté oculta
+        if (listas[index]) {
+            listas[index].classList.remove('open');
+            listas[index].style.display = "none"; // Ocultar directamente
+        }
+    });
+}
+
+/**
+ * Crea un grupo de tareas inbox para una nota específica
+ * @param notaInfo Información de la nota y sus tareas
+ * @param dv Objeto dataview
+ * @returns Elemento DOM con el grupo de tareas
+ */
+crearGrupoTareasInbox(notaInfo, dv) {
+    const { titulo, ruta, tareas } = notaInfo;
+    
+    // Crear contenedor del grupo
+    const grupoDiv = document.createElement("div");
+    grupoDiv.className = "tarea-group";
+    
+    // Crear encabezado con toggle
+    const headerDiv = document.createElement("div");
+    headerDiv.className = "tarea-group-header";
+    
+    // Título con ícono de toggle
+    const titleDiv = document.createElement("div");
+    titleDiv.className = "tarea-group-title";
+    
+    const toggleSpan = document.createElement("span");
+    toggleSpan.className = "tarea-group-toggle";
+    toggleSpan.textContent = "▶";
+    titleDiv.appendChild(toggleSpan);
+    
+    // Enlace a la nota
+    try {
+        const enlaceNota = document.createElement("a");
+        enlaceNota.className = "internal-link";
+        enlaceNota.textContent = titulo;
+        enlaceNota.href = ruta;
+        enlaceNota.setAttribute("data-href", ruta);
+        
+        // Agregar evento para abrir la nota - Evitar propagación
+        enlaceNota.addEventListener("click", (event) => {
+            event.preventDefault();
+            event.stopPropagation(); // Evitar que el evento llegue al header
+            app.workspace.openLinkText(ruta, "", true); // Abrir en nueva pestaña
+        });
+        
+        titleDiv.appendChild(enlaceNota);
+    } catch (e) {
+        // Si falla la creación del enlace, mostrar solo texto
+        const textoNota = document.createElement("span");
+        textoNota.textContent = titulo;
+        titleDiv.appendChild(textoNota);
+    }
+    
+    headerDiv.appendChild(titleDiv);
+    
+    // Contador de tareas
+    const countSpan = document.createElement("span");
+    countSpan.className = "tarea-group-count";
+    countSpan.textContent = tareas.length.toString();
+    headerDiv.appendChild(countSpan);
+    
+    grupoDiv.appendChild(headerDiv);
+    
+    // Lista de tareas (inicialmente oculta)
+    const tareasList = document.createElement("div");
+    tareasList.className = "tarea-list";
+    tareasList.style.display = "none"; // Asegurar que esté oculta por CSS también
+    
+    // Añadir cada tarea
+    for (const tarea of tareas) {
+        const tareaElement = this.crearTareaElementInbox(tarea, dv);
+        tareasList.appendChild(tareaElement);
+    }
+    
+    grupoDiv.appendChild(tareasList);
+    
+    // Agregar evento para mostrar/ocultar lista de tareas
+    headerDiv.addEventListener("click", (event) => {
+        // No colapsar si se hizo clic en un enlace
+        if (event.target.tagName === 'A') return;
+        
+        toggleSpan.classList.toggle('open');
+        tareasList.classList.toggle('open');
+        
+        if (toggleSpan.classList.contains('open')) {
+            toggleSpan.textContent = "▼";
+            tareasList.style.display = "block"; // Mostrar explícitamente
+        } else {
+            toggleSpan.textContent = "▶";
+            tareasList.style.display = "none"; // Ocultar explícitamente
+        }
+    });
+    
+    return grupoDiv;
 }
 
   }
