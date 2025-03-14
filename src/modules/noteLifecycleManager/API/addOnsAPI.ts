@@ -1762,66 +1762,6 @@ agregarTareasAContenedor(tareas, contenedor, dv, pagina) {
     contenedor.appendChild(lista);
 }
 
-/**
- * Navega a una tarea específica en una nota
- * @param {string} path - Ruta de la nota
- * @param {number} linea - Número de línea de la tarea
- */
-navegarATarea(path, linea) {
-    if (!path) {
-        console.error("No se proporcionó una ruta de archivo válida");
-        return;
-    }
-    
-    // Navegar a la nota y posicionar en la línea de la tarea
-    try {
-        // Obtener el archivo
-        const archivo = app.vault.getAbstractFileByPath(path);
-        
-        if (!archivo) {
-            console.warn(`No se encontró el archivo: ${path}`);
-            return;
-        }
-        
-        // Verificar si podemos usar eState para posicionarse en una línea específica
-        const canUseEState = typeof app.workspace.openLinkText === 'function';
-        
-        if (canUseEState) {
-            // Esta es la forma más moderna de abrir archivos en Obsidian
-            app.workspace.openLinkText(path, "", true, { eState: { line: linea } });
-        } else {
-            // Alternativa: abrir el archivo y luego intentar ir a la línea
-            const leaf = app.workspace.getLeaf(false);
-            leaf.openFile(archivo).then(() => {
-                // Intentar posicionar en la línea después de que se abra el archivo
-                setTimeout(() => {
-                    if (leaf.view && leaf.view.editor) {
-                        const editor = leaf.view.editor;
-                        editor.setCursor({ line: linea, ch: 0 });
-                        editor.scrollIntoView({ from: { line: linea, ch: 0 }, to: { line: linea, ch: 0 } }, true);
-                    }
-                }, 100);
-            });
-        }
-    } catch (e) {
-        console.error("Error al navegar a la tarea:", e);
-        
-        // Fallback más robusto - mostrar mensaje al usuario
-        try {
-            // Intentar abrir el archivo sin posicionarse en una línea específica
-            const archivo = app.vault.getAbstractFileByPath(path);
-            if (archivo) {
-                app.workspace.getLeaf(false).openFile(archivo);
-            } else {
-                new Notice("No se pudo encontrar el archivo: " + path);
-            }
-        } catch (err) {
-            console.error("Error en el fallback de navegación:", err);
-            new Notice("Error al abrir el archivo: " + err.message);
-        }
-    }
-}
-
 
 /**
  * Obtiene y procesa notas vinculadas a una nota actual, con opciones de ordenamiento
@@ -3522,5 +3462,587 @@ referenciaAlMismoProyecto(referencia, proyecto) {
     return false;
 }
 
+/**
+ * Navega a una tarea específica en una nota
+ * @param {string} path - Ruta de la nota
+ * @param {number} linea - Número de línea de la tarea
+ */
+navegarATarea(path, linea) {
+    if (!path) {
+        console.error("No se proporcionó una ruta de archivo válida");
+        return;
+    }
+    
+    // Navegar a la nota y posicionar en la línea de la tarea
+    try {
+        // Obtener el archivo
+        const archivo = app.vault.getAbstractFileByPath(path);
+        
+        if (!archivo) {
+            console.warn(`No se encontró el archivo: ${path}`);
+            return;
+        }
+        
+        // Verificar si podemos usar eState para posicionarse en una línea específica
+        const canUseEState = typeof app.workspace.openLinkText === 'function';
+        
+        if (canUseEState) {
+            // Esta es la forma más moderna de abrir archivos en Obsidian
+            app.workspace.openLinkText(path, "", true, { eState: { line: linea } });
+        } else {
+            // Alternativa: abrir el archivo y luego intentar ir a la línea
+            const leaf = app.workspace.getLeaf(false);
+            leaf.openFile(archivo).then(() => {
+                // Intentar posicionar en la línea después de que se abra el archivo
+                setTimeout(() => {
+                    if (leaf.view && leaf.view.editor) {
+                        const editor = leaf.view.editor;
+                        editor.setCursor({ line: linea, ch: 0 });
+                        editor.scrollIntoView({ from: { line: linea, ch: 0 }, to: { line: linea, ch: 0 } }, true);
+                    }
+                }, 100);
+            });
+        }
+    } catch (e) {
+        console.error("Error al navegar a la tarea:", e);
+        
+        // Fallback más robusto - mostrar mensaje al usuario
+        try {
+            // Intentar abrir el archivo sin posicionarse en una línea específica
+            const archivo = app.vault.getAbstractFileByPath(path);
+            if (archivo) {
+                app.workspace.getLeaf(false).openFile(archivo);
+            } else {
+                new Notice("No se pudo encontrar el archivo: " + path);
+            }
+        } catch (err) {
+            console.error("Error en el fallback de navegación:", err);
+            new Notice("Error al abrir el archivo: " + err.message);
+        }
+    }
+}
+
+
+// --- Mejora de la busqueda de Contextos GTD por bloque dvjs
+/**
+ * Genera una vista de tareas por contexto con navegación interactiva
+ * @param dv - Objeto dataview para acceder a sus funciones
+ * @returns Elemento DOM interactivo con los contextos y sus tareas
+ */
+async mostrarContextosGTD(dv) {
+    try {
+        // Crear el contenedor principal
+        const container = document.createElement("div");
+        container.className = "contextos-gtd-container";
+        
+        // Añadir estilos inline necesarios
+        const styleEl = document.createElement("style");
+        styleEl.textContent = `
+        .highlighted-line {
+          background-color: rgba(var(--interactive-accent-rgb), 0.3) !important;
+          transition: background-color 1s ease-out;
+        }
+        
+        .tarea-link {
+          color: var(--interactive-accent);
+          text-decoration: none;
+          transition: all 0.2s ease;
+        }
+        
+        .tarea-link:hover {
+          text-decoration: underline;
+          color: var(--interactive-accent-hover);
+        }
+        
+        .linea-info {
+          font-size: 0.85em;
+          color: var(--text-muted);
+        }
+
+        /* El resto de estilos necesarios se cargan desde el archivo CSS global */
+        `;
+        container.appendChild(styleEl);
+        
+        // Añadir controles para expandir/colapsar/actualizar
+        const controlsContainer = document.createElement("div");
+        controlsContainer.className = "contextos-controles";
+        
+        // Botones con estilos directos
+        const btnExpandir = document.createElement("button");
+        btnExpandir.textContent = "📂 Expandir Todo";
+        btnExpandir.className = "contextos-btn expandir";
+        
+        const btnColapsar = document.createElement("button");
+        btnColapsar.textContent = "📁 Colapsar Todo";
+        btnColapsar.className = "contextos-btn colapsar";
+        
+        const btnRefrescar = document.createElement("button");
+        btnRefrescar.textContent = "🔄 Actualizar";
+        btnRefrescar.className = "contextos-btn refrescar";
+        
+        controlsContainer.appendChild(btnExpandir);
+        controlsContainer.appendChild(btnColapsar);
+        controlsContainer.appendChild(btnRefrescar);
+        container.appendChild(controlsContainer);
+        
+        // Contenedor para los contextos
+        const contextosContainer = document.createElement("div");
+        contextosContainer.className = "contextos-container";
+        container.appendChild(contextosContainer);
+        
+        // Mostrar inicialmente un indicador de carga
+        const loadingIndicator = document.createElement("div");
+        loadingIndicator.className = "loading-indicator";
+        const spinner = document.createElement("div");
+        spinner.className = "spinner";
+        loadingIndicator.appendChild(spinner);
+        
+        const loadingText = document.createElement("div");
+        loadingText.textContent = "Cargando contextos...";
+        loadingIndicator.appendChild(loadingText);
+        
+        contextosContainer.appendChild(loadingIndicator);
+        
+        // Obtener datos de contextos a través de la API de tareas
+        const { contextosConTareas, totalContextos, totalTareas } = await this.plugin.tareasAPI.getTareasContextos();
+        
+        if (totalContextos === 0) {
+            contextosContainer.innerHTML = "";
+            const emptyMessage = document.createElement("p");
+            emptyMessage.className = "error-message";
+            emptyMessage.textContent = "No se encontraron tareas con contextos asignados";
+            contextosContainer.appendChild(emptyMessage);
+            return container;
+        }
+        
+        // Limpiar el contenedor de carga
+        contextosContainer.innerHTML = "";
+        
+        // Mostrar estadísticas
+        const statsDiv = document.createElement("div");
+        statsDiv.className = "contextos-stats";
+        
+        const statTotal = document.createElement("p");
+        statTotal.textContent = `Total de contextos con tareas: ${totalContextos}`;
+        statsDiv.appendChild(statTotal);
+        
+        const statTareas = document.createElement("p");
+        statTareas.textContent = `Total de tareas encontradas: ${totalTareas}`;
+        statsDiv.appendChild(statTareas);
+        
+        contextosContainer.appendChild(statsDiv);
+        
+        // Construir árbol de contextos
+        const arbolContextos = this.construirArbolContextos(contextosConTareas);
+        
+        // Generar el HTML de los contextos
+        this.generarContextosHTML(arbolContextos, contextosConTareas, contextosContainer);
+        
+        // Configurar eventos para los botones
+        btnExpandir.addEventListener("click", () => {
+            container.querySelectorAll(".contexto-details").forEach(details => {
+                details.setAttribute("open", "true");
+            });
+        });
+        
+        btnColapsar.addEventListener("click", () => {
+            container.querySelectorAll(".contexto-details").forEach(details => {
+                details.removeAttribute("open");
+            });
+        });
+        
+        btnRefrescar.addEventListener("click", async () => {
+            // Reemplazar el contenedor actual por una versión actualizada
+            const nuevoContainer = await this.mostrarContextosGTD(dv);
+            container.parentNode.replaceChild(nuevoContainer, container);
+        });
+        
+        return container;
+        
+    } catch (error) {
+        console.error("Error en mostrarContextosGTD:", error);
+        
+        // Devolver un mensaje de error
+        const errorContainer = document.createElement("div");
+        errorContainer.className = "error-message";
+        errorContainer.textContent = `Error al cargar contextos: ${error.message}`;
+        return errorContainer;
+    }
+}
+
+/**
+ * Construye la estructura de árbol de contextos
+ * @param contextosConTareas Mapa de contextos con sus tareas
+ * @returns Estructura jerárquica de contextos
+ */
+construirArbolContextos(contextosConTareas) {
+    const arbol = new Map();
+
+    Array.from(contextosConTareas.keys()).forEach(contexto => {
+        const niveles = contexto.split(' → ');
+        let nodoActual = arbol;
+
+        niveles.forEach((nivel, index) => {
+            if (!nodoActual.has(nivel)) {
+                nodoActual.set(nivel, {
+                    tareas: index === niveles.length - 1 ? contextosConTareas.get(contexto) : [],
+                    subcontextos: new Map(),
+                    rutaCompleta: niveles.slice(0, index + 1).join(' → ')
+                });
+            }
+            nodoActual = nodoActual.get(nivel).subcontextos;
+        });
+    });
+
+    return arbol;
+}
+
+/**
+ * Genera el HTML de los contextos recursivamente
+ * @param arbolContextos Estructura jerárquica de contextos
+ * @param contextosConTareas Mapa original de contextos con tareas
+ * @param container Elemento DOM donde añadir los contextos
+ */
+generarContextosHTML(arbolContextos, contextosConTareas, container) {
+    const procesarNodo = (nodo, nivel = 0, parentEl) => {
+        // Ordenar contextos por cantidad de tareas
+        const sortedKeys = Array.from(nodo.keys()).sort((a, b) => {
+            const tareasA = nodo.get(a).tareas.length;
+            const tareasB = nodo.get(b).tareas.length;
+            return tareasB - tareasA;
+        });
+
+        sortedKeys.forEach(contexto => {
+            const info = nodo.get(contexto);
+            const cantidadTareas = info.tareas.length;
+            const tieneSubcontextos = info.subcontextos.size > 0;
+            
+            // Solo crear elementos si hay tareas o subcontextos
+            if (cantidadTareas > 0 || tieneSubcontextos) {
+                // Crear elemento details
+                const detailsEl = document.createElement("details");
+                detailsEl.className = `contexto-details nivel-${nivel}`;
+                parentEl.appendChild(detailsEl);
+                
+                // Crear summary
+                const summaryEl = document.createElement("summary");
+                summaryEl.className = "contexto-summary";
+                detailsEl.appendChild(summaryEl);
+                
+                // Encabezado con nombre y contador
+                const headerEl = document.createElement("div");
+                headerEl.className = "contexto-header";
+                
+                const nombreEl = document.createElement("div");
+                nombreEl.className = "contexto-nombre";
+                nombreEl.textContent = this.formatearNombreContexto(contexto);
+                headerEl.appendChild(nombreEl);
+                
+                // Contador de tareas
+                if (cantidadTareas > 0) {
+                    const contadorEl = document.createElement("div");
+                    contadorEl.className = "contexto-contador";
+                    contadorEl.textContent = cantidadTareas.toString();
+                    headerEl.appendChild(contadorEl);
+                }
+                
+                summaryEl.appendChild(headerEl);
+                
+                // Contenido de tareas
+                if (cantidadTareas > 0) {
+                    const tareasContainer = document.createElement("div");
+                    tareasContainer.className = "contexto-tareas";
+                    detailsEl.appendChild(tareasContainer);
+                    
+                    // Ordenar y renderizar tareas
+                    info.tareas.forEach(tarea => {
+                        this.crearTareaElement(tarea, tareasContainer);
+                    });
+                }
+                
+                // Procesar subcontextos
+                if (tieneSubcontextos) {
+                    const subcontextosEl = document.createElement("div");
+                    subcontextosEl.className = "subcontextos-container";
+                    detailsEl.appendChild(subcontextosEl);
+                    
+                    procesarNodo(info.subcontextos, nivel + 1, subcontextosEl);
+                }
+            }
+        });
+    };
+    
+    // Iniciar procesamiento recursivo desde el nivel 0
+    procesarNodo(arbolContextos, 0, container);
+}
+
+/**
+ * Crea un elemento HTML para una tarea con navegación interactiva
+ * @param tarea Objeto de tarea a renderizar
+ * @param container Contenedor donde añadir la tarea
+ */
+crearTareaElement(tarea, container) {
+    // Elemento principal de la tarea
+    const tareaEl = document.createElement("div");
+    tareaEl.className = `tarea-item ${tarea.isBlocked ? 'tarea-bloqueada' : ''}`;
+    
+    // Texto de la tarea
+    const textoEl = document.createElement("div");
+    textoEl.className = "tarea-texto";
+    
+    const checkboxEl = document.createElement("span");
+    checkboxEl.className = "tarea-checkbox";
+    checkboxEl.textContent = "☐";
+    textoEl.appendChild(checkboxEl);
+    
+    const contenidoEl = document.createElement("span");
+    contenidoEl.className = "tarea-contenido";
+    contenidoEl.textContent = tarea.texto;
+    textoEl.appendChild(contenidoEl);
+    
+    tareaEl.appendChild(textoEl);
+    
+    // Metadatos
+    const metadatosEl = document.createElement("div");
+    metadatosEl.className = "tarea-metadatos";
+    
+    // Ubicación con navegación
+    const ubicacionEl = document.createElement("div");
+    ubicacionEl.className = "tarea-ubicacion";
+    
+    const iconoUbicacion = document.createElement("span");
+    iconoUbicacion.className = "metadato-icono";
+    iconoUbicacion.textContent = "📍";
+    ubicacionEl.appendChild(iconoUbicacion);
+    
+    const valorUbicacion = document.createElement("span");
+    valorUbicacion.className = "metadato-valor";
+    
+    // Enlace para navegación
+    const enlace = document.createElement("a");
+    enlace.className = "internal-link tarea-link";
+    enlace.textContent = tarea.titulo;
+    enlace.href = "javascript:void(0);"; // Previene comportamiento de enlace
+    
+    // Guardar datos para navegación
+    enlace.dataset.path = tarea.rutaArchivo;
+    enlace.dataset.line = tarea.lineInfo?.numero || "0";
+    enlace.dataset.texto = tarea.textoOriginal || tarea.texto;
+    
+    // Configurar evento de navegación
+    enlace.addEventListener("click", (event) => {
+        event.preventDefault();
+        this.navegarATareaConResaltado(
+            enlace.dataset.path,
+            parseInt(enlace.dataset.line, 10),
+            enlace.dataset.texto
+        );
+    });
+    
+    valorUbicacion.appendChild(enlace);
+    
+    // Añadir número de línea si existe
+    if (tarea.lineInfo?.numero) {
+        const lineaInfo = document.createElement("span");
+        lineaInfo.className = "linea-info";
+        lineaInfo.textContent = ` (línea ${tarea.lineInfo.numero})`;
+        valorUbicacion.appendChild(lineaInfo);
+    }
+    
+    ubicacionEl.appendChild(valorUbicacion);
+    metadatosEl.appendChild(ubicacionEl);
+    
+    // Fechas
+    if (tarea.fechaVencimiento || tarea.fechaScheduled || tarea.fechaStart) {
+        const fechasEl = document.createElement("div");
+        fechasEl.className = "tarea-fechas";
+        
+        if (tarea.fechaVencimiento) {
+            const fechaEl = document.createElement("div");
+            fechaEl.className = "tarea-fecha vencimiento";
+            
+            const iconoFecha = document.createElement("span");
+            iconoFecha.className = "metadato-icono";
+            iconoFecha.textContent = "📅";
+            fechaEl.appendChild(iconoFecha);
+            
+            const valorFecha = document.createElement("span");
+            valorFecha.className = "metadato-valor";
+            valorFecha.textContent = tarea.fechaVencimiento;
+            fechaEl.appendChild(valorFecha);
+            
+            fechasEl.appendChild(fechaEl);
+        }
+        
+        // Similar para scheduled y start...
+        if (tarea.fechaScheduled) {
+            const fechaEl = document.createElement("div");
+            fechaEl.className = "tarea-fecha scheduled";
+            
+            const iconoFecha = document.createElement("span");
+            iconoFecha.className = "metadato-icono";
+            iconoFecha.textContent = "⏳";
+            fechaEl.appendChild(iconoFecha);
+            
+            const valorFecha = document.createElement("span");
+            valorFecha.className = "metadato-valor";
+            valorFecha.textContent = tarea.fechaScheduled;
+            fechaEl.appendChild(valorFecha);
+            
+            fechasEl.appendChild(fechaEl);
+        }
+        
+        if (tarea.fechaStart) {
+            const fechaEl = document.createElement("div");
+            fechaEl.className = "tarea-fecha start";
+            
+            const iconoFecha = document.createElement("span");
+            iconoFecha.className = "metadato-icono";
+            iconoFecha.textContent = "🛫";
+            fechaEl.appendChild(iconoFecha);
+            
+            const valorFecha = document.createElement("span");
+            valorFecha.className = "metadato-valor";
+            valorFecha.textContent = tarea.fechaStart;
+            fechaEl.appendChild(valorFecha);
+            
+            fechasEl.appendChild(fechaEl);
+        }
+        
+        metadatosEl.appendChild(fechasEl);
+    }
+    
+    // Horarios
+    if (tarea.horaInicio || tarea.horaFin) {
+        const horarioEl = document.createElement("div");
+        horarioEl.className = "tarea-horario";
+        
+        const iconoHorario = document.createElement("span");
+        iconoHorario.className = "metadato-icono";
+        iconoHorario.textContent = "⏰";
+        horarioEl.appendChild(iconoHorario);
+        
+        const valorHorario = document.createElement("span");
+        valorHorario.className = "metadato-valor";
+        valorHorario.textContent = `${tarea.horaInicio || '--:--'} - ${tarea.horaFin || '--:--'}`;
+        horarioEl.appendChild(valorHorario);
+        
+        metadatosEl.appendChild(horarioEl);
+    }
+    
+    // Personas asignadas
+    if (tarea.etiquetas.personas?.length > 0) {
+        const personasEl = document.createElement("div");
+        personasEl.className = "tarea-personas";
+        
+        const iconoPersonas = document.createElement("span");
+        iconoPersonas.className = "metadato-icono";
+        iconoPersonas.textContent = "👤";
+        personasEl.appendChild(iconoPersonas);
+        
+        const valorPersonas = document.createElement("span");
+        valorPersonas.className = "metadato-valor";
+        valorPersonas.textContent = tarea.etiquetas.personas.join(' | ');
+        personasEl.appendChild(valorPersonas);
+        
+        metadatosEl.appendChild(personasEl);
+    }
+    
+    tareaEl.appendChild(metadatosEl);
+    container.appendChild(tareaEl);
+}
+
+/**
+ * Versión mejorada de navegarATarea que incluye resaltado temporal
+ * @param path Ruta del archivo
+ * @param lineNumber Número de línea
+ * @param textoTarea Texto de la tarea para búsqueda alternativa
+ */
+async navegarATareaConResaltado(path, lineNumber, textoTarea) {
+    try {
+        // Primero intentamos usar la función existente para la navegación básica
+        if (lineNumber > 0) {
+            this.navegarATarea(path, lineNumber);
+        } else {
+            this.navegarATarea(path, 0); // Abrimos el archivo sin especificar línea
+        }
+        
+        // Luego nos ocupamos del resaltado avanzado
+        setTimeout(() => {
+            // Buscar una hoja de trabajo activa
+            const activeLeaf = app.workspace.activeLeaf;
+            if (!activeLeaf || !activeLeaf.view || !activeLeaf.view.editor) return;
+            
+            const editor = activeLeaf.view.editor;
+            
+            if (lineNumber > 0) {
+                // Aplicar resaltado visual a la línea
+                this.resaltarLineaTemporalmente(editor, lineNumber - 1);
+            } 
+            // Si no tenemos número de línea pero tenemos texto, buscamos el texto
+            else if (textoTarea) {
+                const contenido = editor.getValue();
+                const lineas = contenido.split('\n');
+                
+                for (let i = 0; i < lineas.length; i++) {
+                    if (lineas[i].includes(textoTarea)) {
+                        // Mover el cursor a la línea encontrada
+                        editor.setCursor({ line: i, ch: 0 });
+                        editor.scrollIntoView(
+                            {from: {line: i, ch: 0}, to: {line: i, ch: 0}}, 
+                            true
+                        );
+                        
+                        // Seleccionar la línea
+                        editor.setSelection(
+                            { line: i, ch: 0 },
+                            { line: i, ch: lineas[i].length }
+                        );
+                        
+                        // Resaltar visualmente
+                        this.resaltarLineaTemporalmente(editor, i);
+                        break;
+                    }
+                }
+            }
+        }, 300); // Esperar un poco para que el archivo se abra completamente
+    } catch (error) {
+        console.error('Error en navegarATareaConResaltado:', error);
+        new Notice('Error al navegar y resaltar la tarea');
+    }
+}
+
+/**
+ * Aplica resaltado temporal a una línea del editor
+ * @param editor Editor de CodeMirror
+ * @param lineIndex Índice de la línea a resaltar
+ */
+resaltarLineaTemporalmente(editor, lineIndex) {
+    setTimeout(() => {
+        const lineDiv = editor.lineDiv;
+        if (lineDiv) {
+            const lineElements = lineDiv.querySelectorAll('.CodeMirror-line');
+            if (lineElements && lineElements.length > lineIndex) {
+                lineElements[lineIndex].classList.add('highlighted-line');
+                
+                setTimeout(() => {
+                    lineElements[lineIndex].classList.remove('highlighted-line');
+                }, 2000);
+            }
+        }
+    }, 100);
+}
+
+/**
+ * Formatea el nombre de un contexto para mejor visualización
+ * @param contexto String del contexto con formato jerárquico
+ * @returns Nombre formateado del contexto
+ */
+formatearNombreContexto(contexto) {
+    if (contexto.includes(' → ')) {
+        return contexto.split(' → ').pop() || contexto;
+    }
+    return contexto;
+}
 
   }
