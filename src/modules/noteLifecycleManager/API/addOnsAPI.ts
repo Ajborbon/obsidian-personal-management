@@ -4650,6 +4650,7 @@ colapsarTodasLasTareas(container) {
 
 // Añadir al archivo src/modules/noteLifecycleManager/API/addOnsAPI.ts
 
+// Añadir al archivo src/modules/noteLifecycleManager/API/addOnsAPI.ts
 
 /**
  * Genera un componente visual para mostrar tareas con etiqueta #inbox (bandeja de entrada)
@@ -4684,84 +4685,6 @@ async mostrarTareasInbox(dv) {
             align-items: center;
             justify-content: space-between;
         }
-        
-        /* Estilos específicos para los toggle de inbox */
-        .inbox-toggle-icon {
-            display: inline-block;
-            width: 18px;
-            height: 18px;
-            text-align: center;
-            transition: transform 0.2s ease;
-            font-family: monospace;
-            margin-right: 4px;
-        }
-        
-        .inbox-toggle-icon.open {
-            transform: rotate(90deg);
-        }
-        
-        /* Asegurar que la lista de tareas se muestre/oculte correctamente */
-        .inbox-tarea-list {
-            display: none;
-        }
-        
-        .inbox-tarea-list.open {
-            display: block;
-        }
-        
-        /* Estilos para el botón de procesar inbox */
-        .process-btn {
-            position: relative;
-            padding-right: 22px !important;
-        }
-        
-        .process-btn::after {
-            content: "?";
-            position: absolute;
-            right: 5px;
-            top: 50%;
-            transform: translateY(-50%);
-            font-size: 12px;
-            width: 14px;
-            height: 14px;
-            border-radius: 50%;
-            background-color: rgba(255, 255, 255, 0.3);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        
-        /* Tooltip para el botón procesar */
-        .process-btn-tooltip {
-            position: absolute;
-            background-color: var(--background-primary);
-            border: 1px solid var(--background-modifier-border);
-            padding: 8px 12px;
-            border-radius: 6px;
-            font-size: 12px;
-            max-width: 250px;
-            z-index: 100;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-            opacity: 0;
-            visibility: hidden;
-            transition: opacity 0.2s ease, visibility 0.2s ease;
-            text-align: left;
-            color: var(--text-normal);
-            pointer-events: none;
-            bottom: 100%;
-            left: 50%;
-            transform: translateX(-50%);
-            margin-bottom: 10px;
-        }
-        
-        .process-btn-tooltip.show {
-            opacity: 1;
-            visibility: visible;
-        }
-        
-        .inbox-tooltip-container {
-            position: relative;
-        }
         `;
         container.appendChild(styleEl);
         
@@ -4778,18 +4701,12 @@ async mostrarTareasInbox(dv) {
         const expandBtn = document.createElement("button");
         expandBtn.className = "tareas-btn expand-btn";
         expandBtn.textContent = "📂 Expandir Todo";
-        expandBtn.addEventListener("click", () => {
-            // Usar la función específica para inbox
-            this.expandirTodasTareasInbox(container);
-        });
+        expandBtn.addEventListener("click", () => this.expandirTodasLasTareas(container));
         
         const collapseBtn = document.createElement("button");
         collapseBtn.className = "tareas-btn collapse-btn";
         collapseBtn.textContent = "📁 Colapsar Todo";
-        collapseBtn.addEventListener("click", () => {
-            // Usar la función específica para inbox
-            this.colapsarTodasTareasInbox(container);
-        });
+        collapseBtn.addEventListener("click", () => this.colapsarTodasLasTareas(container));
         
         const refreshBtn = document.createElement("button");
         refreshBtn.className = "tareas-btn refresh-btn";
@@ -4799,55 +4716,20 @@ async mostrarTareasInbox(dv) {
             container.parentNode.replaceChild(nuevoContainer, container);
         });
         
-        // Contenedor para el botón de procesar con tooltip
-        const tooltipContainer = document.createElement("div");
-        tooltipContainer.className = "inbox-tooltip-container";
-        
         const procesarBtn = document.createElement("button");
         procesarBtn.className = "tareas-btn process-btn";
         procesarBtn.style.backgroundColor = "var(--interactive-accent)";
         procesarBtn.style.color = "white";
         procesarBtn.textContent = "🔍 Procesar Inbox";
-        
-        // Tooltip para explicar la función del botón
-        const tooltip = document.createElement("div");
-        tooltip.className = "process-btn-tooltip";
-        tooltip.innerHTML = `
-            <strong>¿Qué es procesar el inbox?</strong><br>
-            <p>Procesar tu bandeja de entrada significa revisar cada tarea y:</p>
-            <ol style="margin-left: 15px; padding-left: 0;">
-                <li>Categorizarla con contextos (#cx/...)</li>
-                <li>Asignarla a proyectos si es necesario</li>
-                <li>Establecer fechas si corresponde</li>
-                <li>Eliminar la etiqueta #inbox una vez procesada</li>
-            </ol>
-            <p>Haz clic en una tarea para abrirla y comenzar este proceso.</p>
-        `;
-        
-        // Eventos para mostrar/ocultar tooltip
-        procesarBtn.addEventListener("mouseenter", () => {
-            tooltip.classList.add("show");
-        });
-        
-        procesarBtn.addEventListener("mouseleave", () => {
-            tooltip.classList.remove("show");
-        });
-        
         procesarBtn.addEventListener("click", () => {
-            // Al hacer clic, mostrar una guía más detallada
-            const notice = new app.Notice(
-                "Para procesar tu inbox: 1) Revisa cada tarea, 2) Categorízala, 3) Asígnale fecha si es necesario, 4) Quita #inbox", 
-                7000
-            );
+            // Mostrar indicación para procesar las tareas
+            const notice = new app.Notice("Para procesar una tarea, haz clic en ella para abrirla y clasificarla", 5000);
         });
-        
-        tooltipContainer.appendChild(procesarBtn);
-        tooltipContainer.appendChild(tooltip);
         
         controlsDiv.appendChild(expandBtn);
         controlsDiv.appendChild(collapseBtn);
         controlsDiv.appendChild(refreshBtn);
-        controlsDiv.appendChild(tooltipContainer);
+        controlsDiv.appendChild(procesarBtn);
         container.appendChild(controlsDiv);
         
         // Añadir indicador de carga
@@ -5015,9 +4897,8 @@ crearGrupoTareasInbox(notaInfo, dv) {
     const titleDiv = document.createElement("div");
     titleDiv.className = "tarea-group-title";
     
-    // Usar la nueva clase para el toggle
     const toggleSpan = document.createElement("span");
-    toggleSpan.className = "inbox-toggle-icon";
+    toggleSpan.className = "tarea-group-toggle";
     toggleSpan.textContent = "▶";
     titleDiv.appendChild(toggleSpan);
     
@@ -5053,9 +4934,9 @@ crearGrupoTareasInbox(notaInfo, dv) {
     
     grupoDiv.appendChild(headerDiv);
     
-    // Lista de tareas (inicialmente oculta) - usar la clase específica para inbox
+    // Lista de tareas (inicialmente oculta)
     const tareasList = document.createElement("div");
-    tareasList.className = "inbox-tarea-list";
+    tareasList.className = "tarea-list";
     
     // Añadir cada tarea
     for (const tarea of tareas) {
@@ -5065,19 +4946,14 @@ crearGrupoTareasInbox(notaInfo, dv) {
     
     grupoDiv.appendChild(tareasList);
     
-    // Guardar referencia a tareasList en el headerDiv para facilitar acceso
-    headerDiv.setAttribute('data-target', tareasList.id = `inbox-list-${Date.now()}-${Math.floor(Math.random()*1000)}`);
-    
     // Agregar evento para mostrar/ocultar lista de tareas
     headerDiv.addEventListener("click", (event) => {
         // No colapsar si se hizo clic en un enlace
         if (event.target.tagName === 'A') return;
         
-        // Alternar clases de open/closed
         toggleSpan.classList.toggle('open');
         tareasList.classList.toggle('open');
         
-        // Cambiar ícono
         if (toggleSpan.classList.contains('open')) {
             toggleSpan.textContent = "▼";
         } else {
@@ -5303,49 +5179,9 @@ crearTareaElementInbox(tarea, dv) {
     });
     
     metadatosDiv.appendChild(accionesDiv);
-                tareaDiv.appendChild(metadatosDiv);
+    tareaDiv.appendChild(metadatosDiv);
     
     return tareaDiv;
-}
-
-/**
- * Expande todos los grupos de tareas inbox
- * @param container Contenedor principal
- */
-expandirTodasTareasInbox(container) {
-    const grupos = container.querySelectorAll('.tarea-group');
-    
-    grupos.forEach(grupo => {
-        const toggle = grupo.querySelector('.inbox-toggle-icon');
-        const listId = grupo.querySelector('.tarea-group-header')?.getAttribute('data-target');
-        const list = document.getElementById(listId);
-        
-        if (toggle && list) {
-            toggle.classList.add('open');
-            toggle.textContent = "▼";
-            list.classList.add('open');
-        }
-    });
-}
-
-/**
- * Colapsa todos los grupos de tareas inbox
- * @param container Contenedor principal
- */
-colapsarTodasTareasInbox(container) {
-    const grupos = container.querySelectorAll('.tarea-group');
-    
-    grupos.forEach(grupo => {
-        const toggle = grupo.querySelector('.inbox-toggle-icon');
-        const listId = grupo.querySelector('.tarea-group-header')?.getAttribute('data-target');
-        const list = document.getElementById(listId);
-        
-        if (toggle && list) {
-            toggle.classList.remove('open');
-            toggle.textContent = "▶";
-            list.classList.remove('open');
-        }
-    });
 }
 
   }
