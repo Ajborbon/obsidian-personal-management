@@ -120,6 +120,12 @@ export class starterAPI {
           case "EMkt":
             fieldHandler = new EntregableFieldHandler(this.tp, this.infoSubsistema, this.plugin);
             break;
+          case "TQ":
+            fieldHandler = new TrimestralFieldHandler(this.tp, this.infoSubsistema, this.plugin);
+            break;
+          case "AY":
+            fieldHandler = new Anual_FH(this.tp, this.infoSubsistema, this.plugin);
+            break;
           default:
             throw new Error(`No se ha definido un manejador de campos para el tipo ${this.infoSubsistema.type}`);
         }
