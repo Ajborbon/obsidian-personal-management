@@ -384,10 +384,10 @@ export class EntregableFieldHandler extends NoteFieldHandler implements Entregab
     async getStatus(): Promise<string> {
         const estados = [
             "Sin empezar",
-            "Diseñando",
+            "Diseñando - En Desarrollo",
             "Revisión Interna",
             "Revisión Cliente",
-            "Programación parrila",
+            "Programación Parrilla",
             "Publicado",
             "Completado",
             "Archivado"
