@@ -832,9 +832,10 @@ export class ProyectoCampanasComponent {
         row.appendChild(hitsCell);
       } else {
         // Fecha de publicación
+        // Fecha de publicación formateada
         const fechaCell = DOMUtils.createElement('td', {
           className: 'col-fecha',
-          textContent: entregable.fechaPublicacion || 'No definida'
+          textContent: this.formatearFechaPublicacion(entregable.fechaPublicacion)
         });
         row.appendChild(fechaCell);
         
@@ -925,7 +926,6 @@ private async obtenerTodosLosProyectos(dv: any, modo: 'hits' | 'fechas'): Promis
     });
     
     // 2. Obtener todas las campañas activas 
-    // NOTA: Estamos evitando usar #type/Cp porque podría fallar si los metadatos no están indexados correctamente
     console.log("🔍 Consultando campañas activas");
     const todasLasCampanas = dv.pages()
       .where(p => p.type === "Cp" && (p.estado === "🟢" || p.estado === "🟡"))
@@ -1033,14 +1033,14 @@ private async obtenerTodosLosProyectos(dv: any, modo: 'hits' | 'fechas'): Promis
       for (const camp of campanasDelProyecto) {
         console.log(`🔍 Procesando campaña: ${camp.titulo || camp.file.basename}`);
         
-        // Encontrar entregables asociados a esta campaña
+        // CAMBIO AQUÍ: Encontrar entregables asociados a esta campaña usando el campo asunto
         const entregablesDeCampana = todosLosEntregables.filter(ent => {
-          if (!ent.proyecto) {
+          if (!ent.asunto) {
             return false; // No tiene referencia a campaña
           }
           
           // Normalizar a array
-          const referencias = Array.isArray(ent.proyecto) ? ent.proyecto : [ent.proyecto];
+          const referencias = Array.isArray(ent.asunto) ? ent.asunto : [ent.asunto];
           
           // Verificar si alguna referencia apunta a esta campaña
           for (const ref of referencias) {
@@ -1178,4 +1178,45 @@ private async obtenerTodosLosProyectos(dv: any, modo: 'hits' | 'fechas'): Promis
       throw error;
     }
   }
+
+
+  /**
+ * Formatea una fecha en formato ISO a un formato más legible
+ * @param fechaStr String de fecha en formato ISO o similar
+ * @returns Fecha formateada como "dddd, dd de mm del yyyy"
+ */
+private formatearFechaPublicacion(fechaStr: string | undefined): string {
+  if (!fechaStr) return 'No definida';
+  
+  try {
+    // Intentar parsear la fecha con moment
+    const fecha = window.moment(fechaStr.toString());
+    
+    if (!fecha.isValid()) {
+      console.log(`🔍 Error: Fecha inválida ${fechaStr}`);
+      return fechaStr; // Devolver original si no es válida
+    }
+    
+    // Configurar moment para usar español
+    const locale = window.moment.locale();
+    if (locale !== 'es') {
+      window.moment.locale('es');
+    }
+    
+    // Formatear la fecha al estilo "sábado, 22 de marzo del 2025"
+    // El formato en moment.js usa:
+    // dddd = nombre día semana, DD = día (número), MMMM = mes (nombre), YYYY = año completo
+    const fechaFormateada = fecha.format('dddd, DD [de] MMMM [del] YYYY');
+    
+    // Restaurar el locale original si fue cambiado
+    if (locale !== 'es') {
+      window.moment.locale(locale);
+    }
+    
+    return fechaFormateada;
+  } catch (e) {
+    console.warn(`🔍 Error al formatear fecha: ${e.message}`);
+    return fechaStr || 'No definida';
+  }
+}
 }
