@@ -2829,10 +2829,14 @@
 }
 
 /* Badges de estado */
-.estado-badge {
-  font-size: 1.2em;
-  margin-right: 8px;
-}
+    /* Mejora para la visibilidad de los badges de estado */
+    .estado-badge {
+      display: inline-flex;
+      justify-content: center;
+      align-items: center;
+      width: 1.2em;
+      height: 1.2em;
+    }
 
 .estado-badge-small {
   font-size: 1em;
@@ -2952,5 +2956,28 @@
   background-color: rgba(52, 152, 219, 0.15);
   color: #5dade2;
   border: 1px solid rgba(52, 152, 219, 0.3);
+}
+
+/* Estilos para entregables pausados */
+.dias-badge.pausado {
+  background-color: rgba(243, 156, 18, 0.1);
+  color: #f39c12;
+  border: 1px solid rgba(243, 156, 18, 0.2);
+}
+
+/* Estilo específico para entregables cancelados */
+.dias-badge.cancelado {
+  background-color: rgba(231, 76, 60, 0.1);
+  color: #e74c3c;
+  border: 1px solid rgba(231, 76, 60, 0.2);
+  text-decoration: line-through;
+}
+
+/* Entregables completados */
+.dias-badge.completado {
+  background-color: rgba(52, 152, 219, 0.1);
+  color: #3498db;
+  border: 1px solid rgba(52, 152, 219, 0.2);
+  opacity: 0.7;
 }
 

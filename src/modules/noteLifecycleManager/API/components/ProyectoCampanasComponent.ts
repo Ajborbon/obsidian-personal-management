@@ -465,26 +465,6 @@ private crearEstadisticasGlobales(proyectos: ProyectoGTD[]): HTMLElement {
     return container;
   }
   
- 
-  
-  /**
-   * Obtiene los días hasta el próximo vencimiento en un proyecto
-   */
-  private obtenerDiasProximoVencimiento(proyecto: ProyectoGTD): number | null {
-    let minDias: number | null = null;
-    
-    proyecto.campanas.forEach(campana => {
-      campana.entregables.forEach(entregable => {
-        if (entregable.diferenciaDias !== undefined) {
-          if (minDias === null || entregable.diferenciaDias < minDias) {
-            minDias = entregable.diferenciaDias;
-          }
-        }
-      });
-    });
-    
-    return minDias;
-  }
 
   /**
    * Crea una sección para un proyecto
@@ -574,9 +554,17 @@ private crearEstadisticasGlobales(proyectos: ProyectoGTD[]): HTMLElement {
       // Mostrar el próximo vencimiento si existe
       const proximoVencimiento = this.obtenerDiasProximoVencimiento(proyecto);
       if (proximoVencimiento !== null) {
+        // CAMBIADO: Usar el estado del proyecto para determinar la clase visual
         const vencimientoSpan = DOMUtils.createElement('span', {
-          className: `vencimiento-badge ${this.obtenerClaseVencimiento(proximoVencimiento)}`,
-          textContent: this.formatearDiasVencimiento(proximoVencimiento)
+          className: `vencimiento-badge ${this.obtenerClaseVencimiento(proximoVencimiento, proyecto.estado)}`,
+          textContent: this.formatearDiasVencimiento(proximoVencimiento, proyecto.estado)
+        });
+        metricasContainer.appendChild(vencimientoSpan);
+      } else {
+        // Si no hay fechas relevantes, mostrar un indicador neutro
+        const vencimientoSpan = DOMUtils.createElement('span', {
+          className: 'vencimiento-badge',
+          textContent: 'Sin fechas'
         });
         metricasContainer.appendChild(vencimientoSpan);
       }
@@ -702,9 +690,17 @@ private crearEstadisticasGlobales(proyectos: ProyectoGTD[]): HTMLElement {
     } else {
       // Mostrar el próximo vencimiento si existe
       if (campana.diferenciaDiasProximo !== undefined) {
+        // CAMBIADO: Pasar el estado de la campaña para determinar correctamente la clase visual
         const vencimientoSpan = DOMUtils.createElement('span', {
-          className: `vencimiento-badge ${this.obtenerClaseVencimiento(campana.diferenciaDiasProximo)}`,
-          textContent: this.formatearDiasVencimiento(campana.diferenciaDiasProximo)
+          className: `vencimiento-badge ${this.obtenerClaseVencimiento(campana.diferenciaDiasProximo, campana.estado)}`,
+          textContent: this.formatearDiasVencimiento(campana.diferenciaDiasProximo, campana.estado)
+        });
+        metricasContainer.appendChild(vencimientoSpan);
+      } else {
+        // Si no hay fechas de entregables, mostrar un indicador neutro
+        const vencimientoSpan = DOMUtils.createElement('span', {
+          className: 'vencimiento-badge',
+          textContent: 'Sin fechas'
         });
         metricasContainer.appendChild(vencimientoSpan);
       }
@@ -892,48 +888,8 @@ private crearEstadisticasGlobales(proyectos: ProyectoGTD[]): HTMLElement {
     }
   }
 
-/**
- * Determina la clase CSS para la celda de días según el estado del entregable y su fecha
- * @param diferenciaDias Días hasta la fecha de publicación (negativo si ya pasó)
- * @param estado Estado del entregable
- * @returns Clase CSS para aplicar
- */
-private obtenerClaseVencimiento(diferenciaDias: number, estado: string): string {
-  // Para entregables archivados (🔵) o cancelados (🔴), nunca mostrar como vencidos
-  if (estado === "🔵" || estado === "🔴") {
-    return "completado"; // Nueva clase para entregables completados o cancelados
-  }
-  
-  // Para entregables activos (🟢) o pausados (🟡), usar la lógica normal de fechas
-  if (diferenciaDias < 0) return "vencido"; // Ya vencido
-  if (diferenciaDias <= 1) return "hoy"; // Hoy o mañana
-  if (diferenciaDias <= 3) return "proximo"; // Próximos 3 días
-  if (diferenciaDias <= 7) return "cercano"; // Próxima semana
-  return "futuro"; // Más de una semana
-}
 
-/**
- * Formatea los días para mostrar de forma legible según el estado del entregable
- */
-private formatearDiasVencimiento(diferenciaDias: number, estado: string): string {
-  // Lógica específica según el estado
-  if (estado === "🔵") {
-    return "Completado";
-  }
-  
-  if (estado === "🔴") {
-    return "Cancelado";
-  }
-  
-  // Lógica normal para estados activos y pausados
-  if (diferenciaDias === 0) return "Hoy";
-  if (diferenciaDias === 1) return "Mañana";
-  if (diferenciaDias < 0) {
-    const diasAbs = Math.abs(diferenciaDias);
-    return `Vencido (${diasAbs} ${diasAbs === 1 ? 'día' : 'días'})`;
-  }
-  return `${diferenciaDias} días`;
-}
+
   
 
   /**
@@ -1092,8 +1048,9 @@ private async obtenerTodosLosProyectos(dv: any, modo: 'hits' | 'fechas'): Promis
         // Procesar entregables
         const entregablesProcessed: Entregable[] = [];
         let totalHitsCampana = 0;
+       
         let minDiasCampana: number | undefined;
-        
+
         for (const ent of entregablesDeCampana) {
           // Calcular días hasta publicación
           let diferenciaDias: number | undefined;
@@ -1103,17 +1060,22 @@ private async obtenerTodosLosProyectos(dv: any, modo: 'hits' | 'fechas'): Promis
               const fechaPublicacion = window.moment(ent.publicacion.toString(), "YYYY-MM-DD");
               if (fechaPublicacion.isValid()) {
                 diferenciaDias = fechaPublicacion.diff(hoy, 'days');
-                console.log(`🔍 Entregable ${ent.titulo || ent.file.basename}: publicación ${ent.publicacion} (${diferenciaDias} días)`);
+                console.log(`🔍 Entregable ${ent.titulo || ent.file.basename}: publicación ${ent.publicacion} (${diferenciaDias} días), estado: ${ent.estado || "Sin estado"}`);
               }
             } catch (e) {
               console.warn(`🔍 Error procesando fecha para ${ent.file.path}: ${e.message}`);
             }
           }
           
-          // Actualizar mínimo para la campaña
+          // CAMBIADO: Actualizar mínimo para la campaña SOLO si el entregable está activo (🟢)
           if (diferenciaDias !== undefined) {
-            if (minDiasCampana === undefined || diferenciaDias < minDiasCampana) {
-              minDiasCampana = diferenciaDias;
+            const estado = ent.estado || "🟡"; // Por defecto, si no tiene estado, se considera en pausa
+            
+            // Solo considerar entregables activos para el cálculo de vencimientos
+            if (this.entregableAConsiderarParaVencimiento(estado)) {
+              if (minDiasCampana === undefined || diferenciaDias < minDiasCampana) {
+                minDiasCampana = diferenciaDias;
+              }
             }
           }
           
@@ -1396,5 +1358,106 @@ private ordenarEntregables(entregables: Entregable[], modo: 'hits' | 'fechas'): 
     });
   }
 }
+
+/**
+ * Modificaciones clave al ProyectoCampanasComponent para corregir el manejo de fechas según estado
+ */
+
+/**
+ * Determina si un entregable debe considerarse para el cálculo de fechas de vencimiento
+ * @param estado Estado del entregable (emoji)
+ * @returns true si el entregable debe considerarse para vencimientos
+ */
+private entregableAConsiderarParaVencimiento(estado: string): boolean {
+  // Solo los entregables activos (🟢) deben afectar el cálculo de vencimientos
+  // Los entregables en pausa (🟡), archivados (🔵) o cancelados (🔴) no deben afectar
+  return estado === "🟢";
+}
+
+/**
+ * Obtiene los días hasta el próximo vencimiento en un proyecto, considerando solo entregables activos
+ */
+private obtenerDiasProximoVencimiento(proyecto: ProyectoGTD): number | null {
+  let minDias: number | null = null;
+  
+  proyecto.campanas.forEach(campana => {
+    // Solo considerar campañas activas (🟢) para los vencimientos del proyecto
+    if (campana.estado === "🟢") {
+      // Si la campaña tiene un valor diferenciaDiasProximo definido...
+      if (campana.diferenciaDiasProximo !== undefined) {
+        if (minDias === null || campana.diferenciaDiasProximo < minDias) {
+          minDias = campana.diferenciaDiasProximo;
+        }
+      }
+    }
+  });
+  
+  return minDias;
+}
+
+/**
+ * Obtiene la clase CSS para la celda de días según el estado del entregable y su fecha
+ * @param diferenciaDias Días hasta la fecha de publicación (negativo si ya pasó)
+ * @param estado Estado del entregable
+ * @returns Clase CSS para aplicar
+ */
+private obtenerClaseVencimiento(diferenciaDias: number, estado: string = "🟢"): string {
+  // Para entregables archivados (🔵) siempre mostrar como completados
+  if (estado === "🔵") {
+    return "completado";
+  }
+  
+  // Para entregables cancelados (🔴) siempre mostrar como cancelados
+  if (estado === "🔴") {
+    return "cancelado";
+  }
+  
+  // Para entregables en pausa (🟡) mostrar un estado especial
+  if (estado === "🟡") {
+    return diferenciaDias < 0 ? "pausado-vencido" : "pausado";
+  }
+  
+  // Para entregables activos (🟢), usar la lógica normal de fechas
+  if (diferenciaDias < 0) return "vencido"; // Ya vencido
+  if (diferenciaDias <= 1) return "hoy"; // Hoy o mañana
+  if (diferenciaDias <= 3) return "proximo"; // Próximos 3 días
+  if (diferenciaDias <= 7) return "cercano"; // Próxima semana
+  return "futuro"; // Más de una semana
+}
+
+/**
+ * Formatea los días para mostrar de forma legible según el estado del entregable
+ * @param diferenciaDias Días hasta la fecha de publicación
+ * @param estado Estado del entregable
+ * @returns Texto formateado para mostrar
+ */
+private formatearDiasVencimiento(diferenciaDias: number, estado: string = "🟢"): string {
+  // Mensaje específico según el estado
+  if (estado === "🔵") {
+    return "Completado";
+  }
+  
+  if (estado === "🔴") {
+    return "Cancelado";
+  }
+  
+  if (estado === "🟡") {
+    if (diferenciaDias < 0) {
+      const diasAbs = Math.abs(diferenciaDias);
+      return `En pausa (${diasAbs} ${diasAbs === 1 ? 'día' : 'días'})`;
+    }
+    return `En pausa (${diferenciaDias} días)`;
+  }
+  
+  // Lógica normal para estados activos
+  if (diferenciaDias === 0) return "Hoy";
+  if (diferenciaDias === 1) return "Mañana";
+  if (diferenciaDias < 0) {
+    const diasAbs = Math.abs(diferenciaDias);
+    return `Vencido (${diasAbs} ${diasAbs === 1 ? 'día' : 'días'})`;
+  }
+  return `${diferenciaDias} días`;
+}
+
 
 }
