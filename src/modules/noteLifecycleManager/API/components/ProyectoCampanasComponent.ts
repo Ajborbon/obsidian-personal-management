@@ -250,67 +250,147 @@ export class ProyectoCampanasComponent {
     return controlsDiv;
   }
 
-  /**
-   * Crea un contenedor con estadísticas globales
-   */
-  private crearEstadisticasGlobales(proyectos: ProyectoGTD[]): HTMLElement {
-    const statsContainer = DOMUtils.createElement('div', {
-      className: 'dashboard-stats-container'
-    });
+/**
+ * Crea un contenedor con estadísticas globales
+ */
+private crearEstadisticasGlobales(proyectos: ProyectoGTD[]): HTMLElement {
+  const statsContainer = DOMUtils.createElement('div', {
+    className: 'dashboard-stats-container'
+  });
+  
+  // Calcular estadísticas globales
+  const totalProyectos = proyectos.length;
+  
+  // Contar elementos por estado
+  let totalProyectosActivos = 0;
+  let totalProyectosSuspendidos = 0;
+  let totalProyectosArchivados = 0;
+  let totalProyectosCancelados = 0;
+  
+  let totalCampanas = 0;
+  let totalCampanasActivas = 0;
+  let totalCampanasSuspendidas = 0;
+  let totalCampanasArchivadas = 0;
+  let totalCampanasCanceladas = 0;
+  
+  let totalEntregables = 0;
+  let totalEntregablesActivos = 0;
+  let totalEntregablesSuspendidos = 0;
+  let totalEntregablesArchivados = 0;
+  let totalEntregablesCancelados = 0;
+  
+  let totalHits = 0;
+  let totalHitsActivos = 0;
+  let totalHitsArchivados = 0;
+  
+  let entregablesVencidos = 0;
+  let entregablesPorVencer = 0; // Próximos a vencer (3 días o menos)
+  
+  proyectos.forEach(proyecto => {
+    // Contabilizar proyectos por estado
+    switch(proyecto.estado) {
+      case "🟢": totalProyectosActivos++; break;
+      case "🟡": totalProyectosSuspendidos++; break;
+      case "🔵": totalProyectosArchivados++; break;
+      case "🔴": totalProyectosCancelados++; break;
+    }
     
-    // Calcular estadísticas globales
-    const totalProyectos = proyectos.length;
+    totalCampanas += proyecto.campanas.length;
     
-    let totalCampanas = 0;
-    let totalEntregables = 0;
-    let totalHits = 0;
-    let entregablesVencidos = 0;
-    let entregablesPorVencer = 0; // Próximos a vencer (3 días o menos)
+    // Contabilizar hits de proyectos activos y archivados
+    if (proyecto.estado === "🟢") {
+      totalHitsActivos += proyecto.hits;
+    } else if (proyecto.estado === "🔵") {
+      totalHitsArchivados += proyecto.hits;
+    }
     
-    proyectos.forEach(proyecto => {
-      totalCampanas += proyecto.campanas.length;
-      totalHits += proyecto.hits;
+    totalHits += proyecto.hits;
+    
+    proyecto.campanas.forEach(campana => {
+      // Contabilizar campañas por estado
+      switch(campana.estado) {
+        case "🟢": totalCampanasActivas++; break;
+        case "🟡": totalCampanasSuspendidas++; break;
+        case "🔵": totalCampanasArchivadas++; break;
+        case "🔴": totalCampanasCanceladas++; break;
+      }
       
-      proyecto.campanas.forEach(campana => {
-        totalEntregables += campana.entregables.length;
+      totalEntregables += campana.entregables.length;
+      
+      campana.entregables.forEach(entregable => {
+        // Contabilizar entregables por estado
+        switch(entregable.estado) {
+          case "🟢": totalEntregablesActivos++; break;
+          case "🟡": totalEntregablesSuspendidos++; break;
+          case "🔵": totalEntregablesArchivados++; break;
+          case "🔴": totalEntregablesCancelados++; break;
+        }
         
-        campana.entregables.forEach(entregable => {
-          if (entregable.diferenciaDias !== undefined) {
-            if (entregable.diferenciaDias < 0) {
-              entregablesVencidos++;
-            } else if (entregable.diferenciaDias <= 3) {
-              entregablesPorVencer++;
-            }
+       // Contabilizar entregables vencidos o por vencer según estado
+      if (entregable.diferenciaDias !== undefined) {
+        // Solo los entregables activos (🟢) o pausados (🟡) pueden estar vencidos
+        if (entregable.estado === "🟢" || entregable.estado === "🟡") {
+          if (entregable.diferenciaDias < 0) {
+            entregablesVencidos++;
+          } else if (entregable.diferenciaDias <= 3) {
+            entregablesPorVencer++;
           }
-        });
+        }
+        // Los entregables archivados (🔵) o cancelados (🔴) nunca cuentan como vencidos
+      }
       });
     });
-    
-    console.log("🔍 Estadísticas globales:", {
-      totalProyectos,
-      totalCampanas,
-      totalEntregables,
-      totalHits,
-      entregablesVencidos,
-      entregablesPorVencer
-    });
-    
-    // Crear tarjetas de estadísticas
-    this.crearTarjetaEstadistica(statsContainer, "📂", "Proyectos", totalProyectos);
-    this.crearTarjetaEstadistica(statsContainer, "📊", "Campañas", totalCampanas);
-    this.crearTarjetaEstadistica(statsContainer, "📄", "Entregables", totalEntregables);
-    this.crearTarjetaEstadistica(statsContainer, "👁️", "Total Hits", totalHits);
-    
-    if (entregablesVencidos > 0) {
-      this.crearTarjetaEstadistica(statsContainer, "⚠️", "Vencidos", entregablesVencidos, "#e74c3c");
+  });
+  
+  console.log("🔍 Estadísticas globales:", {
+    totalProyectos,
+    totalCampanas,
+    totalEntregables,
+    totalHits,
+    entregablesVencidos,
+    entregablesPorVencer,
+    desglose: {
+      proyectos: { activos: totalProyectosActivos, suspendidos: totalProyectosSuspendidos, archivados: totalProyectosArchivados, cancelados: totalProyectosCancelados },
+      campanas: { activas: totalCampanasActivas, suspendidas: totalCampanasSuspendidas, archivadas: totalCampanasArchivadas, canceladas: totalCampanasCanceladas },
+      entregables: { activos: totalEntregablesActivos, suspendidos: totalEntregablesSuspendidos, archivados: totalEntregablesArchivados, cancelados: totalEntregablesCancelados },
+      hits: { activos: totalHitsActivos, archivados: totalHitsArchivados }
     }
-    
-    if (entregablesPorVencer > 0) {
-      this.crearTarjetaEstadistica(statsContainer, "⏰", "Por vencer", entregablesPorVencer, "#f39c12");
-    }
-    
-    return statsContainer;
+  });
+  
+  // Crear tarjetas de estadísticas principales
+  this.crearTarjetaEstadistica(statsContainer, "📂", "Proyectos", totalProyectos);
+  this.crearTarjetaEstadistica(statsContainer, "📊", "Campañas", totalCampanas);
+  this.crearTarjetaEstadistica(statsContainer, "📄", "Entregables", totalEntregables);
+  
+  // CAMBIO: Mostrar total de hits de activos y archivados
+  const etiquetaHits = `Total Hits${totalHitsArchivados > 0 ? '*' : ''}`;
+  this.crearTarjetaEstadistica(statsContainer, "👁️", etiquetaHits, totalHits);
+  
+  if (entregablesVencidos > 0) {
+    this.crearTarjetaEstadistica(statsContainer, "⚠️", "Vencidos", entregablesVencidos, "#e74c3c");
   }
+  
+  if (entregablesPorVencer > 0) {
+    this.crearTarjetaEstadistica(statsContainer, "⏰", "Por vencer", entregablesPorVencer, "#f39c12");
+  }
+  
+  // CAMBIO: Agregar nota sobre el cálculo de hits si aplica
+  if (totalHitsArchivados > 0) {
+    const notaHits = DOMUtils.createElement('div', {
+      className: 'hits-note',
+      textContent: "* El total incluye hits de elementos activos y archivados",
+      styles: {
+        fontSize: '0.8em',
+        color: 'var(--text-muted)',
+        textAlign: 'center',
+        marginTop: '8px'
+      }
+    });
+    statsContainer.appendChild(notaHits);
+  }
+  
+  return statsContainer;
+}
   
   /**
    * Crea una tarjeta de estadística
@@ -385,29 +465,7 @@ export class ProyectoCampanasComponent {
     return container;
   }
   
-  /**
-   * Ordena los proyectos según el modo seleccionado
-   */
-  private ordenarProyectos(proyectos: ProyectoGTD[], modo: 'hits' | 'fechas'): ProyectoGTD[] {
-    if (modo === 'hits') {
-      // Ordenar por hits (mayor a menor)
-      return [...proyectos].sort((a, b) => b.hits - a.hits);
-    } else {
-      // Ordenar por fecha del entregable más próximo a vencer
-      return [...proyectos].sort((a, b) => {
-        const proximoA = this.obtenerDiasProximoVencimiento(a);
-        const proximoB = this.obtenerDiasProximoVencimiento(b);
-        
-        // Si alguno no tiene fechas, ponerlo al final
-        if (proximoA === null && proximoB === null) return 0;
-        if (proximoA === null) return 1;
-        if (proximoB === null) return -1;
-        
-        // Ordenar por proximidad (menor número de días primero)
-        return proximoA - proximoB;
-      });
-    }
-  }
+ 
   
   /**
    * Obtiene los días hasta el próximo vencimiento en un proyecto
@@ -558,29 +616,6 @@ export class ProyectoCampanasComponent {
     return proyectoSection;
   }
   
-  /**
-   * Ordena las campañas según el modo seleccionado
-   */
-  private ordenarCampanas(campanas: Campana[], modo: 'hits' | 'fechas'): Campana[] {
-    if (campanas.length === 0) {
-      return []; // No hay campañas para ordenar
-    }
-    
-    if (modo === 'hits') {
-      // Ordenar por hits (mayor a menor)
-      return [...campanas].sort((a, b) => b.hits - a.hits);
-    } else {
-      // Ordenar por fecha del entregable más próximo a vencer
-      return [...campanas].sort((a, b) => {
-        if (a.diferenciaDiasProximo === undefined && b.diferenciaDiasProximo === undefined) return 0;
-        if (a.diferenciaDiasProximo === undefined) return 1;
-        if (b.diferenciaDiasProximo === undefined) return -1;
-        
-        // Ordenar por proximidad (menor número de días primero)
-        return a.diferenciaDiasProximo - b.diferenciaDiasProximo;
-      });
-    }
-  }
 
   /**
    * Crea un elemento para mostrar una campaña
@@ -706,29 +741,7 @@ export class ProyectoCampanasComponent {
     return campanaElement;
   }
   
-  /**
-   * Ordena los entregables según el modo seleccionado
-   */
-  private ordenarEntregables(entregables: Entregable[], modo: 'hits' | 'fechas'): Entregable[] {
-    if (entregables.length === 0) {
-      return []; // No hay entregables para ordenar
-    }
-    
-    if (modo === 'hits') {
-      // Ordenar por hits (mayor a menor)
-      return [...entregables].sort((a, b) => b.hits - a.hits);
-    } else {
-      // Ordenar por fecha de publicación (más cercanos a vencer primero)
-      return [...entregables].sort((a, b) => {
-        if (a.diferenciaDias === undefined && b.diferenciaDias === undefined) return 0;
-        if (a.diferenciaDias === undefined) return 1;
-        if (b.diferenciaDias === undefined) return -1;
-        
-        // Ordenar por proximidad (menor número de días primero)
-        return a.diferenciaDias - b.diferenciaDias;
-      });
-    }
-  }
+ 
 
   /**
    * Crea una tabla para mostrar los entregables
@@ -839,22 +852,24 @@ export class ProyectoCampanasComponent {
         });
         row.appendChild(fechaCell);
         
-        // Días hasta/desde la fecha
-        const diasCell = DOMUtils.createElement('td', {
-          className: 'col-dias'
+      // Días hasta/desde la fecha
+      const diasCell = DOMUtils.createElement('td', {
+        className: 'col-dias'
+      });
+
+      if (entregable.diferenciaDias !== undefined) {
+        const diasSpan = DOMUtils.createElement('span', {
+          // Pasar el estado como segundo parámetro para determinar la clase adecuada
+          className: `dias-badge ${this.obtenerClaseVencimiento(entregable.diferenciaDias, entregable.estado)}`,
+          // Pasar el estado para formatear el texto adecuadamente
+          textContent: this.formatearDiasVencimiento(entregable.diferenciaDias, entregable.estado)
         });
-        
-        if (entregable.diferenciaDias !== undefined) {
-          const diasSpan = DOMUtils.createElement('span', {
-            className: `dias-badge ${this.obtenerClaseVencimiento(entregable.diferenciaDias)}`,
-            textContent: this.formatearDiasVencimiento(entregable.diferenciaDias)
-          });
-          diasCell.appendChild(diasSpan);
-        } else {
-          diasCell.textContent = "—";
-        }
-        
-        row.appendChild(diasCell);
+        diasCell.appendChild(diasSpan);
+      } else {
+        diasCell.textContent = "—";
+      }
+
+      row.appendChild(diasCell);
       }
       
       tbody.appendChild(row);
@@ -877,32 +892,53 @@ export class ProyectoCampanasComponent {
     }
   }
 
-  /**
-   * Obtiene la clase CSS correspondiente a los días de vencimiento
-   */
-  private obtenerClaseVencimiento(dias: number): string {
-    if (dias < 0) return "vencido"; // Ya vencido
-    if (dias <= 1) return "hoy"; // Hoy o mañana
-    if (dias <= 3) return "proximo"; // Próximos 3 días
-    if (dias <= 7) return "cercano"; // Próxima semana
-    return "futuro"; // Más de una semana
+/**
+ * Determina la clase CSS para la celda de días según el estado del entregable y su fecha
+ * @param diferenciaDias Días hasta la fecha de publicación (negativo si ya pasó)
+ * @param estado Estado del entregable
+ * @returns Clase CSS para aplicar
+ */
+private obtenerClaseVencimiento(diferenciaDias: number, estado: string): string {
+  // Para entregables archivados (🔵) o cancelados (🔴), nunca mostrar como vencidos
+  if (estado === "🔵" || estado === "🔴") {
+    return "completado"; // Nueva clase para entregables completados o cancelados
   }
   
-  /**
-   * Formatea los días para mostrar de forma legible
-   */
-  private formatearDiasVencimiento(dias: number): string {
-    if (dias === 0) return "Hoy";
-    if (dias === 1) return "Mañana";
-    if (dias < 0) {
-      const diasAbs = Math.abs(dias);
-      return `Vencido (${diasAbs} ${diasAbs === 1 ? 'día' : 'días'})`;
-    }
-    return `${dias} días`;
-  }
+  // Para entregables activos (🟢) o pausados (🟡), usar la lógica normal de fechas
+  if (diferenciaDias < 0) return "vencido"; // Ya vencido
+  if (diferenciaDias <= 1) return "hoy"; // Hoy o mañana
+  if (diferenciaDias <= 3) return "proximo"; // Próximos 3 días
+  if (diferenciaDias <= 7) return "cercano"; // Próxima semana
+  return "futuro"; // Más de una semana
+}
 
 /**
+ * Formatea los días para mostrar de forma legible según el estado del entregable
+ */
+private formatearDiasVencimiento(diferenciaDias: number, estado: string): string {
+  // Lógica específica según el estado
+  if (estado === "🔵") {
+    return "Completado";
+  }
+  
+  if (estado === "🔴") {
+    return "Cancelado";
+  }
+  
+  // Lógica normal para estados activos y pausados
+  if (diferenciaDias === 0) return "Hoy";
+  if (diferenciaDias === 1) return "Mañana";
+  if (diferenciaDias < 0) {
+    const diasAbs = Math.abs(diferenciaDias);
+    return `Vencido (${diasAbs} ${diasAbs === 1 ? 'día' : 'días'})`;
+  }
+  return `${diferenciaDias} días`;
+}
+  
+
+  /**
  * Obtiene todos los proyectos GTD con sus campañas y entregables asociados - Versión optimizada
+ * Incluye todos los estados con prioridad específica
  */
 private async obtenerTodosLosProyectos(dv: any, modo: 'hits' | 'fechas'): Promise<ProyectoGTD[]> {
   try {
@@ -911,41 +947,39 @@ private async obtenerTodosLosProyectos(dv: any, modo: 'hits' | 'fechas'): Promis
     // Obtener fecha actual para calcular diferencias
     const hoy = window.moment().startOf('day');
     
-    // 1. Obtener todos los proyectos GTD activos
-    console.log("🔍 Consultando proyectos PGTD activos");
+    // 1. Obtener todos los proyectos GTD con cualquier estado
+    console.log("🔍 Consultando proyectos PGTD");
     const proyectosGTD = dv.pages()
-      .where(p => p.type === "PGTD" && p.estado === "🟢")
+      .where(p => p.type === "PGTD")
       .array();
-    console.log(`🔍 Encontrados ${proyectosGTD.length} proyectos PGTD activos`);
+    console.log(`🔍 Encontrados ${proyectosGTD.length} proyectos PGTD en total`);
     
     // Mostrar resumen de proyectos encontrados para diagnóstico
     proyectosGTD.forEach((proy, idx) => {
-      console.log(`🔍 Proyecto PGTD ${idx + 1}: ${proy.titulo || proy.file.basename}`);
+      console.log(`🔍 Proyecto PGTD ${idx + 1}: ${proy.titulo || proy.file.basename} (Estado: ${proy.estado || "Sin estado"})`);
       console.log(`    - Path: ${proy.file.path}`);
-      console.log(`    - Estado: ${proy.estado}`);
     });
     
-    // 2. Obtener todas las campañas activas 
-    console.log("🔍 Consultando campañas activas");
+    // 2. Obtener todas las campañas con cualquier estado 
+    console.log("🔍 Consultando todas las campañas");
     const todasLasCampanas = dv.pages()
-      .where(p => p.type === "Cp" && (p.estado === "🟢" || p.estado === "🟡"))
+      .where(p => p.type === "Cp")
       .array();
-    console.log(`🔍 Encontradas ${todasLasCampanas.length} campañas activas`);
+    console.log(`🔍 Encontradas ${todasLasCampanas.length} campañas en total`);
     
     // Diagnóstico: mostrar todas las campañas encontradas
     todasLasCampanas.forEach((campana, idx) => {
-      console.log(`🔍 Campaña ${idx + 1}: ${campana.titulo || campana.file.basename}`);
+      console.log(`🔍 Campaña ${idx + 1}: ${campana.titulo || campana.file.basename} (Estado: ${campana.estado || "Sin estado"})`);
       console.log(`    - Path: ${campana.file.path}`);
-      console.log(`    - Estado: ${campana.estado}`);
       console.log(`    - ProyectoGTD: ${JSON.stringify(campana.proyectoGTD)}`);
     });
     
-    // 3. Obtener todos los entregables
-    console.log("🔍 Consultando entregables");
+    // 3. Obtener todos los entregables con cualquier estado
+    console.log("🔍 Consultando todos los entregables");
     const todosLosEntregables = dv.pages()
-      .where(p => p.type === "EMkt" && (p.estado === "🟢" || p.estado === "🟡"))
+      .where(p => p.type === "EMkt")
       .array();
-    console.log(`🔍 Encontrados ${todosLosEntregables.length} entregables activos`);
+    console.log(`🔍 Encontrados ${todosLosEntregables.length} entregables en total`);
     
     // 4. Mapear los datos a nuestras interfaces
     const proyectos: ProyectoGTD[] = [];
@@ -1033,7 +1067,7 @@ private async obtenerTodosLosProyectos(dv: any, modo: 'hits' | 'fechas'): Promis
       for (const camp of campanasDelProyecto) {
         console.log(`🔍 Procesando campaña: ${camp.titulo || camp.file.basename}`);
         
-        // CAMBIO AQUÍ: Encontrar entregables asociados a esta campaña usando el campo asunto
+        // Encontrar entregables asociados a esta campaña usando el campo asunto
         const entregablesDeCampana = todosLosEntregables.filter(ent => {
           if (!ent.asunto) {
             return false; // No tiene referencia a campaña
@@ -1098,14 +1132,18 @@ private async obtenerTodosLosProyectos(dv: any, modo: 'hits' | 'fechas'): Promis
             titulo: ent.titulo || ent.file.basename,
             path: ent.file.path,
             hits: hits,
-            estado: ent.estado || "🟡",
+            estado: ent.estado || "🟡", // Por defecto amarillo si no hay estado
             fechaPublicacion: ent.publicacion,
             diferenciaDias,
             alias: ent.aliases?.[0]
           };
           
           entregablesProcessed.push(entregableInfo);
-          totalHitsCampana += hits;
+          
+          // CAMBIO: Solo sumar hits de estados activos y archivados
+          if (ent.estado === "🟢" || ent.estado === "🔵") {
+            totalHitsCampana += hits;
+          }
         }
         
         // Crear objeto campaña
@@ -1115,7 +1153,7 @@ private async obtenerTodosLosProyectos(dv: any, modo: 'hits' | 'fechas'): Promis
           path: camp.file.path,
           entregables: entregablesProcessed,
           hits: totalHitsCampana,
-          estado: camp.estado || "🟡",
+          estado: camp.estado || "🟡", // Por defecto amarillo si no hay estado
           fechaInicio: camp.fechaInicio,
           fechaFin: camp.fechaFin,
           alias: camp.aliases?.[0],
@@ -1123,7 +1161,11 @@ private async obtenerTodosLosProyectos(dv: any, modo: 'hits' | 'fechas'): Promis
         };
         
         campanasProcessed.push(campanaInfo);
-        totalHitsProyecto += totalHitsCampana;
+        
+        // CAMBIO: Solo sumar hits de campañas activas y archivadas
+        if (camp.estado === "🟢" || camp.estado === "🔵") {
+          totalHitsProyecto += totalHitsCampana;
+        }
         
         console.log(`🔍 Campaña ${campanaInfo.titulo} añadida con ${entregablesProcessed.length} entregables y ${totalHitsCampana} hits`);
       }
@@ -1135,7 +1177,7 @@ private async obtenerTodosLosProyectos(dv: any, modo: 'hits' | 'fechas'): Promis
         path: proy.file.path,
         campanas: campanasProcessed,
         hits: totalHitsProyecto,
-        estado: proy.estado || "🟡",
+        estado: proy.estado || "🟡", // Por defecto amarillo si no hay estado
         alias: proy.aliases?.[0]
       };
       
@@ -1219,4 +1261,140 @@ private formatearFechaPublicacion(fechaStr: string | undefined): string {
     return fechaStr || 'No definida';
   }
 }
+
+/**
+ * Determina la prioridad de un estado para ordenamiento
+ * @param estado Emoji de estado
+ * @returns Valor numérico de prioridad (menor = mayor prioridad)
+ */
+private getPrioridadEstado(estado: string): number {
+  switch (estado) {
+    case "🟢": return 1; // Activo (mayor prioridad)
+    case "🟡": return 2; // Suspendido
+    case "🔵": return 3; // Archivado
+    case "🔴": return 4; // Cancelado (menor prioridad)
+    default: return 5;   // Estados no reconocidos al final
+  }
+}
+
+/**
+ * Ordena los proyectos según el modo seleccionado y respetando la prioridad de estados
+ */
+private ordenarProyectos(proyectos: ProyectoGTD[], modo: 'hits' | 'fechas'): ProyectoGTD[] {
+  if (modo === 'hits') {
+    // Ordenar primero por estado y luego por hits (mayor a menor)
+    return [...proyectos].sort((a, b) => {
+      const prioridadA = this.getPrioridadEstado(a.estado);
+      const prioridadB = this.getPrioridadEstado(b.estado);
+      
+      if (prioridadA !== prioridadB) {
+        return prioridadA - prioridadB; // Ordenar primero por prioridad de estado
+      }
+      
+      return b.hits - a.hits; // Luego por hits descendentes
+    });
+  } else {
+    // Ordenar por fecha del entregable más próximo a vencer y respetando prioridad de estado
+    return [...proyectos].sort((a, b) => {
+      const prioridadA = this.getPrioridadEstado(a.estado);
+      const prioridadB = this.getPrioridadEstado(b.estado);
+      
+      if (prioridadA !== prioridadB) {
+        return prioridadA - prioridadB; // Ordenar primero por prioridad de estado
+      }
+      
+      const proximoA = this.obtenerDiasProximoVencimiento(a);
+      const proximoB = this.obtenerDiasProximoVencimiento(b);
+      
+      // Si alguno no tiene fechas, ponerlo al final dentro de su categoría de estado
+      if (proximoA === null && proximoB === null) return 0;
+      if (proximoA === null) return 1;
+      if (proximoB === null) return -1;
+      
+      // Ordenar por proximidad (menor número de días primero)
+      return proximoA - proximoB;
+    });
+  }
+}
+
+/**
+ * Ordena las campañas según el modo seleccionado y respetando la prioridad de estados
+ */
+private ordenarCampanas(campanas: Campana[], modo: 'hits' | 'fechas'): Campana[] {
+  if (campanas.length === 0) {
+    return []; // No hay campañas para ordenar
+  }
+  
+  if (modo === 'hits') {
+    // Ordenar primero por estado y luego por hits (mayor a menor)
+    return [...campanas].sort((a, b) => {
+      const prioridadA = this.getPrioridadEstado(a.estado);
+      const prioridadB = this.getPrioridadEstado(b.estado);
+      
+      if (prioridadA !== prioridadB) {
+        return prioridadA - prioridadB; // Ordenar primero por prioridad de estado
+      }
+      
+      return b.hits - a.hits; // Luego por hits descendentes
+    });
+  } else {
+    // Ordenar por fecha del entregable más próximo y respetando prioridad de estado
+    return [...campanas].sort((a, b) => {
+      const prioridadA = this.getPrioridadEstado(a.estado);
+      const prioridadB = this.getPrioridadEstado(b.estado);
+      
+      if (prioridadA !== prioridadB) {
+        return prioridadA - prioridadB; // Ordenar primero por prioridad de estado
+      }
+      
+      if (a.diferenciaDiasProximo === undefined && b.diferenciaDiasProximo === undefined) return 0;
+      if (a.diferenciaDiasProximo === undefined) return 1;
+      if (b.diferenciaDiasProximo === undefined) return -1;
+      
+      // Ordenar por proximidad (menor número de días primero)
+      return a.diferenciaDiasProximo - b.diferenciaDiasProximo;
+    });
+  }
+}
+
+/**
+ * Ordena los entregables según el modo seleccionado y respetando la prioridad de estados
+ */
+private ordenarEntregables(entregables: Entregable[], modo: 'hits' | 'fechas'): Entregable[] {
+  if (entregables.length === 0) {
+    return []; // No hay entregables para ordenar
+  }
+  
+  if (modo === 'hits') {
+    // Ordenar primero por estado y luego por hits (mayor a menor)
+    return [...entregables].sort((a, b) => {
+      const prioridadA = this.getPrioridadEstado(a.estado);
+      const prioridadB = this.getPrioridadEstado(b.estado);
+      
+      if (prioridadA !== prioridadB) {
+        return prioridadA - prioridadB; // Ordenar primero por prioridad de estado
+      }
+      
+      return b.hits - a.hits; // Luego por hits descendentes
+    });
+  } else {
+    // Ordenar por fecha de publicación y respetando prioridad de estado
+    return [...entregables].sort((a, b) => {
+      const prioridadA = this.getPrioridadEstado(a.estado);
+      const prioridadB = this.getPrioridadEstado(b.estado);
+      
+      if (prioridadA !== prioridadB) {
+        return prioridadA - prioridadB; // Ordenar primero por prioridad de estado
+      }
+      
+      if (a.diferenciaDias === undefined && b.diferenciaDias === undefined) return 0;
+      if (a.diferenciaDias === undefined) return 1;
+      if (b.diferenciaDias === undefined) return -1;
+      
+      // Ordenar por proximidad (menor número de días primero)
+      return a.diferenciaDias - b.diferenciaDias;
+    });
+  }
+}
+
 }

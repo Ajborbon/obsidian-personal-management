@@ -2936,3 +2936,21 @@
   }
 }
 
+/* Este código debe añadirse a las propiedades de estilo donde se definen las clases para los badges de vencimiento */
+
+/* Estilos para entregables completados o cancelados */
+.vencimiento-badge.completado,
+.dias-badge.completado {
+  background-color: rgba(52, 152, 219, 0.1);
+  color: #3498db;
+  border: 1px solid rgba(52, 152, 219, 0.2);
+}
+
+/* Actualizar estilos para el modo oscuro si es necesario */
+.theme-dark .vencimiento-badge.completado,
+.theme-dark .dias-badge.completado {
+  background-color: rgba(52, 152, 219, 0.15);
+  color: #5dade2;
+  border: 1px solid rgba(52, 152, 219, 0.3);
+}
+
