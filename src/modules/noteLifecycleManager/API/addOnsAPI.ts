@@ -11,15 +11,19 @@
  */
 
 import { TareasInboxComponent } from './components/TareasInboxComponent';
+import { ProyectoCampanasComponent } from './components/ProyectoCampanasComponent';
 import { NavigationUtils } from './utils/NavigationUtils';
 
 export class addOnsAPI {
     private plugin: any;
     private tareasInboxComponent: TareasInboxComponent;
-    
+    // Nuevo componente - asegúrate de que se declare aquí
+    private proyectoCampanasComponent: ProyectoCampanasComponent;
     constructor(plugin: any) {
       this.plugin = plugin;
       this.tareasInboxComponent = new TareasInboxComponent(plugin);
+       // Inicialización del componente - asegúrate de que esta línea existe
+       this.proyectoCampanasComponent = new ProyectoCampanasComponent(plugin); //
     }
   
     crearPrevNext(paginas, pagIndice, dv) {
@@ -4659,4 +4663,17 @@ async mostrarTareasInbox(dv: any): Promise<HTMLElement> {
     return this.tareasInboxComponent.generar(dv);
   }
 
+  
+    /**
+     * Muestra un dashboard de proyectos GTD y sus campañas asociadas
+     * @param dv Objeto dataview para acceder a sus funciones
+     * @param options Opciones de configuración (modo de visualización)
+     * @returns Elemento HTML con el dashboard interactivo
+     */
+    async mostrarDashboardProyectosCampanas(dv: any, options: {
+        modo?: 'hits' | 'fechas',
+        proyectoActualPath?: string
+    } = {}): Promise<HTMLElement> {
+        return this.proyectoCampanasComponent.generar(dv, options);
+    }
   }

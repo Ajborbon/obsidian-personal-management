@@ -2553,3 +2553,386 @@
   font-size: 0.85em;
   color: var(--text-muted);
 }
+
+
+
+/* Clases para bloque dvjs de campañas para proyectos GTD */
+
+/* Estilos para el Dashboard de Proyectos y Campañas */
+
+/* Contenedor principal */
+.proyecto-campanas-container {
+  font-size: 0.95em;
+  width: 100%;
+  margin: 0;
+  padding: 10px 0;
+}
+
+/* Encabezado principal */
+.dashboard-heading {
+  margin-top: 0.5rem;
+  margin-bottom: 1rem;
+  border-bottom: 1px solid var(--background-modifier-border);
+  padding-bottom: 6px;
+  font-weight: 600;
+  font-size: 1.3em;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+/* Controles del dashboard */
+.dashboard-controls {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 1rem;
+  justify-content: center;
+}
+
+.dashboard-btn {
+  background-color: var(--background-secondary-alt);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 6px;
+  padding: 6px 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.dashboard-btn:hover {
+  background-color: var(--background-modifier-hover);
+}
+
+.dashboard-btn.active {
+  background-color: var(--interactive-accent);
+  color: white;
+}
+
+/* Tarjetas de estadísticas */
+.dashboard-stats-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.stats-card {
+  flex: 1;
+  min-width: 120px;
+  background-color: var(--background-secondary);
+  padding: 12px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  transition: all 0.2s ease;
+}
+
+.stats-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.15);
+}
+
+.stats-card-icon {
+  font-size: 1.8em;
+  color: var(--text-normal);
+}
+
+.stats-card-info {
+  flex: 1;
+}
+
+.stats-card-title {
+  font-size: 0.85em;
+  color: var(--text-muted);
+}
+
+.stats-card-value {
+  font-size: 1.2em;
+  font-weight: bold;
+}
+
+/* Contenedor principal de la jerarquía */
+.jerarquia-container {
+  width: 100%;
+}
+
+/* Estilos para proyectos */
+.proyecto-section {
+  background-color: var(--background-secondary);
+  border-radius: 8px;
+  margin-bottom: 15px;
+  overflow: hidden;
+  border: 1px solid var(--background-modifier-border);
+}
+
+.proyecto-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 12px;
+  background-color: var(--background-secondary-alt);
+  cursor: pointer;
+  user-select: none;
+}
+
+.proyecto-header:hover {
+  background-color: var(--background-modifier-hover);
+}
+
+.proyecto-titulo-container {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 500;
+}
+
+.proyecto-icono {
+  font-size: 1.2em;
+}
+
+.proyecto-link {
+  color: var(--text-normal);
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+.proyecto-link:hover {
+  color: var(--text-accent);
+  text-decoration: underline;
+}
+
+.proyecto-metricas {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.campanas-count {
+  color: var(--text-muted);
+  font-size: 0.9em;
+}
+
+.hits-count {
+  background-color: #3498db;
+  color: white;
+  border-radius: 12px;
+  padding: 2px 10px;
+  font-size: 0.85em;
+}
+
+.proyecto-content {
+  padding: 10px 15px;
+}
+
+/* Estilos para campañas */
+.campana-element {
+  background-color: var(--background-primary);
+  border-radius: 6px;
+  margin-bottom: 10px;
+  overflow: hidden;
+  border: 1px solid var(--background-modifier-border);
+}
+
+.campana-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 10px;
+  background-color: var(--background-primary-alt);
+  cursor: pointer;
+  user-select: none;
+}
+
+.campana-header:hover {
+  background-color: var(--background-modifier-hover);
+}
+
+.campana-titulo-container {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.campana-icono {
+  font-size: 1.1em;
+}
+
+.campana-link {
+  color: var(--text-normal);
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+.campana-link:hover {
+  color: var(--text-accent);
+  text-decoration: underline;
+}
+
+.campana-metricas {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.entregables-count {
+  color: var(--text-muted);
+  font-size: 0.85em;
+}
+
+.campana-content {
+  padding: 8px 10px;
+}
+
+/* Tabla de entregables */
+.entregables-tabla {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9em;
+}
+
+.entregables-tabla th {
+  text-align: left;
+  padding: 8px 6px;
+  border-bottom: 1px solid var(--background-modifier-border);
+  font-weight: 500;
+  color: var(--text-muted);
+}
+
+.entregables-tabla td {
+  padding: 6px;
+  border-bottom: 1px solid var(--background-modifier-border-subtle);
+}
+
+.entregables-tabla tr:last-child td {
+  border-bottom: none;
+}
+
+.entregables-tabla tr:hover {
+  background-color: var(--background-modifier-hover);
+}
+
+/* Estados de entregables en la tabla */
+.entregable-row.estado-archivado {
+  opacity: 0.6;
+}
+
+.entregable-link {
+  color: var(--text-normal);
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+.entregable-link:hover {
+  color: var(--text-accent);
+  text-decoration: underline;
+}
+
+/* Badges de estado */
+.estado-badge {
+  font-size: 1.2em;
+  margin-right: 8px;
+}
+
+.estado-badge-small {
+  font-size: 1em;
+}
+
+/* Indicadores de vencimiento */
+.vencimiento-badge {
+  border-radius: 4px;
+  padding: 3px 6px;
+  font-size: 0.85em;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.dias-badge {
+  border-radius: 4px;
+  padding: 2px 5px;
+  font-size: 0.85em;
+}
+
+.vencimiento-badge.vencido,
+.dias-badge.vencido {
+  background-color: rgba(231, 76, 60, 0.2);
+  color: #e74c3c;
+  border: 1px solid rgba(231, 76, 60, 0.3);
+}
+
+.vencimiento-badge.hoy,
+.dias-badge.hoy {
+  background-color: rgba(231, 76, 60, 0.1);
+  color: #e74c3c;
+  border: 1px solid rgba(231, 76, 60, 0.2);
+}
+
+.vencimiento-badge.proximo,
+.dias-badge.proximo {
+  background-color: rgba(243, 156, 18, 0.1);
+  color: #f39c12;
+  border: 1px solid rgba(243, 156, 18, 0.2);
+}
+
+.vencimiento-badge.cercano,
+.dias-badge.cercano {
+  background-color: rgba(46, 204, 113, 0.1);
+  color: #2ecc71;
+  border: 1px solid rgba(46, 204, 113, 0.2);
+}
+
+.vencimiento-badge.futuro,
+.dias-badge.futuro {
+  background-color: rgba(52, 152, 219, 0.1);
+  color: #3498db;
+  border: 1px solid rgba(52, 152, 219, 0.2);
+}
+
+/* Mensajes vacíos */
+.empty-message {
+  color: var(--text-muted);
+  text-align: center;
+  padding: 2rem;
+  font-style: italic;
+}
+
+/* Adaptaciones para modo oscuro */
+.theme-dark .stats-card {
+  background-color: var(--background-secondary-alt);
+}
+
+.theme-dark .proyecto-header {
+  background-color: var(--background-secondary-alt);
+}
+
+.theme-dark .campana-header {
+  background-color: rgba(0, 0, 0, 0.2);
+}
+
+.theme-dark .vencimiento-badge.vencido,
+.theme-dark .dias-badge.vencido {
+  background-color: rgba(231, 76, 60, 0.15);
+}
+
+/* Responsive para pantallas pequeñas */
+@media (max-width: 768px) {
+  .dashboard-stats-container {
+    flex-direction: column;
+  }
+  
+  .stats-card {
+    min-width: 100%;
+  }
+  
+  .proyecto-metricas, 
+  .campana-metricas {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 5px;
+  }
+  
+  .entregables-tabla {
+    font-size: 0.85em;
+  }
+}
+
