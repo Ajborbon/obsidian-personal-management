@@ -1,5 +1,5 @@
 /*
- * Filename: /src/modules/taskNavigator/taskNavigator.ts
+ * Filename: /src/modules/taskExecutionNavigator/taskExecutionNavigator.ts
  * Created Date: 2025-02-26
  * Author: Module Creator
  * -----
@@ -19,7 +19,7 @@ interface TaskInfo {
     displayText: string;    // Texto formateado para mostrar (alias + texto de la tarea)
 }
 
-export class TaskNavigator {
+export class TaskExecutionNavigator {
     private app: App;
     private plugin: Plugin;
 

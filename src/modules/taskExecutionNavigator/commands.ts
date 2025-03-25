@@ -1,5 +1,5 @@
 /*
- * Filename: /src/modules/taskNavigator/commands.ts
+ * Filename: /src/modules/taskExecutionNavigator/commands.ts
  * Created Date: 2025-02-26
  * Author: Module Creator
  * -----
@@ -7,22 +7,22 @@
  */
 
 import { Plugin, Notice, Editor, MarkdownView } from "obsidian";
-import { TaskNavigator } from "./taskNavigator";
+import { TaskExecutionNavigator } from "./taskExecutionNavigator";
 
 /**
- * Registra los comandos relacionados con la navegación de tareas
+ * Registra los comandos relacionados con la navegación de tareas en ejecución
  * @param plugin Instancia del plugin
  */
 export function registerCommands(plugin: Plugin): void {
-    const taskNavigator = new TaskNavigator(plugin);
+    const taskExecutionNavigator = new TaskExecutionNavigator(plugin);
     
     // Comando principal para navegar a tareas
     const navigatorCommand = plugin.addCommand({
-        id: "navigate-to-tasks",
+        id: "navigate-to-execution-tasks",
         name: "Navegar a tareas en ejecución",
         callback: async () => {
             try {
-                await taskNavigator.navigateToTask();
+                await taskExecutionNavigator.navigateToTask();
             } catch (error) {
                 console.error("Error al navegar a la tarea:", error);
                 new Notice("No se pudo navegar a la tarea seleccionada.");
@@ -31,10 +31,10 @@ export function registerCommands(plugin: Plugin): void {
     });
 
     // Almacenar el ID del comando en el plugin para poder desactivarlo después
-    if (!plugin.registeredTaskNavigatorIDs) {
-        plugin.registeredTaskNavigatorIDs = [];
+    if (!plugin.registeredTaskExecutionNavigatorIDs) {
+        plugin.registeredTaskExecutionNavigatorIDs = [];
     }
-    plugin.registeredTaskNavigatorIDs.push(navigatorCommand.id);
+    plugin.registeredTaskExecutionNavigatorIDs.push(navigatorCommand.id);
 }
 
 /**
@@ -42,9 +42,9 @@ export function registerCommands(plugin: Plugin): void {
  * @param plugin Instancia del plugin
  */
 export function deactivateCommands(plugin: Plugin): void {
-    if (!plugin.registeredTaskNavigatorIDs) return;
+    if (!plugin.registeredTaskExecutionNavigatorIDs) return;
     
-    plugin.registeredTaskNavigatorIDs.forEach(commandId => {
+    plugin.registeredTaskExecutionNavigatorIDs.forEach(commandId => {
         const command = plugin.app.commands.commands[commandId];
         
         if (command) {
@@ -54,5 +54,5 @@ export function deactivateCommands(plugin: Plugin): void {
     });
     
     // Limpia el array de IDs registrados
-    plugin.registeredTaskNavigatorIDs = [];
+    plugin.registeredTaskExecutionNavigatorIDs = [];
 }

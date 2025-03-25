@@ -8,7 +8,7 @@ export interface PluginMainSettings {
     moduloTabTitle: boolean,  // Modulo de cambio de titulo de las pestañas.
     moduloTaskManager: boolean;
     moduloDataviewQueries: boolean;
-    taskNavigatorModule: boolean;
+    taskExecutionNavigatorModule: boolean;
     // Archivos de campos
     file_camposCentral: string,
 

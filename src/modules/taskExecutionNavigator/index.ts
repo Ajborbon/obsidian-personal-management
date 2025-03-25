@@ -1,5 +1,5 @@
 /*
- * Filename: /src/modules/taskNavigator/index.ts
+ * Filename: /src/modules/taskExecutionNavigator/index.ts
  * Created Date: 2025-02-26
  * Author: Module Creator
  * -----
@@ -9,7 +9,7 @@
 import { Plugin } from "obsidian";
 import { registerCommands, deactivateCommands } from "./commands";
 
-export class TaskNavigatorModule {
+export class TaskExecutionNavigatorModule {
     plugin: Plugin;
 
     constructor(plugin: Plugin) {
