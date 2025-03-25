@@ -7,94 +7,122 @@ import { Task, TaskPriority, LineInfo } from '../models/Task';
  * Servicio para analizar y extraer tareas de archivos markdown
  */
 export class TaskParser {
-    /**
-     * Extrae todas las tareas de un archivo
-     */
-    async extractTasksFromFile(file: TFile): Promise<Task[]> {
-        try {
-            // Leer el contenido del archivo
-            const content = await this.readFile(file);
+
+    // Modificar TaskParser.ts para añadir mensajes de depuración
+
+/**
+ * Extrae todas las tareas de un archivo
+ */
+async extractTasksFromFile(file: TFile): Promise<Task[]> {
+    console.log(`[TaskNavigator] Extrayendo tareas de archivo: ${file.path}`);
+    try {
+        // Leer el contenido del archivo
+        const content = await this.readFile(file);
+        console.log(`[TaskNavigator] Contenido leído: ${content.length} caracteres`);
+        
+        // Dividir el contenido en líneas
+        const lines = content.split('\n');
+        console.log(`[TaskNavigator] Líneas en el archivo: ${lines.length}`);
+        
+        // Array para almacenar las tareas encontradas
+        const tasks: Task[] = [];
+        
+        // Tareas para depuración
+        let taskLinesFound = 0;
+        
+        // Procesar cada línea
+        for (let i = 0; i < lines.length; i++) {
+            const line = lines[i];
+            const lineNumber = i + 1;
             
-            // Dividir el contenido en líneas
-            const lines = content.split('\n');
-            
-            // Array para almacenar las tareas encontradas
-            const tasks: Task[] = [];
-            
-            // Procesar cada línea
-            for (let i = 0; i < lines.length; i++) {
-                const line = lines[i];
-                const lineNumber = i + 1;
+            // Comprobar si la línea contiene una tarea
+            if (line.trim().startsWith('- [')) {
+                taskLinesFound++;
+                console.log(`[TaskNavigator] Línea potencial de tarea encontrada: ${line}`);
                 
-                // Comprobar si la línea contiene una tarea
                 const task = this.parseTaskLine(line, lineNumber, file);
                 if (task) {
                     tasks.push(task);
+                    console.log(`[TaskNavigator] Tarea válida extraída: "${task.text}", completada: ${task.completed}`);
+                } else {
+                    console.log(`[TaskNavigator] La línea no es una tarea válida: ${line}`);
                 }
             }
-            
-            return tasks;
-        } catch (error) {
-            console.error(`Error al extraer tareas del archivo ${file.path}:`, error);
-            return [];
         }
+        
+        console.log(`[TaskNavigator] Extracción completada: ${tasks.length} tareas extraídas de ${taskLinesFound} líneas potenciales`);
+        return tasks;
+    } catch (error) {
+        console.error(`[TaskNavigator] Error al extraer tareas del archivo ${file.path}:`, error);
+        return [];
+    }
+}
+
+/**
+ * Lee el contenido de un archivo
+ */
+private async readFile(file: TFile): Promise<string> {
+    try {
+        return await app.vault.read(file);
+    } catch (error) {
+        console.error(`[TaskNavigator] Error al leer el archivo ${file.path}:`, error);
+        throw error;
+    }
+}
+
+/**
+ * Analiza una línea para determinar si contiene una tarea
+ */
+private parseTaskLine(line: string, lineNumber: number, file: TFile): Task | null {
+    // Regex para detectar tareas de Obsidian
+    // Captura grupos para: indentación, estado (completado o no), texto de la tarea
+    const taskRegex = /^(\s*)-\s*\[([ xX/])\]\s*(.+)$/;
+    const match = line.match(taskRegex);
+    
+    if (!match) {
+        console.log(`[TaskNavigator] La línea ${lineNumber} no coincide con el patrón de tarea`);
+        return null; // No es una tarea
     }
     
-    /**
-     * Lee el contenido de un archivo
-     */
-    private async readFile(file: TFile): Promise<string> {
-        try {
-            return await app.vault.read(file);
-        } catch (error) {
-            console.error(`Error al leer el archivo ${file.path}:`, error);
-            throw error;
-        }
-    }
+    // Extraer componentes de la tarea
+    const indentation = match[1].length;
+    const isCompleted = match[2] !== ' '; // Cualquier cosa excepto espacio indica completada
+    const taskText = match[3];
     
-    /**
-     * Analiza una línea para determinar si contiene una tarea
-     */
-    private parseTaskLine(line: string, lineNumber: number, file: TFile): Task | null {
-        // Regex para detectar tareas de Obsidian
-        // Captura grupos para: indentación, estado (completado o no), texto de la tarea
-        const taskRegex = /^(\s*)-\s*\[([ xX/])\]\s*(.+)$/;
-        const match = line.match(taskRegex);
-        
-        if (!match) {
-            return null; // No es una tarea
-        }
-        
-        // Extraer componentes de la tarea
-        const indentation = match[1].length;
-        const isCompleted = match[2] !== ' '; // Cualquier cosa excepto espacio indica completada
-        const taskText = match[3];
-        
-        // Crear información de línea
-        const lineInfo: LineInfo = {
-            number: lineNumber,
-            text: line,
-            indentation: indentation
-        };
-        
-        // Generar un ID único para la tarea (o extraerlo del texto)
-        const taskId = this.extractTaskId(taskText) || this.generateTaskId(file.basename, lineNumber);
-        
-        // Crear la tarea básica
-        const task = new Task(
-            taskId,
-            this.cleanTaskText(taskText),
-            taskText,
-            isCompleted,
-            file,
-            lineInfo
-        );
-        
-        // Extraer metadatos adicionales
-        this.extractTaskMetadata(task);
-        
-        return task;
-    }
+    console.log(`[TaskNavigator] Tarea encontrada en línea ${lineNumber}:`);
+    console.log(`  - Indentación: ${indentation}`);
+    console.log(`  - Estado: ${isCompleted ? 'Completada' : 'Pendiente'}`);
+    console.log(`  - Texto: ${taskText}`);
+    
+    // Crear información de línea
+    const lineInfo: LineInfo = {
+        number: lineNumber,
+        text: line,
+        indentation: indentation
+    };
+    
+    // Generar un ID único para la tarea (o extraerlo del texto)
+    const taskId = this.extractTaskId(taskText) || this.generateTaskId(file.basename, lineNumber);
+    console.log(`[TaskNavigator] ID de tarea: ${taskId}`);
+    
+    // Crear la tarea básica
+    const task = new Task(
+        taskId,
+        this.cleanTaskText(taskText),
+        taskText,
+        isCompleted,
+        file,
+        lineInfo
+    );
+    
+    // Extraer metadatos adicionales
+    this.extractTaskMetadata(task);
+    
+    return task;
+}
+
+    
+
     
     /**
      * Limpia el texto de la tarea eliminando metadatos y tags

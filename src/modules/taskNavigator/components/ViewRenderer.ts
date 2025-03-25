@@ -19,19 +19,63 @@ export class ViewRenderer {
     /**
      * Renderiza la vista completa del navegador de tareas
      */
-    render(containerEl: HTMLElement, model: HierarchyViewModel, filterPanel: FilterPanel): void {
-        // Limpiar el contenedor
-        containerEl.empty();
-        containerEl.addClass('task-navigator-container');
+// Modificar el método render de ViewRenderer para añadir manejo de eventos
+
+/**
+ * Renderiza la vista completa del navegador de tareas
+ */
+render(containerEl: HTMLElement, model: HierarchyViewModel, filterPanel: FilterPanel): void {
+    // Limpiar el contenedor
+    containerEl.empty();
+    containerEl.addClass('task-navigator-container');
+    
+    // Crear la estructura principal
+    const header = this.createHeader(containerEl, model);
+    const viewOptions = this.createViewOptions(containerEl, model);
+    const contentContainer = containerEl.createDiv({ cls: 'task-navigator-content' });
+    
+    // Renderizar el panel de filtros
+    const filterContainer = containerEl.createDiv({ cls: 'task-navigator-filter-container' });
+    filterPanel.render(filterContainer);
+    
+    // Añadir listener para el evento de restablecer filtros
+    containerEl.addEventListener('task-navigator-reset-filters', () => {
+        console.log("[TaskNavigator] Evento de restablecer filtros recibido");
         
-        // Crear la estructura principal
-        const header = this.createHeader(containerEl, model);
-        const viewOptions = this.createViewOptions(containerEl, model);
-        const contentContainer = containerEl.createDiv({ cls: 'task-navigator-content' });
+        // Configurar filtros para mostrar todo
+        const resetFilters = {
+            showCompleted: true,        // Mostrar tareas completadas
+            showActive: true,           // Mostrar entidades activas
+            showPaused: true,           // Mostrar entidades pausadas
+            showStopped: true,          // Mostrar entidades detenidas
+            showArchived: true,         // Mostrar entidades archivadas
+            
+            showAreasVida: true,        // Mostrar Áreas de Vida
+            showAreasInteres: true,     // Mostrar Áreas de Interés 
+            showProyectosQ: true,       // Mostrar Proyectos Q
+            showProyectosGTD: true,     // Mostrar Proyectos GTD
+            showOtherEntities: true,    // Mostrar otras entidades
+            
+            contexts: [],               // Sin filtro de contextos específicos
+            people: [],                 // Sin filtro de personas específicas
+            
+            enabledLists: Object.values(TaskListType), // Todas las listas GTD
+            
+            searchText: '',             // Sin texto de búsqueda
+            daysRange: 30               // Mayor rango de días
+        };
         
-        // Renderizar el panel de filtros
-        const filterContainer = containerEl.createDiv({ cls: 'task-navigator-filter-container' });
-        filterPanel.render(filterContainer);
+        // Disparar evento para que el panel de filtros actualice su UI
+        containerEl.dispatchEvent(new CustomEvent('task-navigator-update-filters', {
+            detail: { filters: resetFilters }
+        }));
+        
+        // Actualizar modelo con los filtros restablecidos
+        model.filters = resetFilters;
+        model.applyFilters(resetFilters);
+        
+        // Volver a renderizar el contenido
+        contentContainer.empty();
         
         // Renderizar el contenido según el modo de visualización
         switch (model.viewMode) {
@@ -45,7 +89,21 @@ export class ViewRenderer {
                 this.renderCombinedView(contentContainer, model);
                 break;
         }
+    });
+    
+    // Renderizar el contenido según el modo de visualización
+    switch (model.viewMode) {
+        case ViewMode.HIERARCHY:
+            this.renderHierarchyView(contentContainer, model);
+            break;
+        case ViewMode.GTD_LISTS:
+            this.renderGTDListsView(contentContainer, model);
+            break;
+        case ViewMode.COMBINED:
+            this.renderCombinedView(contentContainer, model);
+            break;
     }
+}
     
     /**
      * Crea el encabezado de la vista
@@ -155,12 +213,15 @@ export class ViewRenderer {
         // Contenedor para el árbol jerárquico
         const hierarchyTree = containerEl.createDiv({ cls: 'hierarchy-tree-container' });
         
-        // Si no hay entidades filtradas, mostrar mensaje
+        // Si no hay entidades filtradas, mostrar mensaje y diagnóstico
         if (model.filteredEntities.length === 0) {
             hierarchyTree.createEl('div', {
                 cls: 'hierarchy-tree-empty',
                 text: 'No hay entidades que coincidan con los filtros aplicados.'
             });
+            
+            // Añadir diagnóstico para ayudar a identificar el problema
+            this.renderDiagnosticInfo(hierarchyTree, model);
             return;
         }
         
@@ -171,16 +232,38 @@ export class ViewRenderer {
     /**
      * Renderiza la vista de listas GTD
      */
+
     private renderGTDListsView(containerEl: HTMLElement, model: HierarchyViewModel): void {
         // Contenedor para las listas GTD
         const gtdListsContainer = containerEl.createDiv({ cls: 'gtd-lists-container' });
         
-        // Si no hay listas habilitadas, mostrar mensaje
+        // Si no hay listas habilitadas, mostrar mensaje y diagnóstico
         if (model.filters.enabledLists.length === 0) {
             gtdListsContainer.createEl('div', {
                 cls: 'gtd-lists-empty',
                 text: 'No hay listas GTD habilitadas en los filtros.'
             });
+            
+            // Añadir diagnóstico para ayudar a identificar el problema
+            this.renderDiagnosticInfo(gtdListsContainer, model);
+            return;
+        }
+        
+        // Verificar si hay tareas en alguna lista
+        let totalTasksInLists = 0;
+        model.filters.enabledLists.forEach(listType => {
+            totalTasksInLists += model.filteredTasks.get(listType)?.length || 0;
+        });
+        
+        // Si no hay tareas en ninguna lista habilitada, mostrar mensaje y diagnóstico
+        if (totalTasksInLists === 0) {
+            gtdListsContainer.createEl('div', {
+                cls: 'gtd-lists-empty',
+                text: 'No hay tareas que coincidan con los filtros aplicados.'
+            });
+            
+            // Añadir diagnóstico para ayudar a identificar el problema
+            this.renderDiagnosticInfo(gtdListsContainer, model);
             return;
         }
         
@@ -862,4 +945,100 @@ export class ViewRenderer {
                 return '';
         }
     }
+
+    // Añadir este método a la clase ViewRenderer para mostrar información de diagnóstico
+
+/**
+ * Muestra un mensaje de diagnóstico cuando no hay entidades o tareas
+ */
+private renderDiagnosticInfo(containerEl: HTMLElement, model: HierarchyViewModel): void {
+    const diagnosticEl = containerEl.createEl('div', { cls: 'task-navigator-diagnostic' });
+    
+    // Título
+    diagnosticEl.createEl('h3', { text: 'Información de diagnóstico', cls: 'diagnostic-title' });
+    
+    // Información general
+    const infoSection = diagnosticEl.createEl('div', { cls: 'diagnostic-section' });
+    infoSection.createEl('h4', { text: 'Datos generales' });
+    
+    const infoList = infoSection.createEl('ul');
+    infoList.createEl('li', { text: `Total de entidades: ${model.allEntities.length}` });
+    infoList.createEl('li', { text: `Entidades filtradas: ${model.filteredEntities.length}` });
+    infoList.createEl('li', { text: `Total de tareas: ${model.allTasks.length}` });
+    
+    // Filtros activos
+    const filtersSection = diagnosticEl.createEl('div', { cls: 'diagnostic-section' });
+    filtersSection.createEl('h4', { text: 'Filtros activos' });
+    
+    const filtersList = filtersSection.createEl('ul');
+    
+    // Estados
+    let statesText = 'Estados: ';
+    if (model.filters.showActive) statesText += '🟢 ';
+    if (model.filters.showPaused) statesText += '🟡 ';
+    if (model.filters.showStopped) statesText += '🔴 ';
+    if (model.filters.showArchived) statesText += '🔵 ';
+    filtersList.createEl('li', { text: statesText });
+    
+    // Tipos
+    let typesText = 'Tipos: ';
+    if (model.filters.showAreasVida) typesText += 'Áreas de Vida, ';
+    if (model.filters.showAreasInteres) typesText += 'Áreas de Interés, ';
+    if (model.filters.showProyectosQ) typesText += 'Proyectos Q, ';
+    if (model.filters.showProyectosGTD) typesText += 'Proyectos GTD, ';
+    if (model.filters.showOtherEntities) typesText += 'Otras entidades, ';
+    typesText = typesText.endsWith(', ') ? typesText.slice(0, -2) : typesText;
+    filtersList.createEl('li', { text: typesText });
+    
+    // Texto de búsqueda
+    if (model.filters.searchText) {
+        filtersList.createEl('li', { text: `Texto de búsqueda: "${model.filters.searchText}"` });
+    }
+    
+    // Contextos filtrados
+    if (model.filters.contexts.length > 0) {
+        filtersList.createEl('li', { text: `Contextos: ${model.filters.contexts.join(', ')}` });
+    }
+    
+    // Personas filtradas
+    if (model.filters.people.length > 0) {
+        filtersList.createEl('li', { text: `Personas: ${model.filters.people.join(', ')}` });
+    }
+    
+    // Entidad focal
+    if (model.focusEntity) {
+        const focusSection = diagnosticEl.createEl('div', { cls: 'diagnostic-section' });
+        focusSection.createEl('h4', { text: 'Entidad focal' });
+        
+        const focusList = focusSection.createEl('ul');
+        focusList.createEl('li', { text: `Título: ${model.focusEntity.title}` });
+        focusList.createEl('li', { text: `Tipo: ${model.focusEntity.type}` });
+        focusList.createEl('li', { text: `Estado: ${model.focusEntity.state}` });
+        focusList.createEl('li', { text: `Archivo: ${model.focusEntity.file.path}` });
+        focusList.createEl('li', { text: `Tareas directas: ${model.focusEntity.tasks.length}` });
+    }
+    
+    // Sugerencias
+    const suggestionsSection = diagnosticEl.createEl('div', { cls: 'diagnostic-section' });
+    suggestionsSection.createEl('h4', { text: 'Sugerencias' });
+    
+    const suggestionsList = suggestionsSection.createEl('ul');
+    suggestionsList.createEl('li', { text: 'Verifica que las tareas estén en formato correcto: "- [ ] Texto de la tarea"' });
+    suggestionsList.createEl('li', { text: 'Asegúrate de que el archivo tenga las propiedades frontmatter correctas (type, estado, etc.)' });
+    suggestionsList.createEl('li', { text: 'Revisa si hay filtros aplicados que puedan estar ocultando las tareas' });
+    suggestionsList.createEl('li', { text: 'Prueba a abrir el navegador desde una nota que sepas que contiene tareas' });
+    
+    // Botón para mostrar todas las entidades y tareas
+    const actionSection = diagnosticEl.createEl('div', { cls: 'diagnostic-actions' });
+    
+    const resetFiltersButton = actionSection.createEl('button', {
+        text: 'Mostrar todo (quitar filtros)',
+        cls: 'task-navigator-refresh-button'
+    });
+    
+    resetFiltersButton.addEventListener('click', () => {
+        // Evento personalizado para resetear filtros
+        containerEl.dispatchEvent(new CustomEvent('task-navigator-reset-filters'));
+    });
+}
 }

@@ -21,63 +21,140 @@ export class TaskHierarchyBuilder {
         this.taskParser = new TaskParser();
     }
     
-    /**
-     * Construye la jerarquía completa de entidades y tareas
-     * @param focusEntity Entidad en la que centrar la jerarquía (opcional)
-     */
-    async buildHierarchy(focusEntity: IEntity | null = null): Promise<HierarchyViewModel> {
-        const model = new HierarchyViewModel();
+
+    // Modificar TaskHierarchyBuilder.ts para añadir mensajes de depuración
+
+/**
+ * Construye la jerarquía completa de entidades y tareas
+ * @param focusEntity Entidad en la que centrar la jerarquía (opcional)
+ */
+async buildHierarchy(focusEntity: IEntity | null = null): Promise<HierarchyViewModel> {
+    const model = new HierarchyViewModel();
+    console.log("[TaskNavigator] Iniciando construcción de jerarquía", focusEntity ? `con foco en ${focusEntity.title}` : "sin entidad focal");
+    
+    try {
+        // Si se proporciona una entidad de enfoque, establecerla
+        model.focusEntity = focusEntity;
         
+        // Paso 1: Recopilar todas las entidades relevantes
+        console.log("[TaskNavigator] Recopilando entidades");
+        const entities = await this.collectAllEntities();
+        console.log(`[TaskNavigator] Recopiladas ${entities.length} entidades`);
+        model.allEntities = entities;
+        
+        // Registrar los tipos de entidades encontradas para depuración
+        const entityTypeCount = {};
+        entities.forEach(entity => {
+            entityTypeCount[entity.type] = (entityTypeCount[entity.type] || 0) + 1;
+        });
+        console.log("[TaskNavigator] Distribución de tipos de entidades:", entityTypeCount);
+        
+        // Paso 2: Construir las relaciones entre entidades
+        console.log("[TaskNavigator] Construyendo relaciones entre entidades");
+        this.buildEntityRelationships(entities);
+        
+        // Paso 3: Determinar las entidades raíz según la entidad de enfoque
+        console.log("[TaskNavigator] Determinando entidades raíz");
+        model.rootEntities = this.determineRootEntities(entities, focusEntity);
+        console.log(`[TaskNavigator] Determinadas ${model.rootEntities.length} entidades raíz`);
+        
+        // Paso 4: Extraer y asignar tareas a cada entidad
+        console.log("[TaskNavigator] Extrayendo y asignando tareas");
+        await this.extractAndAssignTasks(entities);
+        
+        // Contar tareas totales para depuración
+        let totalTasks = 0;
+        entities.forEach(entity => {
+            totalTasks += entity.tasks.length;
+            console.log(`[TaskNavigator] Entidad ${entity.title} (${entity.type}): ${entity.tasks.length} tareas`);
+        });
+        console.log(`[TaskNavigator] Total de tareas encontradas: ${totalTasks}`);
+        
+        return model;
+    } catch (error) {
+        console.error("[TaskNavigator] Error al construir la jerarquía:", error);
+        throw error;
+    }
+}
+
+/**
+ * Recopila todas las entidades del sistema
+ */
+private async collectAllEntities(): Promise<IEntity[]> {
+    const entities: IEntity[] = [];
+    
+    // Obtener todos los archivos de markdown
+    const files = this.plugin.app.vault.getMarkdownFiles();
+    console.log(`[TaskNavigator] Analizando ${files.length} archivos markdown`);
+    
+    // Procesar cada archivo
+    let processedCount = 0;
+    let entityCount = 0;
+    let errorCount = 0;
+    
+    for (const file of files) {
         try {
-            // Si se proporciona una entidad de enfoque, establecerla
-            model.focusEntity = focusEntity;
+            // Detectar entidad del archivo
+            const entity = await this.entityDetector.detectEntityFromFile(file);
+            processedCount++;
             
-            // Paso 1: Recopilar todas las entidades relevantes
-            const entities = await this.collectAllEntities();
-            model.allEntities = entities;
-            
-            // Paso 2: Construir las relaciones entre entidades
-            this.buildEntityRelationships(entities);
-            
-            // Paso 3: Determinar las entidades raíz según la entidad de enfoque
-            model.rootEntities = this.determineRootEntities(entities, focusEntity);
-            
-            // Paso 4: Extraer y asignar tareas a cada entidad
-            await this.extractAndAssignTasks(entities);
-            
-            return model;
+            if (entity) {
+                entities.push(entity);
+                entityCount++;
+                
+                if (entityCount % 50 === 0 || processedCount === files.length) {
+                    console.log(`[TaskNavigator] Progreso: ${processedCount}/${files.length} archivos procesados, ${entityCount} entidades encontradas`);
+                }
+            }
         } catch (error) {
-            console.error("Error al construir la jerarquía:", error);
-            throw error;
+            errorCount++;
+            console.error(`[TaskNavigator] Error al procesar archivo ${file.path}:`, error);
+            // Continuar con el siguiente archivo
         }
     }
     
-    /**
-     * Recopila todas las entidades del sistema
-     */
-    private async collectAllEntities(): Promise<IEntity[]> {
-        const entities: IEntity[] = [];
-        
-        // Obtener todos los archivos de markdown
-        const files = this.plugin.app.vault.getMarkdownFiles();
-        
-        // Procesar cada archivo
-        for (const file of files) {
-            try {
-                // Detectar entidad del archivo
-                const entity = await this.entityDetector.detectEntityFromFile(file);
+    console.log(`[TaskNavigator] Análisis completado: ${processedCount} archivos procesados, ${entityCount} entidades encontradas, ${errorCount} errores`);
+    return entities;
+}
+
+/**
+ * Extrae y asigna tareas a cada entidad
+ */
+private async extractAndAssignTasks(entities: IEntity[]): Promise<void> {
+    let totalTasksFound = 0;
+    let entitiesWithTasks = 0;
+    
+    for (const entity of entities) {
+        try {
+            // Extraer tareas del archivo de la entidad
+            console.log(`[TaskNavigator] Extrayendo tareas de ${entity.file.path}`);
+            const tasks = await this.taskParser.extractTasksFromFile(entity.file);
+            
+            if (tasks.length > 0) {
+                entitiesWithTasks++;
+                console.log(`[TaskNavigator] Se encontraron ${tasks.length} tareas en ${entity.file.path}`);
                 
-                if (entity) {
-                    entities.push(entity);
+                // Log de muestra para las primeras tareas
+                if (tasks.length > 0) {
+                    console.log(`[TaskNavigator] Ejemplo de tarea: "${tasks[0].text}" (completada: ${tasks[0].completed})`);
                 }
-            } catch (error) {
-                console.error(`Error al procesar archivo ${file.path}:`, error);
-                // Continuar con el siguiente archivo
             }
+            
+            totalTasksFound += tasks.length;
+            
+            // Asignar cada tarea a la entidad
+            for (const task of tasks) {
+                entity.addTask(task);
+            }
+        } catch (error) {
+            console.error(`[TaskNavigator] Error al extraer tareas para ${entity.file.path}:`, error);
+            // Continuar con la siguiente entidad
         }
-        
-        return entities;
     }
+    
+    console.log(`[TaskNavigator] Extracción de tareas completada: ${totalTasksFound} tareas encontradas en ${entitiesWithTasks} entidades`);
+}
+
     
     /**
      * Construye las relaciones entre entidades
@@ -247,25 +324,7 @@ export class TaskHierarchyBuilder {
         return rootEntities;
     }
     
-    /**
-     * Extrae y asigna tareas a cada entidad
-     */
-    private async extractAndAssignTasks(entities: IEntity[]): Promise<void> {
-        for (const entity of entities) {
-            try {
-                // Extraer tareas del archivo de la entidad
-                const tasks = await this.taskParser.extractTasksFromFile(entity.file);
-                
-                // Asignar cada tarea a la entidad
-                for (const task of tasks) {
-                    entity.addTask(task);
-                }
-            } catch (error) {
-                console.error(`Error al extraer tareas para ${entity.file.path}:`, error);
-                // Continuar con la siguiente entidad
-            }
-        }
-    }
+
 }
 
 // DEVELOPMENT_CHECKPOINT: "hierarchy_builder"

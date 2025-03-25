@@ -95,6 +95,23 @@ export class FilterPanel {
             cls: 'filter-reset-button'
         });
         resetButton.addEventListener('click', () => this.resetFilters());
+
+
+        // Añadir escucha para el evento de actualización de filtros
+        container.addEventListener('task-navigator-update-filters', (event: CustomEvent) => {
+        console.log("[TaskNavigator] Evento de actualización de filtros recibido", event.detail);
+        
+        if (event.detail?.filters) {
+            // Actualizar filtros con los valores nuevos
+            this.currentFilters = { ...this.currentFilters, ...event.detail.filters };
+            
+            // Actualizar la UI para reflejar los nuevos filtros
+            this.updateUI();
+            
+            // Aplicar los filtros
+            this.applyFilters();
+        }
+    });
     }
     
     /**

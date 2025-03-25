@@ -105,6 +105,14 @@ export class TaskNavigatorModule {
                 document.dispatchEvent(new CustomEvent('task-navigator-show-overdue'));
             }
         });
+
+        // Comando para depuración (solo en modo de desarrollo)
+        this.plugin.addCommand({
+            id: 'debug-task-navigator',
+            name: 'Depurar Navegador de Tareas GTD',
+            callback: () => this.debugTaskNavigator()
+        });
+
     }
     
  /**
@@ -183,6 +191,83 @@ async openTaskNavigatorView(): Promise<void> {
             workspace.revealLeaf(leaf);
         }
     
+/**
+ * Método de depuración para el navegador de tareas
+ * Muestra información detallada en la consola
+ */
+private async debugTaskNavigator(): Promise<void> {
+    console.log("=====================================================");
+    console.log("[TaskNavigator] INICIANDO DEPURACIÓN MANUAL");
+    console.log("=====================================================");
+    
+    // Verificar si la vista está abierta
+    const workspace = this.plugin.app.workspace;
+    const existingLeaves = workspace.getLeavesOfType(this.VIEW_TYPE);
+    
+    if (existingLeaves.length > 0) {
+        console.log("[TaskNavigator] Vista encontrada, accediendo al modelo...");
+        
+        // Acceder a la vista para obtener el modelo
+        const view = existingLeaves[0].view as any; // Usar 'any' para acceder a propiedades
+        
+        if (view && view.currentModel) {
+            console.log("[TaskNavigator] Modelo encontrado, volcando información...");
+            
+            // Importamos dinámicamente la utilidad de depuración
+            // Esto evita tener que importarla en la clase principal
+            const { DebugUtils } = require('./utils/DebugUtils');
+            DebugUtils.dumpModelInfo(view.currentModel);
+            
+            // Mostrar mensaje en la interfaz
+            new Notice("Información de depuración volcada a la consola");
+        } else {
+            console.log("[TaskNavigator] No se encontró un modelo válido en la vista");
+            new Notice("No se encontró un modelo válido para depurar");
+        }
+    } else {
+        console.log("[TaskNavigator] No hay ninguna vista de navegador abierta");
+        
+        // Si no hay vista abierta, podemos abrir una con propósito de depuración
+        const shouldOpen = await new Promise(resolve => {
+            const notice = new Notice(
+                "No hay ninguna vista de navegador abierta. ¿Deseas abrir una?",
+                0 // 0 significa que no se cierra automáticamente
+            );
+            
+            // Añadir botones a la notificación
+            const buttonYes = createEl("button", {text: "Sí"});
+            const buttonNo = createEl("button", {text: "No"});
+            
+            buttonYes.addEventListener("click", () => {
+                resolve(true);
+                notice.hide();
+            });
+            
+            buttonNo.addEventListener("click", () => {
+                resolve(false);
+                notice.hide();
+            });
+            
+            // @ts-ignore - Añadir botones a la notificación
+            notice.noticeEl.appendChild(buttonYes);
+            // @ts-ignore
+            notice.noticeEl.appendChild(buttonNo);
+        });
+        
+        if (shouldOpen) {
+            console.log("[TaskNavigator] Abriendo vista para depuración");
+            await this.openTaskNavigatorView();
+            
+            // Esperar un momento para que se cargue la vista
+            setTimeout(() => {
+                this.debugTaskNavigator(); // Llamada recursiva después de abrir
+            }, 2000);
+        }
+    }
+}
+
+
+
     /**
      * Proporciona el constructor de jerarquía a otros componentes
      */
