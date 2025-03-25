@@ -107,47 +107,81 @@ export class TaskNavigatorModule {
         });
     }
     
-    /**
-     * Abre la vista del navegador de tareas
-     */
-    async openTaskNavigatorView(): Promise<void> {
-        const workspace = this.plugin.app.workspace;
-        
-        // Verificar si la vista ya está abierta
-        const existingLeaves = workspace.getLeavesOfType(this.VIEW_TYPE);
-        if (existingLeaves.length > 0) {
-            // Si ya está abierta, revelarla
-            workspace.revealLeaf(existingLeaves[0]);
-            return;
-        }
-        
-        // Si no está abierta, crear una nueva hoja
-        const leaf = workspace.getRightLeaf(false);
-        await leaf.setViewState({
-            type: this.VIEW_TYPE,
-            active: true
-        });
-        
-        workspace.revealLeaf(leaf);
+ /**
+ * Abre la vista del navegador de tareas como una pestaña nueva
+ */
+async openTaskNavigatorView(): Promise<void> {
+    const workspace = this.plugin.app.workspace;
+    
+    // Verificar si la vista ya está abierta
+    const existingLeaves = workspace.getLeavesOfType(this.VIEW_TYPE);
+    if (existingLeaves.length > 0) {
+        // Si ya está abierta, revelarla
+        workspace.revealLeaf(existingLeaves[0]);
+        return;
     }
     
-    /**
-     * Abre la vista del navegador centrada en la nota actual
-     */
-    async openTaskNavigatorWithCurrentNote(): Promise<void> {
-        // Primero abrimos la vista
-        await this.openTaskNavigatorView();
-        
-        // Obtenemos la nota actual
-        const currentFile = this.plugin.app.workspace.getActiveFile();
-        
-        if (currentFile) {
-            // Emitimos un evento personalizado para que la vista se centre en esta nota
-            document.dispatchEvent(new CustomEvent('task-navigator-focus-entity', {
-                detail: { filePath: currentFile.path }
-            }));
+    // Guardar la nota activa actual para mantener el contexto
+    const activeFile = workspace.getActiveFile();
+    
+    // Crear una nueva pestaña en el área principal
+    // Usamos createLeafInParent para crear una pestaña en el área principal
+    const leaf = workspace.getLeaf('tab');
+    
+    // Configurar la nueva pestaña para mostrar nuestra vista
+    await leaf.setViewState({
+        type: this.VIEW_TYPE,
+        active: true,
+        state: {
+            contextFile: activeFile ? activeFile.path : null
         }
-    }
+    });
+    
+    // Revelar la pestaña recién creada
+    workspace.revealLeaf(leaf);
+}
+    
+        /**
+         * Abre la vista del navegador centrada en la nota actual
+         */
+        async openTaskNavigatorWithCurrentNote(): Promise<void> {
+            const workspace = this.plugin.app.workspace;
+            
+            // Obtenemos la nota actual
+            const currentFile = workspace.getActiveFile();
+            
+            if (!currentFile) {
+                // Si no hay nota activa, simplemente abrimos la vista normal
+                await this.openTaskNavigatorView();
+                return;
+            }
+            
+            // Verificar si la vista ya está abierta
+            const existingLeaves = workspace.getLeavesOfType(this.VIEW_TYPE);
+            if (existingLeaves.length > 0) {
+                // Si ya está abierta, actualizamos su contexto
+                workspace.revealLeaf(existingLeaves[0]);
+                document.dispatchEvent(new CustomEvent('task-navigator-focus-entity', {
+                    detail: { filePath: currentFile.path }
+                }));
+                return;
+            }
+            
+            // Si no está abierta, creamos una pestaña nueva con el contexto de la nota actual
+            const leaf = workspace.getLeaf('tab');
+            
+            // Configurar la nueva pestaña para mostrar nuestra vista
+            await leaf.setViewState({
+                type: this.VIEW_TYPE,
+                active: true,
+                state: {
+                    contextFile: currentFile.path
+                }
+            });
+            
+            // Revelar la pestaña recién creada
+            workspace.revealLeaf(leaf);
+        }
     
     /**
      * Proporciona el constructor de jerarquía a otros componentes
