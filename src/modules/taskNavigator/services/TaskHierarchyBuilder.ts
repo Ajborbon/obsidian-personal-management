@@ -30,16 +30,18 @@ export class TaskHierarchyBuilder {
  */
 async buildHierarchy(focusEntity: IEntity | null = null): Promise<HierarchyViewModel> {
     const model = new HierarchyViewModel();
-    console.log("[TaskNavigator] Iniciando construcción de jerarquía", focusEntity ? `con foco en ${focusEntity.title}` : "sin entidad focal");
+    LogHelper.info("HierarchyBuilder", focusEntity ? 
+                  `Iniciando construcción con foco en ${focusEntity.title}` : 
+                  "Iniciando construcción sin entidad focal");
     
     try {
         // Si se proporciona una entidad de enfoque, establecerla
         model.focusEntity = focusEntity;
         
         // Paso 1: Recopilar todas las entidades relevantes
-        console.log("[TaskNavigator] Recopilando entidades");
+        LogHelper.group("HierarchyBuilder", "Recopilación de entidades", true);
         const entities = await this.collectAllEntities();
-        console.log(`[TaskNavigator] Recopiladas ${entities.length} entidades`);
+        LogHelper.info("HierarchyBuilder", `Recopiladas ${entities.length} entidades`);
         model.allEntities = entities;
         
         // Registrar los tipos de entidades encontradas para depuración
@@ -47,32 +49,38 @@ async buildHierarchy(focusEntity: IEntity | null = null): Promise<HierarchyViewM
         entities.forEach(entity => {
             entityTypeCount[entity.type] = (entityTypeCount[entity.type] || 0) + 1;
         });
-        console.log("[TaskNavigator] Distribución de tipos de entidades:", entityTypeCount);
+        LogHelper.debug("HierarchyBuilder", "Distribución de tipos de entidades:", entityTypeCount);
+        LogHelper.groupEnd();
         
         // Paso 2: Construir las relaciones entre entidades
-        console.log("[TaskNavigator] Construyendo relaciones entre entidades");
+        LogHelper.group("HierarchyBuilder", "Construcción de relaciones", true);
         this.buildEntityRelationships(entities);
+        LogHelper.groupEnd();
         
         // Paso 3: Determinar las entidades raíz según la entidad de enfoque
-        console.log("[TaskNavigator] Determinando entidades raíz");
+        LogHelper.info("HierarchyBuilder", "Determinando entidades raíz");
         model.rootEntities = this.determineRootEntities(entities, focusEntity);
-        console.log(`[TaskNavigator] Determinadas ${model.rootEntities.length} entidades raíz`);
+        LogHelper.info("HierarchyBuilder", `Determinadas ${model.rootEntities.length} entidades raíz`);
         
         // Paso 4: Extraer y asignar tareas a cada entidad
-        console.log("[TaskNavigator] Extrayendo y asignando tareas");
+        LogHelper.group("HierarchyBuilder", "Extracción y asignación de tareas", true);
         await this.extractAndAssignTasks(entities);
+        LogHelper.groupEnd();
         
         // Contar tareas totales para depuración
         let totalTasks = 0;
         entities.forEach(entity => {
             totalTasks += entity.tasks.length;
-            console.log(`[TaskNavigator] Entidad ${entity.title} (${entity.type}): ${entity.tasks.length} tareas`);
+            if (entity.tasks.length > 0) {
+                LogHelper.debug("HierarchyBuilder", 
+                    `Entidad ${entity.title} (${entity.type}): ${entity.tasks.length} tareas`);
+            }
         });
-        console.log(`[TaskNavigator] Total de tareas encontradas: ${totalTasks}`);
+        LogHelper.info("HierarchyBuilder", `Total de tareas encontradas: ${totalTasks}`);
         
         return model;
     } catch (error) {
-        console.error("[TaskNavigator] Error al construir la jerarquía:", error);
+        LogHelper.error("HierarchyBuilder", "Error al construir la jerarquía:", error);
         throw error;
     }
 }
@@ -85,35 +93,49 @@ private async collectAllEntities(): Promise<IEntity[]> {
     
     // Obtener todos los archivos de markdown
     const files = this.plugin.app.vault.getMarkdownFiles();
-    console.log(`[TaskNavigator] Analizando ${files.length} archivos markdown`);
+    LogHelper.info("HierarchyBuilder", `Analizando ${files.length} archivos markdown`);
     
     // Procesar cada archivo
     let processedCount = 0;
     let entityCount = 0;
     let errorCount = 0;
     
-    for (const file of files) {
-        try {
-            // Detectar entidad del archivo
-            const entity = await this.entityDetector.detectEntityFromFile(file);
-            processedCount++;
-            
-            if (entity) {
-                entities.push(entity);
-                entityCount++;
+    const batchSize = 100; // Procesar en lotes para reducir el spam de logs
+    for (let i = 0; i < files.length; i += batchSize) {
+        const batchEnd = Math.min(i + batchSize, files.length);
+        LogHelper.debug("HierarchyBuilder", `Procesando lote ${i}-${batchEnd} de ${files.length} archivos`);
+        
+        // Procesar lote actual
+        for (let j = i; j < batchEnd; j++) {
+            const file = files[j];
+            try {
+                // Detectar entidad del archivo
+                const entity = await this.entityDetector.detectEntityFromFile(file);
+                processedCount++;
                 
-                if (entityCount % 50 === 0 || processedCount === files.length) {
-                    console.log(`[TaskNavigator] Progreso: ${processedCount}/${files.length} archivos procesados, ${entityCount} entidades encontradas`);
+                if (entity) {
+                    entities.push(entity);
+                    entityCount++;
                 }
+            } catch (error) {
+                errorCount++;
+                LogHelper.warn("HierarchyBuilder", `Error al procesar archivo ${file.path}:`, error);
             }
-        } catch (error) {
-            errorCount++;
-            console.error(`[TaskNavigator] Error al procesar archivo ${file.path}:`, error);
-            // Continuar con el siguiente archivo
         }
+        
+        // Log de progreso por lote
+        LogHelper.info("HierarchyBuilder", 
+            `Progreso: ${processedCount}/${files.length} archivos (${entityCount} entidades, ${errorCount} errores)`);
     }
     
-    console.log(`[TaskNavigator] Análisis completado: ${processedCount} archivos procesados, ${entityCount} entidades encontradas, ${errorCount} errores`);
+    // Mostrar estadísticas finales
+    LogHelper.logStats("HierarchyBuilder", {
+        "Archivos procesados": processedCount,
+        "Entidades encontradas": entityCount,
+        "Errores": errorCount,
+        "Tasa de éxito": `${((processedCount - errorCount) / processedCount * 100).toFixed(2)}%`
+    });
+    
     return entities;
 }
 

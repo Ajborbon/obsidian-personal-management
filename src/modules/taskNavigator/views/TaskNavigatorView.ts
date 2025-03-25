@@ -10,6 +10,9 @@ import { HierarchyViewModel, ViewMode } from '../models/HierarchyViewModel';
 import { DebugUtils } from '../utils/DebugUtils';
 import { IEntity, EntityType, EntityState } from '../models/Entity';
 import { Task, TaskListType, TaskPriority } from '../models/Task';
+import { LogHelper } from '../utils/LogHelper';
+import { DiagnosticTools } from '../utils/DiagnosticTools';
+import { DiagnosticModal } from '../components/DiagnosticModal';
 
 export class TaskNavigatorView extends ItemView {
     private plugin: Plugin;
@@ -137,115 +140,64 @@ export class TaskNavigatorView extends ItemView {
 /**
  * Se ejecuta cuando la vista se abre
  */
+
 async onOpen(): Promise<void> {
     try {
-        // Mostrar versión detallada en la consola
-        console.log("=====================================================");
-        console.log("[TaskNavigator] ABRIENDO VISTA DE NAVEGACIÓN DE TAREAS");
-        console.log("=====================================================");
+        LogHelper.group("View", "ABRIENDO VISTA DE NAVEGACIÓN DE TAREAS", false);
         
-        if (this.DEBUG) {
-            console.log("[TaskNavigator] Modo de depuración ACTIVADO");
-            console.log("[TaskNavigator] Información del entorno:");
-            console.log("- Obsidian API version:", this.app.version);
-            
-            // Usar try/catch para evitar errores en la obtención de la ruta base
-            try {
-                console.log("- Ruta de la bóveda:", this.app.vault.adapter.basePath);
-            } catch (e) {
-                console.log("- Ruta de la bóveda: No disponible");
-            }
-            
-            console.log("- Archivos en la bóveda:", this.app.vault.getMarkdownFiles().length);
-            
-            // Verificar que EntityType está correctamente importado antes de usarlo
-            if (typeof EntityType !== 'undefined') {
-                // Mostrar información de bibliotecas disponibles
-                const entityTypes = Object.values(EntityType);
-                console.log("- Tipos de entidad disponibles:", entityTypes);
-            } else {
-                console.log("- Tipos de entidad disponibles: No se pudo acceder a EntityType");
-            }
-            
-            // Verificar integración de servicios
-            console.log("- Servicios inicializados:");
-            console.log("  * EntityDetector:", !!this.entityDetector);
-            console.log("  * TaskParser:", !!this.taskParser);
-            console.log("  * HierarchyBuilder:", !!this.hierarchyBuilder);
-            console.log("  * TaskClassifier:", !!this.taskClassifier);
-            
-            // Mostrar notificación en la UI
-            new Notice("TaskNavigator: Modo de depuración activado");
+        LogHelper.info("View", "Información del entorno:");
+        LogHelper.info("View", `- Obsidian API version: ${this.app.version}`);
+        
+        // Usar try/catch para evitar errores en la obtención de la ruta base
+        try {
+            LogHelper.info("View", `- Ruta de la bóveda: ${this.app.vault.adapter.basePath}`);
+        } catch (e) {
+            LogHelper.info("View", "- Ruta de la bóveda: No disponible");
         }
         
-        this.log("onOpen() llamado - Abriendo vista");
+        LogHelper.info("View", `- Archivos en la bóveda: ${this.app.vault.getMarkdownFiles().length}`);
+        
+        // Mostrar información de bibliotecas disponibles
+        if (typeof EntityType !== 'undefined') {
+            const entityTypes = Object.values(EntityType);
+            LogHelper.debug("View", "- Tipos de entidad disponibles:", entityTypes);
+        }
+        
+        // Verificar integración de servicios
+        LogHelper.debug("View", "- Servicios inicializados:");
+        LogHelper.debug("View", `  * EntityDetector: ${!!this.entityDetector}`);
+        LogHelper.debug("View", `  * TaskParser: ${!!this.taskParser}`);
+        LogHelper.debug("View", `  * HierarchyBuilder: ${!!this.hierarchyBuilder}`);
+        LogHelper.debug("View", `  * TaskClassifier: ${!!this.taskClassifier}`);
+        
+        LogHelper.info("View", "Iniciando carga de vista");
+        
         // Mostrar mensaje de carga inicial
         this.contentEl.empty();
         this.contentEl.addClass('task-navigator-container');
         this.contentEl.createEl('div', { text: 'Cargando navegador de tareas...', cls: 'task-navigator-loading' });
         
         // Obtener el archivo de contexto desde el estado o usar el archivo activo actual
-        if (this.leaf.getViewState().state?.contextFile) {
-            const contextPath = this.leaf.getViewState().state.contextFile;
-            this.log("Obteniendo archivo de contexto del estado", contextPath);
-            const file = this.app.vault.getAbstractFileByPath(contextPath);
-            if (file instanceof TFile) {
-                this.contextFile = file;
-                this.log("Archivo de contexto establecido desde el estado", file.path);
-            } else {
-                this.warn("No se pudo obtener el archivo de contexto del estado", contextPath);
-            }
-        } 
-        
-        // Si no hay archivo de contexto en el estado, usar el archivo activo actual
-        if (!this.contextFile) {
-            this.log("Intentando usar el archivo activo como contexto");
-            this.contextFile = this.app.workspace.getActiveFile();
-            if (this.contextFile) {
-                this.log("Archivo activo establecido como contexto", this.contextFile.path);
-            } else {
-                this.warn("No hay archivo activo para usar como contexto");
-            }
-        }
+        this.obtainContextFile();
         
         // Construir la vista inicial basada en el archivo de contexto
         await this.refreshView();
         
-        // Configurar actualización periódica (cada 2 minutos)
-        this.log("Configurando actualización periódica (2 minutos)");
+        // Configurar actualización periódica
+        LogHelper.info("View", "Configurando actualización periódica (2 minutos)");
         this.refreshInterval = window.setInterval(() => {
-            this.log("Ejecutando actualización periódica");
+            LogHelper.info("View", "Ejecutando actualización periódica");
             this.refreshView();
         }, 120000);
         
         // Registrar listeners para eventos personalizados
         this.registerCustomEvents();
+        
+        LogHelper.groupEnd();
     } catch (error) {
-        console.error("[TaskNavigator] Error crítico en onOpen:", error);
-        // Mostrar mensaje amigable al usuario
-        this.contentEl.empty();
-        const errorContainer = this.contentEl.createEl('div', { cls: 'task-navigator-error' });
-        errorContainer.createEl('h3', { text: 'Error al iniciar el Navegador de Tareas' });
-        errorContainer.createEl('p', { text: 'Se ha producido un error al iniciar el navegador de tareas.' });
-        errorContainer.createEl('p', { text: `Detalles: ${error.message}` });
-        errorContainer.createEl('p', { text: 'Consulta la consola de desarrollador para más información (Ctrl+Shift+I).' });
-        
-        // Sugerencia para resolver el problema
-        const helpSection = errorContainer.createEl('div', { cls: 'task-navigator-help-section' });
-        helpSection.createEl('h4', { text: 'Posibles soluciones:' });
-        const suggestionsList = helpSection.createEl('ul');
-        suggestionsList.createEl('li', { text: 'Reinicia Obsidian e intenta nuevamente.' });
-        suggestionsList.createEl('li', { text: 'Verifica que tienes las últimas versiones de los módulos.' });
-        suggestionsList.createEl('li', { text: 'Comprueba si hay tareas en la nota actual en formato correcto (- [ ] Texto de la tarea).' });
-        
-        // Botón para recargar
-        const reloadButton = errorContainer.createEl('button', { 
-            text: 'Intentar nuevamente', 
-            cls: 'task-navigator-refresh-button' 
-        });
-        reloadButton.addEventListener('click', () => {
-            this.refreshView();
-        });
+        LogHelper.error("View", "Error crítico en onOpen:", error);
+        // Mostrar mensaje amigable al usuario en la UI
+        this.showErrorMessage(error);
     }
 }
     
@@ -598,4 +550,203 @@ async refreshView(): Promise<void> {
             this.error("Error al mostrar tareas vencidas", error);
         }
     };
+
+
+
+    // Método específico para obtener el archivo de contexto
+private obtainContextFile(): void {
+    if (this.leaf.getViewState().state?.contextFile) {
+        const contextPath = this.leaf.getViewState().state.contextFile;
+        LogHelper.info("View", `Obteniendo archivo de contexto del estado: ${contextPath}`);
+        
+        const file = this.app.vault.getAbstractFileByPath(contextPath);
+        if (file instanceof TFile) {
+            this.contextFile = file;
+            LogHelper.info("View", `Archivo de contexto establecido: ${file.path}`);
+        } else {
+            LogHelper.warn("View", `No se pudo obtener el archivo de contexto: ${contextPath}`);
+        }
+    } 
+    
+    // Si no hay archivo de contexto en el estado, usar el archivo activo actual
+    if (!this.contextFile) {
+        LogHelper.info("View", "Intentando usar el archivo activo como contexto");
+        this.contextFile = this.app.workspace.getActiveFile();
+        
+        if (this.contextFile) {
+            LogHelper.info("View", `Archivo activo establecido como contexto: ${this.contextFile.path}`);
+        } else {
+            LogHelper.warn("View", "No hay archivo activo para usar como contexto");
+        }
+    }
+}
+
+// Método para mostrar errores amigable al usuario
+private showErrorMessage(error: Error): void {
+    this.contentEl.empty();
+    const errorContainer = this.contentEl.createEl('div', { cls: 'task-navigator-error' });
+    errorContainer.createEl('h3', { text: 'Error al iniciar el Navegador de Tareas' });
+    errorContainer.createEl('p', { text: 'Se ha producido un error al iniciar el navegador de tareas.' });
+    errorContainer.createEl('p', { text: `Detalles: ${error.message}` });
+    errorContainer.createEl('p', { text: 'Consulta la consola para más información (Ctrl+Shift+I).' });
+    
+    // Botón para recargar
+    const reloadButton = errorContainer.createEl('button', { 
+        text: 'Intentar nuevamente', 
+        cls: 'task-navigator-refresh-button' 
+    });
+    reloadButton.addEventListener('click', () => {
+        this.refreshView();
+    });
+}
+
+/**
+ * Renderiza información de diagnóstico cuando no hay datos visibles
+ */
+private renderEmptyStateWithDiagnostic(container: HTMLElement): void {
+    // Crear contenedor principal
+    const emptyStateContainer = container.createDiv({ cls: 'task-navigator-empty-state' });
+    
+    // Título y descripción
+    emptyStateContainer.createEl('h2', { text: 'No hay datos visibles' });
+    emptyStateContainer.createEl('p', { 
+        text: 'No se encontraron entidades o tareas que coincidan con los filtros actuales.'
+    });
+    
+    // Ejecutar diagnóstico
+    if (this.currentModel) {
+        LogHelper.info("View", "Ejecutando diagnóstico automático por falta de datos visibles");
+        const { status, issues } = DiagnosticTools.analyzeModel(this.currentModel);
+        
+        // Mostrar resultados del diagnóstico
+        const diagnosticContainer = emptyStateContainer.createDiv({ cls: 'diagnostic-results' });
+        
+        // Título según estado
+        diagnosticContainer.createEl('h3', { 
+            text: `Diagnóstico: ${status === 'OK' ? '✅ Todo en orden' : 
+                  status === 'WARNING' ? '⚠️ Posibles problemas' : 
+                  '❌ Problemas detectados'}`,
+            cls: `diagnostic-title status-${status.toLowerCase()}`
+        });
+        
+        // Lista de problemas
+        if (issues.length > 0) {
+            const issuesList = diagnosticContainer.createEl('ul', { cls: 'diagnostic-issues-list' });
+            issues.forEach(issue => {
+                issuesList.createEl('li', { text: issue });
+            });
+        } else {
+            diagnosticContainer.createEl('p', { 
+                text: 'No se detectaron problemas específicos. Revisa tus filtros actuales.'
+            });
+        }
+        
+        // Sección de recomendaciones
+        const recommendationsContainer = emptyStateContainer.createDiv({ cls: 'diagnostic-recommendations' });
+        recommendationsContainer.createEl('h3', { text: 'Recomendaciones' });
+        
+        const recommendationsList = recommendationsContainer.createEl('ul');
+        
+        // Añadir recomendaciones según los problemas detectados
+        if (issues.some(i => i.includes("filtros de estado"))) {
+            recommendationsList.createEl('li', { 
+                text: 'Activa al menos un filtro de estado (🟢, 🟡, 🔴, 🔵)'
+            });
+        }
+        
+        if (issues.some(i => i.includes("tipo de entidad"))) {
+            recommendationsList.createEl('li', { 
+                text: 'Habilita al menos un tipo de entidad (Áreas de Vida, Proyectos, etc.)'
+            });
+        }
+        
+        if (issues.some(i => i.includes("listas GTD"))) {
+            recommendationsList.createEl('li', { 
+                text: 'Activa al menos una lista GTD para ver tareas clasificadas'
+            });
+        }
+        
+        if (issues.some(i => i.includes("filtro de texto"))) {
+            recommendationsList.createEl('li', { 
+                text: 'Elimina o modifica el texto de búsqueda actual'
+            });
+        }
+        
+        // Recomendaciones generales
+        recommendationsList.createEl('li', { 
+            text: 'Verifica que tus notas contengan tareas con formato correcto: "- [ ] Texto de la tarea"'
+        });
+        
+        recommendationsList.createEl('li', { 
+            text: 'Asegúrate de que tus notas tengan las propiedades frontmatter correctas (type, estado, etc.)'
+        });
+        
+        // Botones de acción
+        const actionButtonsContainer = emptyStateContainer.createDiv({ cls: 'diagnostic-actions' });
+        
+        // Botón para restablecer filtros
+        const resetFiltersButton = actionButtonsContainer.createEl('button', {
+            text: 'Mostrar Todo (Quitar Filtros)',
+            cls: 'diagnostic-action-button reset-filters-button'
+        });
+        
+        resetFiltersButton.addEventListener('click', () => {
+            // Disparar evento para resetear filtros
+            this.contentEl.dispatchEvent(new CustomEvent('task-navigator-reset-filters'));
+        });
+        
+        // Botón para diagnóstico detallado
+        const detailedDiagnosticButton = actionButtonsContainer.createEl('button', {
+            text: 'Diagnóstico Detallado',
+            cls: 'diagnostic-action-button detailed-diagnostic-button'
+        });
+        
+        detailedDiagnosticButton.addEventListener('click', () => {
+            this.runDetailedDiagnostic();
+        });
+    } else {
+        // No hay modelo para diagnosticar
+        emptyStateContainer.createEl('p', { 
+            text: 'No se puede realizar un diagnóstico. Intenta recargar la vista.'
+        });
+        
+        // Botón para recargar
+        const reloadButton = emptyStateContainer.createEl('button', {
+            text: 'Recargar Vista',
+            cls: 'task-navigator-refresh-button'
+        });
+        
+        reloadButton.addEventListener('click', () => {
+            this.refreshView();
+        });
+    }
+}
+
+/**
+ * Ejecuta un diagnóstico detallado cuando el usuario lo solicita
+ */
+private async runDetailedDiagnostic(): Promise<void> {
+    if (!this.currentModel) {
+        new Notice("No hay datos para diagnosticar");
+        return;
+    }
+    
+    LogHelper.group("View", "EJECUTANDO DIAGNÓSTICO DETALLADO", false);
+    
+    try {
+        // Crear modal de diagnóstico
+        const modal = new DiagnosticModal(this.app, this.currentModel, 
+                                         this.taskParser, this.entityDetector);
+        modal.open();
+        
+    } catch (error) {
+        LogHelper.error("View", "Error al ejecutar diagnóstico detallado:", error);
+        new Notice("Error al ejecutar diagnóstico. Consulta la consola.");
+    }
+    
+    LogHelper.groupEnd();
+}
+
+
+
 }

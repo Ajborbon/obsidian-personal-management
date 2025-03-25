@@ -14,20 +14,18 @@ export class TaskParser {
  * Extrae todas las tareas de un archivo
  */
 async extractTasksFromFile(file: TFile): Promise<Task[]> {
-    console.log(`[TaskNavigator] Extrayendo tareas de archivo: ${file.path}`);
     try {
         // Leer el contenido del archivo
         const content = await this.readFile(file);
-        console.log(`[TaskNavigator] Contenido leído: ${content.length} caracteres`);
+        LogHelper.debug("TaskParser", `Contenido leído de ${file.path}: ${content.length} caracteres`);
         
         // Dividir el contenido en líneas
         const lines = content.split('\n');
-        console.log(`[TaskNavigator] Líneas en el archivo: ${lines.length}`);
         
         // Array para almacenar las tareas encontradas
         const tasks: Task[] = [];
         
-        // Tareas para depuración
+        // Buscar líneas de tareas potenciales
         let taskLinesFound = 0;
         
         // Procesar cada línea
@@ -38,22 +36,27 @@ async extractTasksFromFile(file: TFile): Promise<Task[]> {
             // Comprobar si la línea contiene una tarea
             if (line.trim().startsWith('- [')) {
                 taskLinesFound++;
-                console.log(`[TaskNavigator] Línea potencial de tarea encontrada: ${line}`);
                 
                 const task = this.parseTaskLine(line, lineNumber, file);
                 if (task) {
                     tasks.push(task);
-                    console.log(`[TaskNavigator] Tarea válida extraída: "${task.text}", completada: ${task.completed}`);
-                } else {
-                    console.log(`[TaskNavigator] La línea no es una tarea válida: ${line}`);
                 }
             }
         }
         
-        console.log(`[TaskNavigator] Extracción completada: ${tasks.length} tareas extraídas de ${taskLinesFound} líneas potenciales`);
+        if (tasks.length > 0) {
+            LogHelper.debug("TaskParser", 
+                `Extraídas ${tasks.length}/${taskLinesFound} tareas de ${file.path}`);
+            
+            // Log más detallado solo para los primeros archivos con tareas
+            if (tasks.length > 0 && LogHelper.LEVEL.TRACE) {
+                LogHelper.trace("TaskParser", `Primera tarea en ${file.path}: "${tasks[0].text}" (completada: ${tasks[0].completed})`);
+            }
+        }
+        
         return tasks;
     } catch (error) {
-        console.error(`[TaskNavigator] Error al extraer tareas del archivo ${file.path}:`, error);
+        LogHelper.error("TaskParser", `Error al extraer tareas de ${file.path}:`, error);
         return [];
     }
 }
