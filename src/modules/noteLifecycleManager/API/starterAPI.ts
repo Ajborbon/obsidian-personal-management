@@ -62,6 +62,7 @@ export class starterAPI {
         Object.assign(this.infoSubsistema, infoSubsistema);
         
         if (this.infoSubsistema.defined) {
+          debugger;
           this.infoSubsistema.folder = this.plugin.settings[infoSubsistema.folder];
           this.infoSubsistema.indice = this.plugin.settings[infoSubsistema.indice];
           Object.assign(this.nota, infoSubsistema);

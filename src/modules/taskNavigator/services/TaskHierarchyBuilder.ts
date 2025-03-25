@@ -6,6 +6,7 @@ import { TaskParser } from './TaskParser';
 import { IEntity, EntityType, Entity } from '../models/Entity';
 import { HierarchyViewModel } from '../models/HierarchyViewModel';
 import { Task } from '../models/Task';
+import { LogHelper } from '../utils/LogHelper';  
 
 /**
  * Servicios para construir la jerarquía de entidades y tareas
@@ -85,15 +86,40 @@ async buildHierarchy(focusEntity: IEntity | null = null): Promise<HierarchyViewM
     }
 }
 
+
 /**
- * Recopila todas las entidades del sistema
+ * Recopila todas las entidades del sistema, excluyendo carpetas específicas
  */
 private async collectAllEntities(): Promise<IEntity[]> {
     const entities: IEntity[] = [];
     
+    // Carpetas a excluir (asegurarse de que no tengan barra al final para mayor flexibilidad)
+    const excludedFolders = [
+        "Archivo",
+        "Plantillas", 
+        "Adjuntos", 
+        "Estructura/GTD/Sistema GTD/Sistema"
+    ];
+    
     // Obtener todos los archivos de markdown
-    const files = this.plugin.app.vault.getMarkdownFiles();
-    LogHelper.info("HierarchyBuilder", `Analizando ${files.length} archivos markdown`);
+    const allFiles = this.plugin.app.vault.getMarkdownFiles();
+    
+    // Filtrar archivos para excluir las carpetas especificadas
+    const files = allFiles.filter(file => {
+        // Verificar si el archivo está en alguna carpeta excluida
+        for (const folder of excludedFolders) {
+            // Comprobar si la ruta del archivo comienza con la carpeta excluida
+            // seguida de una barra o es exactamente igual a la carpeta
+            if (file.path === folder || 
+                file.path.startsWith(folder + "/")) {
+                LogHelper.debug("HierarchyBuilder", `Archivo excluido: ${file.path} (en carpeta: ${folder})`);
+                return false;
+            }
+        }
+        return true;
+    });
+    
+    LogHelper.info("HierarchyBuilder", `Analizando ${files.length} archivos markdown (${allFiles.length - files.length} excluidos)`);
     
     // Procesar cada archivo
     let processedCount = 0;
@@ -132,6 +158,7 @@ private async collectAllEntities(): Promise<IEntity[]> {
     LogHelper.logStats("HierarchyBuilder", {
         "Archivos procesados": processedCount,
         "Entidades encontradas": entityCount,
+        "Archivos excluidos": allFiles.length - files.length,
         "Errores": errorCount,
         "Tasa de éxito": `${((processedCount - errorCount) / processedCount * 100).toFixed(2)}%`
     });

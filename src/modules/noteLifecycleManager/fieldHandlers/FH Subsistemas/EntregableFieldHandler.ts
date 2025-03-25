@@ -240,7 +240,7 @@ export class EntregableFieldHandler extends NoteFieldHandler implements Entregab
     async getTrimestre(): Promise<string> {
         // Verificar si es una continuación desde una Campaña
         const activo = app.workspace.getActiveFile();
-        debugger;
+        
         if (activo) {
             const metadata = app.metadataCache.getFileCache(activo)?.frontmatter;
             
@@ -251,7 +251,7 @@ export class EntregableFieldHandler extends NoteFieldHandler implements Entregab
                     false,
                     `¿Este entregable es parte de la campaña ${activo.basename}?`
                 );
-                debugger;
+                
                 if (esContinuacion && metadata.trimestre) {
                     this.nota.trimestre = metadata.trimestre;
                     return metadata.trimestre;
@@ -542,6 +542,7 @@ export class EntregableFieldHandler extends NoteFieldHandler implements Entregab
 
 async getRename(): Promise<string> {
     // Crear la estructura de carpetas por trimestre
+    debugger;
     const folderBase = `${this.infoSubsistema.folder}`;
     // Aplicar filtro para eliminar [[ y ]]
     const trimestreLimpio = this.nota.trimestre.replace(/\[\[|\]\]/g, '').trim();         

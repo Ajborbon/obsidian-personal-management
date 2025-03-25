@@ -2,6 +2,7 @@
 
 import { TFile } from 'obsidian';
 import { Task, TaskPriority, LineInfo } from '../models/Task';
+import { LogHelper } from '../utils/LogHelper';  
 
 /**
  * Servicio para analizar y extraer tareas de archivos markdown
