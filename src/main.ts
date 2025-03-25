@@ -28,6 +28,7 @@ import { ModuloTabTitle } from './modules/moduloTabTitle';
 import { ModuloTaskManager } from './modules/taskManager';
 import { ModuloDataviewQueries } from './modules/dataviewQueries';
 import { TaskExecutionNavigatorModule } from './modules/taskExecutionNavigator';
+import { TaskNavigatorModule } from "./modules/taskNavigator/module";
 import { EntregableFieldHandler } from "./modules/noteLifecycleManager/fieldHandlers/FH Subsistemas/EntregableFieldHandler";
 import { SeleccionMultipleModal } from "./modules/modales/seleccionMultipleModal";
 import { DatePickerModal } from "./modules/modales/datePickerModal";
@@ -61,6 +62,7 @@ export default class ManagementPlugin extends Plugin {
   moduloTaskManager: ModuloTaskManager | null = null;
   moduloDataviewQueries: ModuloDataviewQueries | null = null;
   taskExecutionNavigatorModule: TaskExecutionNavigatorModule | null = null;
+  taskNavigatorModule: TaskNavigatorModule | null = null;
   // Declara una propiedad para mantener una instancia de `StatusBarExtension`.
 
   async onload() {
@@ -92,6 +94,7 @@ export default class ManagementPlugin extends Plugin {
     this.librosAPI = new librosAPI(this);
     this.newInbox = ingresarBandejaEntrada.bind(this);
     this.taskExecutionNavigatorModule = new TaskExecutionNavigatorModule(this);
+    this.taskNavigatorModule = new TaskNavigatorModule(this);
     // Añade la pestaña de configuración -
     this.addSettingTab(new PluginMainSettingsTab(this));
     // Inicializa las instancias de los módulos
@@ -143,6 +146,10 @@ export default class ManagementPlugin extends Plugin {
           this.taskExecutionNavigatorModule?.activate();
       }
 
+        if (this.settings.taskNavigatorModule) {
+          this.taskNavigatorModule?.activate();
+      }
+
     
   
   }
@@ -190,11 +197,18 @@ export default class ManagementPlugin extends Plugin {
         this.moduloDataviewQueries?.deactivate();
     }
 
-    if (this.settings.taskExecutionNavigatorModule) {
-      this.taskExecutionNavigatorModule?.activate();
-  } else {
-      this.taskExecutionNavigatorModule?.deactivate();
-  }
+          if (this.settings.taskExecutionNavigatorModule) {
+            this.taskExecutionNavigatorModule?.activate();
+        } else {
+            this.taskExecutionNavigatorModule?.deactivate();
+        }
+
+          // Configurar el módulo TaskNavigator
+          if (this.settings.taskNavigatorModule) {
+            this.taskNavigatorModule?.activate();
+        } else {
+            this.taskNavigatorModule?.deactivate();
+        }
 
     //this.moduloTerceros?.activate(this);
   }
@@ -209,6 +223,11 @@ export default class ManagementPlugin extends Plugin {
       if (this.taskExecutionNavigatorModule) {
         this.taskExecutionNavigatorModule.deactivate();
     }
+
+    if (this.taskNavigatorModule) {
+      this.taskNavigatorModule.deactivate();
+  }
+
     delete (this.app as any).gpManagement;
     return Promise.resolve();
   }

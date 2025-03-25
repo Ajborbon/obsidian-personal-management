@@ -9,6 +9,7 @@ export interface PluginMainSettings {
     moduloTaskManager: boolean;
     moduloDataviewQueries: boolean;
     taskExecutionNavigatorModule: boolean;
+    taskNavigatorModule: boolean;
     // Archivos de campos
     file_camposCentral: string,
 

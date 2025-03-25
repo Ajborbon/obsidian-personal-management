@@ -10,6 +10,7 @@ export const DEFAULT_SETTINGS: PluginMainSettings = {
   moduloTaskManager: true,
   moduloDataviewQueries: true,
   taskExecutionNavigatorModule: true,  // Activado por defecto
+  taskNavigatorModule: true,
   file_camposCentral :"Estructura/Campos Sistema Gestion/Campos Sistema Central", 
   folder_Anotaciones: "Anotaciones/Notas",
   indice_Anotaciones: "Anotaciones/Indice Anotaciones",
