@@ -33,6 +33,7 @@ export interface ParsedNoteData {
     aliases?: string[]; // Add aliases from frontmatter
     tasks: ParsedTaskData[];
     content: string; // Keep content for potential future use or context
+    ctime: number; // File creation timestamp
 }
 
 /**
@@ -79,6 +80,7 @@ export async function parseVault(app: App): Promise<ParsedNoteData[]> {
                 aliases: frontmatter.aliases, // Add aliases here
                 tasks: parsedTasks,
                 content: content,
+                ctime: file.stat.ctime, // Add file creation time
             });
         } catch (error) {
             console.error(`[GTDv2 Parser] Error parsing file ${file.path}:`, error);

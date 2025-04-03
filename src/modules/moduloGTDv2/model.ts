@@ -51,6 +51,7 @@ export interface HierarchicalItem {
     lineageProyectoQ: string[]; // Array of file paths
     lineageProyectoGTD: string[]; // Array of file paths
     parentAsuntoPath: string | null; // Path of the direct parent defined by 'asunto'
+    ctime?: number; // Optional: File creation timestamp (added for sorting)
 
     // State for UI
     isExpanded?: boolean; // For tree view state

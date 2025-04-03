@@ -59,6 +59,7 @@ export function buildHierarchy(parsedNotes: ParsedNoteData[]): GtdDataModel {
             lineageProyectoQ: noteData.frontmatter.proyectoQLinks,
             lineageProyectoGTD: noteData.frontmatter.proyectoGTDLinks,
             parentAsuntoPath: noteData.frontmatter.asuntoLink,
+            ctime: noteData.ctime, // Assign ctime from ParsedNoteData
             // Initialize UI state
             isExpanded: false,
             isActiveContext: false,
@@ -87,9 +88,68 @@ export function buildHierarchy(parsedNotes: ParsedNoteData[]): GtdDataModel {
 
     console.log(`[GTDv2 Builder] Pass 2 complete. Identified ${roots.length} root items.`);
 
-    // Sort children alphabetically by fileName for consistent display? (Optional)
+    // --- Custom Sorting Logic ---
+    const typeOrder = [
+        "AreaVida",
+        "AreaInteres",
+        "Recursos Recurrentes", // Assuming this is the exact typeName string
+        "Proyectos Q", // Assuming this is the exact typeName string
+        "ProyectoGTD", // Assuming #cx-ProyectoGTD maps to this typeName
+        "Campañas", // Assuming this is the exact typeName string
+        "Entregable", // Assuming #cx-Entregable maps to this typeName
+        "Anotacion", // Assuming this is the exact typeName string
+    ];
+    const typeOrderMap = new Map(typeOrder.map((type, index) => [type, index]));
+
+    const statusOrder = ["🟢", "🟡", "🔵", "🔴"];
+    const statusOrderMap = new Map(statusOrder.map((status, index) => [status, index]));
+
+    function compareHierarchicalItems(a: HierarchicalItem, b: HierarchicalItem): number {
+        // 1. Sort by Type Name based on custom order
+        const typeAIndex = typeOrderMap.get(a.typeName ?? '');
+        const typeBIndex = typeOrderMap.get(b.typeName ?? '');
+
+        if (typeAIndex !== undefined && typeBIndex !== undefined) {
+            if (typeAIndex !== typeBIndex) return typeAIndex - typeBIndex;
+        } else if (typeAIndex !== undefined) {
+            return -1; // a comes first (it's in the custom order)
+        } else if (typeBIndex !== undefined) {
+            return 1; // b comes first
+        } else {
+            // Neither is in custom order, sort alphabetically by typeName (or handle undefined)
+            const typeNameA = a.typeName ?? '';
+            const typeNameB = b.typeName ?? '';
+            if (typeNameA !== typeNameB) return typeNameA.localeCompare(typeNameB);
+        }
+
+        // 2. Types are equivalent, sort by Status based on custom order
+        const statusAIndex = statusOrderMap.get(a.estado ?? '');
+        const statusBIndex = statusOrderMap.get(b.estado ?? '');
+        const maxStatusIndex = statusOrder.length; // Place items without status last
+
+        const effectiveStatusA = statusAIndex !== undefined ? statusAIndex : maxStatusIndex;
+        const effectiveStatusB = statusBIndex !== undefined ? statusBIndex : maxStatusIndex;
+
+        if (effectiveStatusA !== effectiveStatusB) {
+            return effectiveStatusA - effectiveStatusB;
+        }
+
+        // 3. Types and Statuses are equivalent, sort by Creation Time (ctime) descending (newest first)
+        // Use 0 as a fallback if ctime is undefined/null, placing items without ctime last.
+        const ctimeA = a.ctime ?? 0;
+        const ctimeB = b.ctime ?? 0;
+
+        if (ctimeA !== ctimeB) {
+            return ctimeB - ctimeA; // Descending order (higher timestamp = newer)
+        }
+
+        // 4. Fallback to alphabetical by filename if all else is equal
+        return a.fileName.localeCompare(b.fileName);
+    }
+
+    // Sort children using the custom comparison function
     itemsMap.forEach(item => {
-        item.children.sort((a, b) => a.fileName.localeCompare(b.fileName));
+        item.children.sort(compareHierarchicalItems);
     });
 
     return {
