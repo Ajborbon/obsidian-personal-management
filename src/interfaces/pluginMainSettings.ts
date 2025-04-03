@@ -9,6 +9,7 @@ export interface PluginMainSettings {
     moduloTaskManager: boolean;
     moduloDataviewQueries: boolean;
     taskExecutionNavigatorModule: boolean;
+    moduloGTDv2: boolean; // Added setting for the new GTD v2 module
     // Archivos de campos
     file_camposCentral: string,
 
@@ -127,5 +128,3 @@ export interface PluginMainSettings {
     folder_RegistrosAkashikos: string,
     indice_RegistrosAkashikos: string,
     }
-
-

@@ -1,9 +1,10 @@
-import { Plugin, PluginSettingTab, Setting } from 'obsidian';
+import { Plugin, PluginSettingTab, Setting, TextComponent, ToggleComponent } from 'obsidian'; // Import specific components
+import type ManagementPlugin from './main'; // Import the specific plugin class type
 
 export class PluginMainSettingsTab extends PluginSettingTab {
-    plugin: Plugin;
+    plugin: ManagementPlugin; // Use the specific plugin class type
 
-    constructor(plugin: Plugin) {
+    constructor(plugin: ManagementPlugin) { // Use the specific plugin class type
         super(plugin.app, plugin);
         this.plugin = plugin;
     }
@@ -45,42 +46,55 @@ export class PluginMainSettingsTab extends PluginSettingTab {
                 new Setting(tabContent)
                 .setName('Ver Alias en el Status Bar')
                 .setDesc('Elige si deseas ver el Aliases de las notas en el Status Bar.')
-                .addToggle((toggle: { setValue: (arg0: any) => { (): any; new(): any; onChange: { (arg0: (value: any) => Promise<void>): any; new(): any; }; }; }) => toggle
-                    .setValue(this.plugin.settings.moduloAliasStatusBar)
-                    .onChange(async (value: any) => {
-                        this.plugin.settings.moduloAliasStatusBar = value;
+                .addToggle((toggle: ToggleComponent) => toggle // Correct type
+                    .setValue(this.plugin.settings!.moduloAliasStatusBar) // Add assertion
+                    .onChange(async (value: boolean) => { // Use boolean type
+                        this.plugin.settings!.moduloAliasStatusBar = value; // Add assertion
                         await this.plugin.saveSettings();
                     }));
 
                     new Setting(tabContent)
                     .setName('Activar Módulo Registro Tiempo')
                     .setDesc('Activa o desactiva el módulo de registro de tiempo.')
-                    .addToggle((toggle: { setValue: (arg0: any) => { (): any; new(): any; onChange: { (arg0: (value: any) => Promise<void>): any; new(): any; }; }; }) => toggle
-                        .setValue(this.plugin.settings.moduloRegistroTiempo)
-                        .onChange(async (value: any) => {
-                            this.plugin.settings.moduloRegistroTiempo = value;
+                    .addToggle((toggle: ToggleComponent) => toggle // Correct type
+                        .setValue(this.plugin.settings!.moduloRegistroTiempo) // Add assertion
+                        .onChange(async (value: boolean) => { // Use boolean type
+                            this.plugin.settings!.moduloRegistroTiempo = value; // Add assertion
                             await this.plugin.saveSettings();
                         }));
 
                     new Setting(tabContent)
                     .setName('Activar Módulo Base - Pruebas')
                     .setDesc('Activa o desactiva el módulo de pruebas.')
-                    .addToggle((toggle: { setValue: (arg0: any) => { (): any; new(): any; onChange: { (arg0: (value: any) => Promise<void>): any; new(): any; }; }; }) => toggle
-                        .setValue(this.plugin.settings.moduloBase)
-                        .onChange(async (value: any) => {
-                            this.plugin.settings.moduloBase = value;
+                    .addToggle((toggle: ToggleComponent) => toggle // Correct type
+                        .setValue(this.plugin.settings!.moduloBase) // Add assertion
+                        .onChange(async (value: boolean) => { // Use boolean type
+                            this.plugin.settings!.moduloBase = value; // Add assertion
                             await this.plugin.saveSettings();
                         }));
+
+                    // Add toggle for ModuloGTDv2
+                    new Setting(tabContent)
+                        .setName('Activar Módulo GTD v2 (Jerárquico)')
+                        .setDesc('Activa o desactiva el módulo de visualización jerárquica GTD v2.')
+                        .addToggle((toggle: ToggleComponent) => toggle // Correct type
+                            .setValue(this.plugin.settings!.moduloGTDv2) // Add assertion
+                            .onChange(async (value: boolean) => { // Use boolean type
+                                this.plugin.settings!.moduloGTDv2 = value; // Add assertion
+                                await this.plugin.saveSettings();
+                                // Note: No explicit activate/deactivate needed yet as it only controls command availability
+                            }));
+
 
                     containerEl.createEl('h3', {text: 'Navegador de Tareas'});
 
                     new Setting(containerEl)
                     .setName('Task Execution Navigator')
                     .setDesc('Permite navegar rápidamente a tareas en ejecución')
-                    .addToggle(toggle => toggle
-                        .setValue(this.plugin.settings.taskExecutionNavigatorModule)
-                        .onChange(async (value) => {
-                            this.plugin.settings.taskExecutionNavigatorModule = value;
+                    .addToggle((toggle: ToggleComponent) => toggle // Correct type
+                        .setValue(this.plugin.settings!.taskExecutionNavigatorModule) // Add assertion
+                        .onChange(async (value: boolean) => { // Use boolean type
+                            this.plugin.settings!.taskExecutionNavigatorModule = value; // Add assertion
                             if (value) {
                                 this.plugin.taskExecutionNavigatorModule?.activate();
                             } else {
@@ -96,14 +110,17 @@ export class PluginMainSettingsTab extends PluginSettingTab {
             // Contenido para la segunda pestaña
             if (index === 1) {
                 // Función para manejar el clic en el título del bloque desplegable
-                const toggleCollapse = (event: { target: { nextElementSibling: any; innerHTML: string; getAttribute: (arg0: string) => string; }; }) => {
-                    const nextElement = event.target.nextElementSibling;
-                    if (nextElement.style.display === 'none') {
-                        nextElement.style.display = 'block';
-                        event.target.innerHTML = '&#9660; ' + event.target.getAttribute('data-title'); // Cambia el icono a "abajo"
-                    } else {
-                        nextElement.style.display = 'none';
-                        event.target.innerHTML = '&#9654; ' + event.target.getAttribute('data-title'); // Cambia el icono a "derecha"
+                const toggleCollapse = (event: MouseEvent) => { // Use MouseEvent type
+                    const target = event.target as HTMLElement; // Cast target
+                    const nextElement = target.nextElementSibling as HTMLElement | null; // Cast next element
+                    if (nextElement) { // Check if nextElement exists
+                        if (nextElement.style.display === 'none') {
+                            nextElement.style.display = 'block';
+                            target.innerHTML = '&#9660; ' + (target.getAttribute('data-title') ?? ''); // Cambia el icono a "abajo" + null check
+                        } else {
+                            nextElement.style.display = 'none';
+                            target.innerHTML = '&#9654; ' + (target.getAttribute('data-title') ?? ''); // Cambia el icono a "derecha" + null check
+                        }
                     }
                 };
             
@@ -116,23 +133,23 @@ export class PluginMainSettingsTab extends PluginSettingTab {
                 anotacionesContent.style.display = 'none'; // Oculta inicialmente los ajustes
                 anotacionesTitle.onclick = toggleCollapse;
             
-                new Setting(anotacionesContent) // Usamos `blogContent` en lugar de `tabContent`
+                new Setting(anotacionesContent) // Usamos `anotacionesContent`
                     .setName('Carpeta de Anotaciones')
                     .setDesc('Establece la ruta de la carpeta donde se guardarán todas las Anotaciones.')
-                    .addText((text: { setValue: (arg0: any) => { (): any; new(): any; onChange: { (arg0: (value: any) => Promise<void>): any; new(): any; }; }; }) => text
-                        .setValue(this.plugin.settings.folder_Anotaciones)
-                        .onChange(async (value: any) => {
-                            this.plugin.settings.folder_Anotaciones = value;
+                    .addText((text: TextComponent) => text // Correct type
+                        .setValue(this.plugin.settings!.folder_Anotaciones) // Add assertion
+                        .onChange(async (value: string) => { // Use string type
+                            this.plugin.settings!.folder_Anotaciones = value; // Add assertion
                             await this.plugin.saveSettings();
                         }));
             
-                new Setting(anotacionesContent) // Usamos `blogContent` en lugar de `tabContent`
+                new Setting(anotacionesContent) // Usamos `anotacionesContent`
                     .setName('Indice de Anotaciones')
                     .setDesc('Establece la ruta del índice de las Anotaciones.')
-                    .addText((text: { setValue: (arg0: any) => { (): any; new(): any; onChange: { (arg0: (value: any) => Promise<void>): any; new(): any; }; }; }) => text
-                        .setValue(this.plugin.settings.indice_Anotaciones)
-                        .onChange(async (value: any) => {
-                            this.plugin.settings.indice_Anotaciones = value;
+                    .addText((text: TextComponent) => text // Correct type
+                        .setValue(this.plugin.settings!.indice_Anotaciones) // Add assertion
+                        .onChange(async (value: string) => { // Use string type
+                            this.plugin.settings!.indice_Anotaciones = value; // Add assertion
                             await this.plugin.saveSettings();
                         }));
 
@@ -149,20 +166,20 @@ export class PluginMainSettingsTab extends PluginSettingTab {
                 new Setting(campañasContent)
                     .setName('Carpeta de Campañas')
                     .setDesc('Establece la ruta de la carpeta donde se guardarán las campañas.')
-                    .addText((text) => text
-                        .setValue(this.plugin.settings.folder_Campañas)
-                        .onChange(async (value) => {
-                            this.plugin.settings.folder_Campañas = value;
+                    .addText((text: TextComponent) => text // Correct type
+                        .setValue(this.plugin.settings!.folder_Campaña) // Correct typo + Add assertion
+                        .onChange(async (value: string) => { // Use string type
+                            this.plugin.settings!.folder_Campaña = value; // Correct typo + Add assertion
                             await this.plugin.saveSettings();
                         }));
 
                 new Setting(campañasContent)
                     .setName('Índice de Campañas')
                     .setDesc('Establece la ruta del índice de campañas.')
-                    .addText((text) => text
-                        .setValue(this.plugin.settings.indice_Campañas)
-                        .onChange(async (value) => {
-                            this.plugin.settings.indice_Campañas = value;
+                    .addText((text: TextComponent) => text // Correct type
+                        .setValue(this.plugin.settings!.indice_Campaña) // Correct typo + Add assertion
+                        .onChange(async (value: string) => { // Use string type
+                            this.plugin.settings!.indice_Campaña = value; // Correct typo + Add assertion
                             await this.plugin.saveSettings();
                         }));
 
@@ -174,23 +191,23 @@ export class PluginMainSettingsTab extends PluginSettingTab {
                 blogContent.style.display = 'none'; // Oculta inicialmente los ajustes
                 blogTitle.onclick = toggleCollapse;
             
-                new Setting(blogContent) // Usamos `blogContent` en lugar de `tabContent`
+                new Setting(blogContent) // Usamos `blogContent`
                     .setName('Carpeta de Artículos del Blog')
                     .setDesc('Establece la ruta de la carpeta donde se guardarán los artículos del blog.')
-                    .addText((text: { setValue: (arg0: any) => { (): any; new(): any; onChange: { (arg0: (value: any) => Promise<void>): any; new(): any; }; }; }) => text
-                        .setValue(this.plugin.settings.folder_ABlog)
-                        .onChange(async (value: any) => {
-                            this.plugin.settings.folder_ABlog = value;
+                    .addText((text: TextComponent) => text // Correct type
+                        .setValue(this.plugin.settings!.folder_ABlog) // Add assertion
+                        .onChange(async (value: string) => { // Use string type
+                            this.plugin.settings!.folder_ABlog = value; // Add assertion
                             await this.plugin.saveSettings();
                         }));
             
-                new Setting(blogContent) // Usamos `blogContent` en lugar de `tabContent`
+                new Setting(blogContent) // Usamos `blogContent`
                     .setName('Indice de Artículos del Blog')
                     .setDesc('Establece la ruta del índice de los artículos del blog.')
-                    .addText((text: { setValue: (arg0: any) => { (): any; new(): any; onChange: { (arg0: (value: any) => Promise<void>): any; new(): any; }; }; }) => text
-                        .setValue(this.plugin.settings.indice_ABlog)
-                        .onChange(async (value: any) => {
-                            this.plugin.settings.indice_ABlog = value;
+                    .addText((text: TextComponent) => text // Correct type
+                        .setValue(this.plugin.settings!.indice_ABlog) // Add assertion
+                        .onChange(async (value: string) => { // Use string type
+                            this.plugin.settings!.indice_ABlog = value; // Add assertion
                             await this.plugin.saveSettings();
                         }));
             
@@ -203,24 +220,24 @@ export class PluginMainSettingsTab extends PluginSettingTab {
                 desarrollosTitle.onclick = toggleCollapse;
 
                 // Configuración para Carpeta de Desarrollos y Códigos
-                new Setting(desarrollosContent) // Usamos `desarrollosContent` en lugar de `tabContent`
+                new Setting(desarrollosContent) // Usamos `desarrollosContent`
                     .setName('Carpeta de Desarrollos y Códigos')
                     .setDesc('Establece la ruta de la carpeta donde se guardarán los desarrollos y códigos.')
-                    .addText((text: { setValue: (arg0: any) => { (): any; new(): any; onChange: { (arg0: (value: any) => Promise<void>): any; new(): any; }; }; }) => text
-                        .setValue(this.plugin.settings.folder_Desarrollos)
-                        .onChange(async (value: any) => {
-                            this.plugin.settings.folder_Desarrollos = value;
+                    .addText((text: TextComponent) => text // Correct type
+                        .setValue(this.plugin.settings!.folder_Desarrollos) // Add assertion
+                        .onChange(async (value: string) => { // Use string type
+                            this.plugin.settings!.folder_Desarrollos = value; // Add assertion
                             await this.plugin.saveSettings();
                         }));
 
                 // Configuración para Índice de Desarrollos y Códigos
-                new Setting(desarrollosContent) // Usamos `desarrollosContent` en lugar de `tabContent`
+                new Setting(desarrollosContent) // Usamos `desarrollosContent`
                     .setName('Índice de Desarrollos y Códigos')
                     .setDesc('Establece la ruta del índice de los desarrollos y códigos.')
-                    .addText((text: { setValue: (arg0: any) => { (): any; new(): any; onChange: { (arg0: (value: any) => Promise<void>): any; new(): any; }; }; }) => text
-                        .setValue(this.plugin.settings.indice_Desarrollos)
-                        .onChange(async (value: any) => {
-                            this.plugin.settings.indice_Desarrollos = value;
+                    .addText((text: TextComponent) => text // Correct type
+                        .setValue(this.plugin.settings!.indice_Desarrollos) // Add assertion
+                        .onChange(async (value: string) => { // Use string type
+                            this.plugin.settings!.indice_Desarrollos = value; // Add assertion
                             await this.plugin.saveSettings();
                         }));
 
@@ -235,20 +252,20 @@ export class PluginMainSettingsTab extends PluginSettingTab {
                 new Setting(estudioContent)
                     .setName('Carpeta de Temas de Estudio')
                     .setDesc('Establece la ruta de la carpeta donde se guardarán los temas de estudio.')
-                    .addText((text: { setValue: (arg0: any) => { (): any; new(): any; onChange: { (arg0: (value: any) => Promise<void>): any; new(): any; }; }; }) => text
-                        .setValue(this.plugin.settings.folder_Estudio)
-                        .onChange(async (value: any) => {
-                            this.plugin.settings.folder_Estudio = value;
+                    .addText((text: TextComponent) => text // Correct type
+                        .setValue(this.plugin.settings!.folder_Estudio) // Add assertion
+                        .onChange(async (value: string) => { // Use string type
+                            this.plugin.settings!.folder_Estudio = value; // Add assertion
                             await this.plugin.saveSettings();
                         }));
 
                 new Setting(estudioContent)
                     .setName('Índice de Estudio')
                     .setDesc('Establece la ruta del índice de los temas de estudio.')
-                    .addText((text: { setValue: (arg0: any) => { (): any; new(): any; onChange: { (arg0: (value: any) => Promise<void>): any; new(): any; }; }; }) => text
-                        .setValue(this.plugin.settings.indice_Estudio)
-                        .onChange(async (value: any) => {
-                            this.plugin.settings.indice_Estudio = value;
+                    .addText((text: TextComponent) => text // Correct type
+                        .setValue(this.plugin.settings!.indice_Estudio) // Add assertion
+                        .onChange(async (value: string) => { // Use string type
+                            this.plugin.settings!.indice_Estudio = value; // Add assertion
                             await this.plugin.saveSettings();
                         }));
 
@@ -263,10 +280,10 @@ export class PluginMainSettingsTab extends PluginSettingTab {
                 new Setting(gtdContent)
                 .setName('Archivo de Bandeja de Entrada.')
                 .setDesc('Establece la ruta de la Bandeja de entrada GTD.')
-                .addText((text: { setValue: (arg0: any) => { (): any; new(): any; onChange: { (arg0: (value: any) => Promise<void>): any; new(): any; }; }; }) => text
-                    .setValue(this.plugin.settings.file_Inbox)
-                    .onChange(async (value: any) => {
-                        this.plugin.settings.file_Inbox = value;
+                .addText((text: TextComponent) => text // Correct type
+                    .setValue(this.plugin.settings!.file_Inbox) // Add assertion
+                    .onChange(async (value: string) => { // Use string type
+                        this.plugin.settings!.file_Inbox = value; // Add assertion
                         await this.plugin.saveSettings();
                     }));
 
@@ -275,20 +292,20 @@ export class PluginMainSettingsTab extends PluginSettingTab {
                 new Setting(gtdContent)
                     .setName('Carpeta de Proyectos GTD')
                     .setDesc('Establece la ruta de la carpeta para proyectos GTD.')
-                    .addText((text: { setValue: (arg0: any) => { (): any; new(): any; onChange: { (arg0: (value: any) => Promise<void>): any; new(): any; }; }; }) => text
-                        .setValue(this.plugin.settings.folder_ProyectosGTD)
-                        .onChange(async (value: any) => {
-                            this.plugin.settings.folder_ProyectosGTD = value;
+                    .addText((text: TextComponent) => text // Correct type
+                        .setValue(this.plugin.settings!.folder_ProyectosGTD) // Add assertion
+                        .onChange(async (value: string) => { // Use string type
+                            this.plugin.settings!.folder_ProyectosGTD = value; // Add assertion
                             await this.plugin.saveSettings();
                         }));
 
                 new Setting(gtdContent)
                     .setName('Índice de Proyectos GTD')
                     .setDesc('Establece la ruta del índice para proyectos GTD.')
-                    .addText((text: { setValue: (arg0: any) => { (): any; new(): any; onChange: { (arg0: (value: any) => Promise<void>): any; new(): any; }; }; }) => text
-                        .setValue(this.plugin.settings.indice_ProyectosGTD)
-                        .onChange(async (value: any) => {
-                            this.plugin.settings.indice_ProyectosGTD = value;
+                    .addText((text: TextComponent) => text // Correct type
+                        .setValue(this.plugin.settings!.indice_ProyectosGTD) // Add assertion
+                        .onChange(async (value: string) => { // Use string type
+                            this.plugin.settings!.indice_ProyectosGTD = value; // Add assertion
                             await this.plugin.saveSettings();
                         }));
 
@@ -296,20 +313,20 @@ export class PluginMainSettingsTab extends PluginSettingTab {
                 new Setting(gtdContent)
                     .setName('Carpeta de Revisiones Semanales GTD')
                     .setDesc('Establece la ruta de la carpeta para las revisiones semanales GTD.')
-                    .addText((text: { setValue: (arg0: any) => { (): any; new(): any; onChange: { (arg0: (value: any) => Promise<void>): any; new(): any; }; }; }) => text
-                        .setValue(this.plugin.settings.folder_RSGTD)
-                        .onChange(async (value: any) => {
-                            this.plugin.settings.folder_RSGTD = value;
+                    .addText((text: TextComponent) => text // Correct type
+                        .setValue(this.plugin.settings!.folder_RSGTD) // Add assertion
+                        .onChange(async (value: string) => { // Use string type
+                            this.plugin.settings!.folder_RSGTD = value; // Add assertion
                             await this.plugin.saveSettings();
                         }));
 
                 new Setting(gtdContent)
                     .setName('Índice de Revisiones Semanales GTD')
                     .setDesc('Establece la ruta del índice para las revisiones semanales GTD.')
-                    .addText((text: { setValue: (arg0: any) => { (): any; new(): any; onChange: { (arg0: (value: any) => Promise<void>): any; new(): any; }; }; }) => text
-                        .setValue(this.plugin.settings.indice_RSGTD)
-                        .onChange(async (value: any) => {
-                            this.plugin.settings.indice_RSGTD = value;
+                    .addText((text: TextComponent) => text // Correct type
+                        .setValue(this.plugin.settings!.indice_RSGTD) // Add assertion
+                        .onChange(async (value: string) => { // Use string type
+                            this.plugin.settings!.indice_RSGTD = value; // Add assertion
                             await this.plugin.saveSettings();
                         }));
 
@@ -321,45 +338,46 @@ export class PluginMainSettingsTab extends PluginSettingTab {
                 lecturaContent.style.display = 'none';
                 lecturaTitle.onclick = toggleCollapse;
 
-                // Sesiones de Lectura
+                // Sesiones de Lectura (Corrected to Resumenes based on error)
                 new Setting(lecturaContent)
-                    .setName('Carpeta de Sesiones de Lectura')
-                    .setDesc('Establece la ruta de la carpeta para las sesiones de lectura.')
-                    .addText((text: { setValue: (arg0: any) => { (): any; new(): any; onChange: { (arg0: (value: any) => Promise<void>): any; new(): any; }; }; }) => text
-                        .setValue(this.plugin.settings.folder_LecturaSesiones)
-                        .onChange(async (value: any) => {
-                            this.plugin.settings.folder_LecturaSesiones = value;
+                    .setName('Carpeta de Resúmenes de Libros') // Corrected Name
+                    .setDesc('Establece la ruta de la carpeta para los resúmenes de libros.') // Corrected Desc
+                    .addText((text: TextComponent) => text // Correct type
+                        .setValue(this.plugin.settings!.folder_LecturaResumenes) // Corrected key + Add assertion
+                        .onChange(async (value: string) => { // Use string type
+                            this.plugin.settings!.folder_LecturaResumenes = value; // Corrected key + Add assertion
                             await this.plugin.saveSettings();
                         }));
 
                 new Setting(lecturaContent)
-                    .setName('Índice de Sesiones de Lectura')
-                    .setDesc('Establece la ruta del índice para las sesiones de lectura.')
-                    .addText((text: { setValue: (arg0: any) => { (): any; new(): any; onChange: { (arg0: (value: any) => Promise<void>): any; new(): any; }; }; }) => text
-                        .setValue(this.plugin.settings.indice_LecturaSesiones)
-                        .onChange(async (value: any) => {
-                            this.plugin.settings.indice_LecturaSesiones = value;
+                    .setName('Índice de Resúmenes de Libros') // Corrected Name
+                    .setDesc('Establece la ruta del índice para los resúmenes de libros.') // Corrected Desc
+                    .addText((text: TextComponent) => text // Correct type
+                        .setValue(this.plugin.settings!.indice_LecturaResumenes) // Corrected key + Add assertion
+                        .onChange(async (value: string) => { // Use string type
+                            this.plugin.settings!.indice_LecturaResumenes = value; // Corrected key + Add assertion
                             await this.plugin.saveSettings();
                         }));
 
-                // Libros y Resúmenes
+                // Libros y Resúmenes (This seems redundant now, maybe remove or adjust?)
+                // Keeping it for now, but correcting types and assertions
                 new Setting(lecturaContent)
-                    .setName('Carpeta de Resúmenes de Libros')
+                    .setName('Carpeta de Resúmenes de Libros (Repetido?)')
                     .setDesc('Establece la ruta de la carpeta para los resúmenes de libros.')
-                    .addText((text: { setValue: (arg0: any) => { (): any; new(): any; onChange: { (arg0: (value: any) => Promise<void>): any; new(): any; }; }; }) => text
-                        .setValue(this.plugin.settings.folder_LecturaResumenes)
-                        .onChange(async (value: any) => {
-                            this.plugin.settings.folder_LecturaResumenes = value;
+                    .addText((text: TextComponent) => text // Correct type
+                        .setValue(this.plugin.settings!.folder_LecturaResumenes) // Add assertion
+                        .onChange(async (value: string) => { // Use string type
+                            this.plugin.settings!.folder_LecturaResumenes = value; // Add assertion
                             await this.plugin.saveSettings();
                         }));
 
                 new Setting(lecturaContent)
-                    .setName('Índice de Resúmenes de Libros')
+                    .setName('Índice de Resúmenes de Libros (Repetido?)')
                     .setDesc('Establece la ruta del índice para los resúmenes de libros.')
-                    .addText((text: { setValue: (arg0: any) => { (): any; new(): any; onChange: { (arg0: (value: any) => Promise<void>): any; new(): any; }; }; }) => text
-                        .setValue(this.plugin.settings.indice_LecturaResumenes)
-                        .onChange(async (value: any) => {
-                            this.plugin.settings.indice_LecturaResumenes = value;
+                    .addText((text: TextComponent) => text // Correct type
+                        .setValue(this.plugin.settings!.indice_LecturaResumenes) // Add assertion
+                        .onChange(async (value: string) => { // Use string type
+                            this.plugin.settings!.indice_LecturaResumenes = value; // Add assertion
                             await this.plugin.saveSettings();
                         }));
 
@@ -376,20 +394,20 @@ export class PluginMainSettingsTab extends PluginSettingTab {
                 new Setting(mentoriasContent)
                     .setName('Carpeta de Sesiones de Mentoría')
                     .setDesc('Establece la ruta de la carpeta donde se guardarán las sesiones de mentoría.')
-                    .addText((text: { setValue: (arg0: any) => { (): any; new(): any; onChange: { (arg0: (value: any) => Promise<void>): any; new(): any; }; }; }) => text
-                        .setValue(this.plugin.settings.folder_Mentorias)
-                        .onChange(async (value: any) => {
-                            this.plugin.settings.folder_Mentorias = value;
+                    .addText((text: TextComponent) => text // Correct type
+                        .setValue(this.plugin.settings!.folder_Mentorias) // Add assertion
+                        .onChange(async (value: string) => { // Use string type
+                            this.plugin.settings!.folder_Mentorias = value; // Add assertion
                             await this.plugin.saveSettings();
                         }));
 
                 new Setting(mentoriasContent)
                     .setName('Índice de Mentorías')
                     .setDesc('Establece la ruta del índice de las sesiones de mentoría.')
-                    .addText((text: { setValue: (arg0: any) => { (): any; new(): any; onChange: { (arg0: (value: any) => Promise<void>): any; new(): any; }; }; }) => text
-                        .setValue(this.plugin.settings.indice_Mentorias)
-                        .onChange(async (value: any) => {
-                            this.plugin.settings.indice_Mentorias = value;
+                    .addText((text: TextComponent) => text // Correct type
+                        .setValue(this.plugin.settings!.indice_Mentorias) // Add assertion
+                        .onChange(async (value: string) => { // Use string type
+                            this.plugin.settings!.indice_Mentorias = value; // Add assertion
                             await this.plugin.saveSettings();
                         }));
 
@@ -407,20 +425,20 @@ export class PluginMainSettingsTab extends PluginSettingTab {
                 new Setting(mercadoContent)
                     .setName('Carpeta de Listados de Mercado')
                     .setDesc('Establece la ruta de la carpeta donde se guardarán las listas de mercado.')
-                    .addText((text: { setValue: (arg0: any) => { (): any; new(): any; onChange: { (arg0: (value: any) => Promise<void>): any; new(): any; }; }; }) => text
-                        .setValue(this.plugin.settings.folder_Mercado)
-                        .onChange(async (value: any) => {
-                            this.plugin.settings.folder_Mercado = value;
+                    .addText((text: TextComponent) => text // Correct type
+                        .setValue(this.plugin.settings!.folder_Mercado) // Add assertion
+                        .onChange(async (value: string) => { // Use string type
+                            this.plugin.settings!.folder_Mercado = value; // Add assertion
                             await this.plugin.saveSettings();
                         }));
 
                 new Setting(mercadoContent)
                     .setName('Índice de listados de mercado')
                     .setDesc('Establece la ruta del índice de los listados de mercado.')
-                    .addText((text: { setValue: (arg0: any) => { (): any; new(): any; onChange: { (arg0: (value: any) => Promise<void>): any; new(): any; }; }; }) => text
-                        .setValue(this.plugin.settings.indice_Mercado)
-                        .onChange(async (value: any) => {
-                            this.plugin.settings.indice_Mercado = value;
+                    .addText((text: TextComponent) => text // Correct type
+                        .setValue(this.plugin.settings!.indice_Mercado) // Add assertion
+                        .onChange(async (value: string) => { // Use string type
+                            this.plugin.settings!.indice_Mercado = value; // Add assertion
                             await this.plugin.saveSettings();
                         }));
                 
@@ -437,20 +455,20 @@ export class PluginMainSettingsTab extends PluginSettingTab {
                 new Setting(modulosContent)
                     .setName('Carpeta de Modulos del Sistema de Gestion')
                     .setDesc('Establece la ruta de la carpeta donde se guardarán los módulos del Sistema de Gestión.')
-                    .addText((text: { setValue: (arg0: any) => { (): any; new(): any; onChange: { (arg0: (value: any) => Promise<void>): any; new(): any; }; }; }) => text
-                        .setValue(this.plugin.settings.folder_ModulosSistema)
-                        .onChange(async (value: any) => {
-                            this.plugin.settings.folder_ModulosSistema = value;
+                    .addText((text: TextComponent) => text // Correct type
+                        .setValue(this.plugin.settings!.folder_ModulosSistema) // Add assertion
+                        .onChange(async (value: string) => { // Use string type
+                            this.plugin.settings!.folder_ModulosSistema = value; // Add assertion
                             await this.plugin.saveSettings();
                         }));
 
                 new Setting(modulosContent)
                     .setName('Índice de los Modulos del sistema de Gestion')
                     .setDesc('Establece la ruta del índice de los Módulos del sistema de Gestión.')
-                    .addText((text: { setValue: (arg0: any) => { (): any; new(): any; onChange: { (arg0: (value: any) => Promise<void>): any; new(): any; }; }; }) => text
-                        .setValue(this.plugin.settings.indice_ModulosSistema)
-                        .onChange(async (value: any) => {
-                            this.plugin.settings.indice_ModulosSistema = value;
+                    .addText((text: TextComponent) => text // Correct type
+                        .setValue(this.plugin.settings!.indice_ModulosSistema) // Add assertion
+                        .onChange(async (value: string) => { // Use string type
+                            this.plugin.settings!.indice_ModulosSistema = value; // Add assertion
                             await this.plugin.saveSettings();
                         }));
                 // Bloque desplegable para "Transacciones y Pagos"
@@ -465,20 +483,20 @@ export class PluginMainSettingsTab extends PluginSettingTab {
                 new Setting(transaccionesContent)
                     .setName('Carpeta de Modulos del Sistema de Transacciones')
                     .setDesc('Establece la ruta de la carpeta donde se guardarán los comprobantes de las transacciones.')
-                    .addText((text: { setValue: (arg0: any) => { (): any; new(): any; onChange: { (arg0: (value: any) => Promise<void>): any; new(): any; }; }; }) => text
-                        .setValue(this.plugin.settings.folder_Transacciones)
-                        .onChange(async (value: any) => {
-                            this.plugin.settings.folder_Transacciones = value;
+                    .addText((text: TextComponent) => text // Correct type
+                        .setValue(this.plugin.settings!.folder_Transacciones) // Add assertion
+                        .onChange(async (value: string) => { // Use string type
+                            this.plugin.settings!.folder_Transacciones = value; // Add assertion
                             await this.plugin.saveSettings();
                         }));
 
                 new Setting(transaccionesContent)
                     .setName('Índice de Transacciones')
                     .setDesc('Establece la ruta del índice de Transacciones.')
-                    .addText((text: { setValue: (arg0: any) => { (): any; new(): any; onChange: { (arg0: (value: any) => Promise<void>): any; new(): any; }; }; }) => text
-                        .setValue(this.plugin.settings.indice_Transacciones)
-                        .onChange(async (value: any) => {
-                            this.plugin.settings.indice_Transacciones = value;
+                    .addText((text: TextComponent) => text // Correct type
+                        .setValue(this.plugin.settings!.indice_Transacciones) // Add assertion
+                        .onChange(async (value: string) => { // Use string type
+                            this.plugin.settings!.indice_Transacciones = value; // Add assertion
                             await this.plugin.saveSettings();
                         }));
 
@@ -494,20 +512,20 @@ export class PluginMainSettingsTab extends PluginSettingTab {
                 new Setting(presentacionesContent)
                     .setName('Carpeta de Notas de Presentaciones')
                     .setDesc('Establece la ruta de la carpeta donde se guardarán las notas de presentaciones.')
-                    .addText((text: { setValue: (arg0: any) => { (): any; new(): any; onChange: { (arg0: (value: any) => Promise<void>): any; new(): any; }; }; }) => text
-                        .setValue(this.plugin.settings.folder_Presentaciones)
-                        .onChange(async (value: any) => {
-                            this.plugin.settings.folder_Presentaciones = value;
+                    .addText((text: TextComponent) => text // Correct type
+                        .setValue(this.plugin.settings!.folder_Presentaciones) // Add assertion
+                        .onChange(async (value: string) => { // Use string type
+                            this.plugin.settings!.folder_Presentaciones = value; // Add assertion
                             await this.plugin.saveSettings();
                         }));
 
                 new Setting(presentacionesContent)
                     .setName('Índice de Presentaciones')
                     .setDesc('Establece la ruta del índice de presentaciones.')
-                    .addText((text: { setValue: (arg0: any) => { (): any; new(): any; onChange: { (arg0: (value: any) => Promise<void>): any; new(): any; }; }; }) => text
-                        .setValue(this.plugin.settings.indice_Presentaciones)
-                        .onChange(async (value: any) => {
-                            this.plugin.settings.indice_Presentaciones = value;
+                    .addText((text: TextComponent) => text // Correct type
+                        .setValue(this.plugin.settings!.indice_Presentaciones) // Add assertion
+                        .onChange(async (value: string) => { // Use string type
+                            this.plugin.settings!.indice_Presentaciones = value; // Add assertion
                             await this.plugin.saveSettings();
                         }));
 
@@ -522,20 +540,20 @@ export class PluginMainSettingsTab extends PluginSettingTab {
                 new Setting(proyectosQContent)
                     .setName('Carpeta de Proyectos de Q')
                     .setDesc('Establece la ruta de la carpeta donde se guardarán los proyectos de Q.')
-                    .addText((text: { setValue: (arg0: any) => { (): any; new(): any; onChange: { (arg0: (value: any) => Promise<void>): any; new(): any; }; }; }) => text
-                        .setValue(this.plugin.settings.folder_ProyectosQ)
-                        .onChange(async (value: any) => {
-                            this.plugin.settings.folder_ProyectosQ = value;
+                    .addText((text: TextComponent) => text // Correct type
+                        .setValue(this.plugin.settings!.folder_ProyectosQ) // Add assertion
+                        .onChange(async (value: string) => { // Use string type
+                            this.plugin.settings!.folder_ProyectosQ = value; // Add assertion
                             await this.plugin.saveSettings();
                         }));
 
                 new Setting(proyectosQContent)
                     .setName('Índice de Proyectos de Q')
                     .setDesc('Establece la ruta del índice de proyectos de Q.')
-                    .addText((text: { setValue: (arg0: any) => { (): any; new(): any; onChange: { (arg0: (value: any) => Promise<void>): any; new(): any; }; }; }) => text
-                        .setValue(this.plugin.settings.indice_ProyectosQ)
-                        .onChange(async (value: any) => {
-                            this.plugin.settings.indice_ProyectosQ = value;
+                    .addText((text: TextComponent) => text // Correct type
+                        .setValue(this.plugin.settings!.indice_ProyectosQ) // Add assertion
+                        .onChange(async (value: string) => { // Use string type
+                            this.plugin.settings!.indice_ProyectosQ = value; // Add assertion
                             await this.plugin.saveSettings();
                         }));
 
@@ -552,20 +570,20 @@ export class PluginMainSettingsTab extends PluginSettingTab {
                 new Setting(publicacionesContent)
                     .setName('Carpeta de Piezas de Publicaciones')
                     .setDesc('Establece la ruta de la carpeta donde se guardarán las piezas de publicaciones.')
-                    .addText((text: { setValue: (arg0: any) => { (): any; new(): any; onChange: { (arg0: (value: any) => Promise<void>): any; new(): any; }; }; }) => text
-                        .setValue(this.plugin.settings.folder_Publicaciones)
-                        .onChange(async (value: any) => {
-                            this.plugin.settings.folder_Publicaciones = value;
+                    .addText((text: TextComponent) => text // Correct type
+                        .setValue(this.plugin.settings!.folder_Publicaciones) // Add assertion
+                        .onChange(async (value: string) => { // Use string type
+                            this.plugin.settings!.folder_Publicaciones = value; // Add assertion
                             await this.plugin.saveSettings();
                         }));
 
                 new Setting(publicacionesContent)
                     .setName('Índice de Publicaciones')
                     .setDesc('Establece la ruta del índice de publicaciones.')
-                    .addText((text: { setValue: (arg0: any) => { (): any; new(): any; onChange: { (arg0: (value: any) => Promise<void>): any; new(): any; }; }; }) => text
-                        .setValue(this.plugin.settings.indice_Publicaciones)
-                        .onChange(async (value: any) => {
-                            this.plugin.settings.indice_Publicaciones = value;
+                    .addText((text: TextComponent) => text // Correct type
+                        .setValue(this.plugin.settings!.indice_Publicaciones) // Add assertion
+                        .onChange(async (value: string) => { // Use string type
+                            this.plugin.settings!.indice_Publicaciones = value; // Add assertion
                             await this.plugin.saveSettings();
                         }));
 
@@ -580,20 +598,20 @@ export class PluginMainSettingsTab extends PluginSettingTab {
                 new Setting(recetasContent)
                     .setName('Carpeta de Recetas')
                     .setDesc('Establece la ruta de la carpeta donde se guardarán las recetas.')
-                    .addText((text: { setValue: (arg0: any) => { (): any; new(): any; onChange: { (arg0: (value: any) => Promise<void>): any; new(): any; }; }; }) => text
-                        .setValue(this.plugin.settings.folder_Recetas)
-                        .onChange(async (value: any) => {
-                            this.plugin.settings.folder_Recetas = value;
+                    .addText((text: TextComponent) => text // Correct type
+                        .setValue(this.plugin.settings!.folder_Recetas) // Add assertion
+                        .onChange(async (value: string) => { // Use string type
+                            this.plugin.settings!.folder_Recetas = value; // Add assertion
                             await this.plugin.saveSettings();
                         }));
 
                 new Setting(recetasContent)
                     .setName('Índice de Recetas')
                     .setDesc('Establece la ruta del índice de recetas.')
-                    .addText((text: { setValue: (arg0: any) => { (): any; new(): any; onChange: { (arg0: (value: any) => Promise<void>): any; new(): any; }; }; }) => text
-                        .setValue(this.plugin.settings.indice_Recetas)
-                        .onChange(async (value: any) => {
-                            this.plugin.settings.indice_Recetas = value;
+                    .addText((text: TextComponent) => text // Correct type
+                        .setValue(this.plugin.settings!.indice_Recetas) // Add assertion
+                        .onChange(async (value: string) => { // Use string type
+                            this.plugin.settings!.indice_Recetas = value; // Add assertion
                             await this.plugin.saveSettings();
                         }));
 
@@ -608,20 +626,20 @@ export class PluginMainSettingsTab extends PluginSettingTab {
                 new Setting(recursosRecurrentesContent)
                     .setName('Carpeta de Recursos Recurrentes')
                     .setDesc('Establece la ruta de la carpeta donde se guardarán los recursos recurrentes.')
-                    .addText((text: { setValue: (arg0: any) => { (): any; new(): any; onChange: { (arg0: (value: any) => Promise<void>): any; new(): any; }; }; }) => text
-                        .setValue(this.plugin.settings.folder_RecursosRecurrentes)
-                        .onChange(async (value: any) => {
-                            this.plugin.settings.folder_RecursosRecurrentes = value;
+                    .addText((text: TextComponent) => text // Correct type
+                        .setValue(this.plugin.settings!.folder_RecursosRecurrentes) // Add assertion
+                        .onChange(async (value: string) => { // Use string type
+                            this.plugin.settings!.folder_RecursosRecurrentes = value; // Add assertion
                             await this.plugin.saveSettings();
                         }));
 
                 new Setting(recursosRecurrentesContent)
                     .setName('Índice de Recursos Recurrentes')
                     .setDesc('Establece la ruta del índice de recursos recurrentes.')
-                    .addText((text: { setValue: (arg0: any) => { (): any; new(): any; onChange: { (arg0: (value: any) => Promise<void>): any; new(): any; }; }; }) => text
-                        .setValue(this.plugin.settings.indice_RecursosRecurrentes)
-                        .onChange(async (value: any) => {
-                            this.plugin.settings.indice_RecursosRecurrentes = value;
+                    .addText((text: TextComponent) => text // Correct type
+                        .setValue(this.plugin.settings!.indice_RecursosRecurrentes) // Add assertion
+                        .onChange(async (value: string) => { // Use string type
+                            this.plugin.settings!.indice_RecursosRecurrentes = value; // Add assertion
                             await this.plugin.saveSettings();
                         }));
 
@@ -636,20 +654,20 @@ export class PluginMainSettingsTab extends PluginSettingTab {
                 new Setting(registroTiempoContent)
                     .setName('Carpeta de Registros de Tiempo')
                     .setDesc('Establece la ruta de la carpeta donde se guardarán los registros de tiempo.')
-                    .addText((text: { setValue: (arg0: any) => { (): any; new(): any; onChange: { (arg0: (value: any) => Promise<void>): any; new(): any; }; }; }) => text
-                        .setValue(this.plugin.settings.folder_RegistroTiempo)
-                        .onChange(async (value: any) => {
-                            this.plugin.settings.folder_RegistroTiempo = value;
+                    .addText((text: TextComponent) => text // Correct type
+                        .setValue(this.plugin.settings!.folder_RegistroTiempo) // Add assertion
+                        .onChange(async (value: string) => { // Use string type
+                            this.plugin.settings!.folder_RegistroTiempo = value; // Add assertion
                             await this.plugin.saveSettings();
                         }));
 
                 new Setting(registroTiempoContent)
                     .setName('Índice de Registro de Tiempo')
                     .setDesc('Establece la ruta del índice de registros de tiempo.')
-                    .addText((text: { setValue: (arg0: any) => { (): any; new(): any; onChange: { (arg0: (value: any) => Promise<void>): any; new(): any; }; }; }) => text
-                        .setValue(this.plugin.settings.indice_RegistroTiempo)
-                        .onChange(async (value: any) => {
-                            this.plugin.settings.indice_RegistroTiempo = value;
+                    .addText((text: TextComponent) => text // Correct type
+                        .setValue(this.plugin.settings!.indice_RegistroTiempo) // Add assertion
+                        .onChange(async (value: string) => { // Use string type
+                            this.plugin.settings!.indice_RegistroTiempo = value; // Add assertion
                             await this.plugin.saveSettings();
                         }));
 
@@ -684,9 +702,9 @@ export class PluginMainSettingsTab extends PluginSettingTab {
         
 
         // Función para cambiar la pestaña activa
-        this.openTab = (tabName) => {
+        this.openTab = (tabName: string) => { // Add type for tabName
             document.querySelectorAll('.tab-content').forEach(content => {
-                content.style.display = 'none';
+                (content as HTMLElement).style.display = 'none'; // Cast to HTMLElement
                 content.classList.remove('active');
             });
             document.querySelectorAll('.tab-link').forEach(link => {

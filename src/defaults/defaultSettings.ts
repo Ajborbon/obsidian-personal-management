@@ -10,7 +10,8 @@ export const DEFAULT_SETTINGS: PluginMainSettings = {
   moduloTaskManager: true,
   moduloDataviewQueries: true,
   taskExecutionNavigatorModule: true,  // Activado por defecto
-  file_camposCentral :"Estructura/Campos Sistema Gestion/Campos Sistema Central", 
+  moduloGTDv2: true, // Default value for the new module
+  file_camposCentral :"Estructura/Campos Sistema Gestion/Campos Sistema Central",
   folder_Anotaciones: "Anotaciones/Notas",
   indice_Anotaciones: "Anotaciones/Indice Anotaciones",
   folder_ABlog: "Subsistemas/Articulos Blog/Articulos",
@@ -55,8 +56,10 @@ export const DEFAULT_SETTINGS: PluginMainSettings = {
   // Estructura
   folder_AreasVida: "Estructura/Areas de Vida",
   indice_AreasVida: "Estructura/Areas de Vida/Indice Areas de Vida",
+  nameFile_AreasVida: "", // Added missing default
   folder_AreasInteres: "Estructura/Areas de Interes",
   indice_AreasInteres: "Estructura/Areas de Interes/Indice Areas de Interes",
+  nameFile_AreasInteres: "", // Added missing default
   folder_TemasInteres: "Estructura/Temas de Interes",
   indice_TemasInteres: "Estructura/Temas de Interes/Indice Temas de Interes",
   folder_RecursosRecurrentes: "Estructura/Recursos Recurrentes/Recursos",
@@ -106,4 +109,3 @@ export const DEFAULT_SETTINGS: PluginMainSettings = {
    indice_RegistrosAkashikos: "Registros Personales/Registros Akashikos/Indice Registros Akashikos",
    
 };
-

@@ -1,9 +1,10 @@
   {
     "extends": "@tsconfig/svelte/tsconfig.json",
     "compilerOptions": {
-      "types": ["svelte"],
-      "target": "es6",
-      "module": "es6",
+      "types": ["svelte", "node"], // Added 'node' for good measure, often useful
+      "target": "es2020", // Updated target
+      "lib": ["es2020", "dom"], // Added lib
+      "module": "es6", // Keep module as es6 for Obsidian compatibility? Check build process if issues arise.
       "strict": true,
       "esModuleInterop": true,
       "moduleResolution": "node",

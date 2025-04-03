@@ -1,6 +1,6 @@
 .vista-RT {
-    padding-top: 2px; 
-    padding: 2px 10px 1px; 
+    padding-top: 2px;
+    padding: 2px 10px 1px;
     /* Cualquier otro estilo que quieras aplicar */
 }
 
@@ -14,20 +14,20 @@
     /* Puedes ajustar el 0.8em al tamaño que prefieras */
 }
 .vista-RT h5 {
-    padding: 0px 8px 0px; 
+    padding: 0px 8px 0px;
     text-align: center; /* Centra los encabezados h1 */
     margin-top: 5px;
     /* Cualquier otro estilo que quieras aplicar a h1 */
 }
 .vista-RT button {
-    padding: 0px 8px 0px; 
+    padding: 0px 8px 0px;
     text-align: center; /* Centra los encabezados h1 */
     margin-top: 5px;
     /* Cualquier otro estilo que quieras aplicar a h1 */
 }
 
 .vista-RT div {
-    padding: 5px 8px 3px; 
+    padding: 5px 8px 3px;
     /* Cualquier otro estilo que quieras aplicar a h1 */
 }
 
@@ -63,15 +63,15 @@
   height : 1px;
   width : 100%;
   backgroundColor : #ccc;
-  margin : 10px 0; 
+  margin : 10px 0;
 }
 
 .table-container button {
     font-size: 0.8em;
-    padding: 0px 8px; 
-    margin-top: 5px; 
+    padding: 0px 8px;
+    margin-top: 5px;
     margin-left: auto; /* Margen automático para centrar horizontalmente */
-    margin-right: auto; 
+    margin-right: auto;
     display: block; /* Hace que el margen automático funcione */
  }
 
@@ -84,7 +84,7 @@
     border-radius: 8px;
     text-align: center;
   }
-  
+
   /* Estilos para el textarea dentro del modal */
   .modalInbox textarea {
     width: 98%; /* Ajusta al 98% del ancho del modal */
@@ -96,34 +96,34 @@
     padding: 4px; /* Añade un poco de padding dentro del textarea */
     box-sizing: border-box; /* Asegura que el padding no afecte el ancho establecido */
 }
-  
+
   /* Estilos para el contenedor del checkbox para centrar */
   .modalInbox checkbox-container {
     text-align: center;
     margin: 20px 0; /* Añade margen arriba y abajo para separación */
   }
-  
+
   /* Estilos opcionales para el checkbox */
   .modalInbox checkbox {
     margin-right: 5px;
   }
-  
+
   /* Estilos para el contenedor del botón para centrar */
   .modalInbox button-container {
     text-align: center;
     margin: 20px 0; /* Añade margen arriba y abajo para separación */
   }
-  
+
   /* Estilos para el botón */
   .modalInbox button {
-    
+
     border: none;
     padding: 20px 15px;
     border-radius: 5px;
     cursor: pointer;
-    margin-left: 20px; 
+    margin-left: 20px;
   }
-  
+
 /* Tabla estilizada */
 .table-wrapper {
   width: 100%;
@@ -181,7 +181,7 @@
 .clickable-alias:hover {
   text-decoration: underline;
 }
-  
+
 /* Botón de "Nuevo Registro Tiempo" */
 .registro-tiempo-btn {
   background-color: #0078D4; /* Azul predeterminado */
@@ -287,7 +287,7 @@
 .active-time-container {
   width: 100%;              /* Ocupa el ancho completo del contenedor padre */
   box-sizing: border-box;   /* Incluye padding y border en el ancho */
-  
+
   /* Resto de estilos */
   background-color: #ffeb3b; /* Amarillo suave */
   padding: 15px;
@@ -609,14 +609,14 @@
   background: #666;
 }
 
-}  
+}
 
   .styled-table {
     width: 100%;
     table-layout: fixed; /* Fuerza a que respete los anchos y permita el wrapping */
     border-collapse: collapse;
   }
-  
+
   /* Asegura que el texto se corte y salte de línea */
   .styled-table th,
   .styled-table td {
@@ -626,7 +626,7 @@
     padding: 8px;              /* Ajusta el padding según tu preferencia */
     vertical-align: top;       /* Alinea el texto arriba si hay varias líneas */
   }
-    
+
 
   /* Para pantallas pequeñas (por ejemplo, menos de 600px de ancho) */
 @media (max-width: 600px) {
@@ -664,7 +664,7 @@
 
 /* Estilo del texto y enlaces dentro del bloque */
 .nota-relaciones a {
-  color: var(--interactive-accent); 
+  color: var(--interactive-accent);
   font-weight: 500;
   text-decoration: none;
   transition: all 0.15s ease;
@@ -1201,15 +1201,15 @@
     padding: 0.75rem;
     font-size: 0.9em;
   }
-  
+
   .tasks-tree-title {
     font-size: 1.2em;
   }
-  
+
   .tasks-ref-header {
     padding: 0.5rem;
   }
-  
+
   .tasks-list-container {
     padding: 0.5rem;
   }
@@ -1417,15 +1417,15 @@
     background-color: #444444;
     color: #ffffff;
   }
-  
+
   .alias-link {
     color: #6bb0ff;
   }
-  
+
   .alias-link:hover {
     color: #9ccdff;
   }
-  
+
   .registro-descripcion {
     background-color: #555555;
     color: #ffffff;
@@ -1645,7 +1645,7 @@
   margin-top: 12px;
 }
 
-.proyectos-area-vida, 
+.proyectos-area-vida,
 .proyectos-sin-av {
   margin-bottom: 12px;
   border-radius: 6px;
@@ -1653,7 +1653,7 @@
   overflow: hidden;
 }
 
-.proyectos-area-header, 
+.proyectos-area-header,
 .proyectos-ai-header {
   padding: 8px 12px;
   cursor: pointer;
@@ -1665,12 +1665,12 @@
   transition: background-color 0.2s ease;
 }
 
-.proyectos-area-header:hover, 
+.proyectos-area-header:hover,
 .proyectos-ai-header:hover {
   background-color: var(--background-modifier-hover);
 }
 
-.proyectos-area-content, 
+.proyectos-area-content,
 .proyectos-ai-content {
   padding: 10px 15px;
 }
@@ -1700,7 +1700,7 @@
   text-decoration: underline;
 }
 
-.proyectos-area-interes, 
+.proyectos-area-interes,
 .proyectos-sin-ai {
   margin: 8px 0;
   border-radius: 4px;
@@ -1763,7 +1763,7 @@
   margin-left: 5px;
 }
 
-.proyectos-ai-empty, 
+.proyectos-ai-empty,
 .proyectos-lista-empty,
 .proyectos-tree-empty {
   color: var(--text-muted);
@@ -1945,11 +1945,11 @@
   .filtro-label {
       flex: 0 0 90px;
   }
-  
+
   .proyectos-tree-container {
       font-size: 0.85em;
   }
-  
+
   .botones-expandir-container {
       flex-direction: column;
   }
@@ -1981,250 +1981,6 @@
 
 
 /* Contextos GTD */
-/* Estilos para la vista de ContextosGTD */
-
-/* Estilos generales para los contextos */
-.contexto-details {
-  margin-bottom: 8px;
-  border-radius: 6px;
-  border: 1px solid var(--background-modifier-border);
-  overflow: hidden;
-  transition: all 0.3s ease;
-}
-
-.contexto-details[open] {
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-}
-
-/* Estilo para el encabezado del contexto */
-.contexto-summary {
-  cursor: pointer;
-  user-select: none;
-  padding: 10px 16px;
-  background-color: var(--background-secondary);
-  transition: background-color 0.2s ease;
-  list-style: none;
-}
-
-.contexto-summary::-webkit-details-marker {
-  display: none;
-}
-
-.contexto-summary:hover {
-  background-color: var(--background-modifier-hover);
-}
-
-/* Header con nombre y contador */
-.contexto-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.contexto-nombre {
-  font-weight: 600;
-  font-size: 1.1em;
-}
-
-.contexto-contador {
-  background-color: var(--interactive-accent);
-  color: white;
-  border-radius: 50%;
-  width: 24px;
-  height: 24px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 0.85em;
-  font-weight: bold;
-}
-
-/* Contenedor de tareas */
-.contexto-tareas {
-  padding: 10px 16px;
-  background-color: var(--background-primary);
-}
-
-/* Estilos para las tareas */
-.tarea-item {
-  margin-bottom: 12px;
-  padding: 10px;
-  border-radius: 4px;
-  background-color: var(--background-primary);
-  border: 1px solid var(--background-modifier-border);
-  transition: all 0.2s ease;
-}
-
-.tarea-item:hover {
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  transform: translateY(-2px);
-  border-color: var(--interactive-accent);
-}
-
-.tarea-bloqueada {
-  border-left: 3px solid #e74c3c;
-}
-
-/* Texto de la tarea */
-.tarea-texto {
-  margin-bottom: 8px;
-  font-size: 1.05em;
-  display: flex;
-  align-items: flex-start;
-}
-
-.tarea-checkbox {
-  margin-right: 8px;
-  font-size: 1.2em;
-  color: var(--text-faint);
-}
-
-.tarea-contenido {
-  line-height: 1.4;
-  flex-grow: 1;
-}
-
-/* Metadatos de la tarea */
-.tarea-metadatos {
-  margin-left: 28px;
-  font-size: 0.9em;
-  color: var(--text-muted);
-}
-
-.tarea-ubicacion, .tarea-fechas, .tarea-horario, .tarea-personas, .tarea-dependencia {
-  margin-bottom: 4px;
-  display: flex;
-  align-items: baseline;
-}
-
-.metadato-icono {
-  margin-right: 6px;
-  width: 16px;
-  text-align: center;
-}
-
-/* Colores para estados de fechas */
-.tarea-fecha.vencimiento .metadato-valor {
-  color: #e74c3c;
-  font-weight: 500;
-}
-
-.tarea-fecha.scheduled .metadato-valor {
-  color: #f39c12;
-  font-weight: 500;
-}
-
-.tarea-fecha.start .metadato-valor {
-  color: #3498db;
-  font-weight: 500;
-}
-
-/* Dependencias */
-.tarea-dependencia.bloqueada {
-  color: #e74c3c;
-}
-
-.tarea-dependencia.disponible {
-  color: #2ecc71;
-}
-
-/* Niveles anidados */
-.nivel-0 > summary {
-  background-color: var(--background-secondary-alt);
-}
-
-.nivel-1 {
-  margin-left: 20px;
-}
-
-.nivel-2 {
-  margin-left: 20px;
-}
-
-.nivel-3 {
-  margin-left: 20px;
-}
-
-/* Contenedor de subcontextos */
-.subcontextos-container {
-  padding: 0 0 10px 10px;
-}
-
-/* Controles */
-.contextos-controles {
-  margin-bottom: 16px;
-  display: flex;
-  justify-content: center;
-}
-
-.actualizacion-btn-container {
-  margin: 16px 0;
-  display: flex;
-  justify-content: center;
-}
-
-.actualizacion-btn {
-  padding: 10px 16px;
-  background-color: var(--interactive-accent);
-  color: white;
-  border: none;
-  border-radius: 4px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: background-color 0.2s ease, transform 0.1s ease;
-}
-
-.actualizacion-btn:hover {
-  background-color: var(--interactive-accent-hover);
-  transform: translateY(-2px);
-}
-
-/* Adaptaciones para modo oscuro */
-.theme-dark .tarea-item {
-  background-color: var(--background-primary);
-  border-color: var(--background-modifier-border);
-}
-
-.theme-dark .tarea-item:hover {
-  background-color: var(--background-primary-alt);
-}
-
-.theme-dark .contexto-summary {
-  background-color: var(--background-secondary);
-}
-
-.theme-dark .contexto-summary:hover {
-  background-color: var(--background-secondary-alt);
-}
-
-/* Animaciones */
-@keyframes highlight {
-  0% {
-    background-color: var(--interactive-accent);
-    color: white;
-  }
-  100% {
-    background-color: transparent;
-    color: var(--text-normal);
-  }
-}
-
-/* Capacidad de respuesta para pantallas pequeñas */
-@media (max-width: 768px) {
-  .contexto-header {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-  
-  .contexto-contador {
-    margin-top: 5px;
-  }
-  
-  .tarea-metadatos {
-    margin-left: 10px;
-  }
-} 
-
 /* Estilos para la vista de ContextosGTD */
 
 /* Estilos generales para los contextos */
@@ -2518,15 +2274,15 @@
     flex-direction: column;
     align-items: flex-start;
   }
-  
+
   .contexto-contador {
     margin-top: 5px;
   }
-  
+
   .tarea-metadatos {
     margin-left: 10px;
   }
-  
+
   .contextos-gtd-inline {
     font-size: 0.9em;
     padding: 5px;
@@ -2923,18 +2679,18 @@
   .dashboard-stats-container {
     flex-direction: column;
   }
-  
+
   .stats-card {
     min-width: 100%;
   }
-  
-  .proyecto-metricas, 
+
+  .proyecto-metricas,
   .campana-metricas {
     flex-direction: column;
     align-items: flex-start;
     gap: 5px;
   }
-  
+
   .entregables-tabla {
     font-size: 0.85em;
   }
@@ -2981,3 +2737,226 @@
   opacity: 0.7;
 }
 
+/* --- Styles for GTD v2 View --- */
+
+/* General View Container (within Obsidian tab) */
+.gtd-v2-view-container { /* Add this class to the root element in view.ts if needed */
+  padding: var(--size-4-3) var(--size-4-6); /* Use Obsidian spacing */
+  font-size: var(--font-ui-normal);
+}
+
+/* Hierarchy View Specifics */
+#hierarchy-view ul,
+#list-view ul {
+  list-style: none;
+  padding-left: 0;
+}
+
+#hierarchy-view .hierarchy-root {
+  padding-left: 0;
+}
+
+.proyectos-item { /* Used for notes in hierarchy */
+  margin-bottom: var(--size-4-1);
+}
+
+.proyectos-area-header { /* Header for each note */
+  display: flex;
+  align-items: center;
+  gap: var(--size-4-2);
+  padding: var(--size-4-1) var(--size-4-2);
+  border-radius: var(--radius-s);
+  cursor: pointer;
+  background-color: var(--background-secondary);
+  transition: background-color 0.2s ease;
+}
+.proyectos-area-header:hover {
+  background-color: var(--background-modifier-hover);
+}
+
+.toggle-icon, .no-toggle {
+  color: var(--text-muted);
+  width: 1em;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.item-type {
+  color: var(--text-faint);
+  font-size: 0.9em;
+}
+
+.proyecto-estado { /* Emoji status */
+  margin-right: var(--size-4-1);
+}
+
+.item-link { /* Link for the note name */
+  color: var(--text-normal);
+  font-weight: 500;
+  text-decoration: none;
+  flex-grow: 1; /* Allow name to take up space */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.item-link:hover {
+  color: var(--text-accent);
+}
+
+.proyectos-contador { /* Task count */
+  background-color: var(--background-modifier-border);
+  color: var(--text-muted);
+  border-radius: var(--radius-l);
+  padding: 0 var(--size-4-2);
+  font-size: 0.85em;
+  font-weight: 600;
+}
+.proyectos-area-header:hover .proyectos-contador {
+  background-color: var(--interactive-accent);
+  color: var(--text-on-accent);
+}
+
+.show-lineage { /* Lineage button */
+  margin-left: auto; /* Push to the right */
+  font-size: 0.8em;
+  padding: var(--size-4-1) var(--size-4-2);
+  cursor: pointer;
+  border: 1px solid var(--background-modifier-border);
+  background-color: var(--interactive-normal);
+  border-radius: var(--radius-s);
+  color: var(--text-muted);
+}
+.show-lineage:hover {
+  background-color: var(--background-modifier-hover);
+  color: var(--text-normal);
+}
+
+.item-lineage { /* Lineage details */
+  font-size: 0.85em;
+  color: var(--text-muted);
+  margin-left: calc(1em + var(--size-4-2) + var(--size-4-4)); /* Indent past toggle */
+  padding: var(--size-4-1) var(--size-4-2);
+  border-left: 1px solid var(--background-modifier-border);
+  margin-top: var(--size-4-1);
+  margin-bottom: var(--size-4-1);
+  background-color: var(--background-secondary-alt);
+}
+.item-lineage .lineage-link {
+    color: var(--text-faint);
+}
+.item-lineage .lineage-link:hover {
+    color: var(--text-muted);
+}
+
+
+.proyectos-area-content { /* Container for tasks and sub-items */
+  padding-left: calc(1em + var(--size-4-2)); /* Indent content */
+  border-left: 1px dashed var(--background-modifier-border);
+  margin-left: calc( (1em + var(--size-4-2)) / 2 ); /* Center the border */
+  padding-top: var(--size-4-1);
+}
+
+/* Task List Styling */
+.tasks-list {
+  padding-left: var(--size-4-2);
+  margin: 0;
+}
+
+.tasks-item {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--size-4-2);
+  padding: var(--size-4-1) 0;
+  border-bottom: 1px solid var(--background-modifier-border-subtle);
+}
+.tasks-item:last-child {
+  border-bottom: none;
+}
+
+.tasks-checkbox {
+  cursor: pointer;
+  color: var(--text-muted);
+  margin-top: 0.1em; /* Align better with text */
+}
+.tasks-checkbox:hover {
+  color: var(--text-normal);
+}
+
+.tasks-text {
+  flex-grow: 1;
+  cursor: pointer;
+  line-height: 1.4;
+}
+.tasks-text:hover {
+  color: var(--text-accent);
+}
+
+.tarea-metadatos {
+  font-size: 0.85em;
+  color: var(--text-muted);
+  margin-top: var(--size-4-1);
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--size-4-2);
+  padding-left: calc(1.2em + var(--size-4-2)); /* Indent metadata */
+}
+
+.tarea-metadatos .meta {
+  background-color: var(--background-modifier-hover);
+  padding: 0.1em 0.4em;
+  border-radius: var(--radius-s);
+  white-space: nowrap;
+}
+.tarea-metadatos .meta.overdue { /* Style for overdue indicator if added */
+    color: var(--text-error);
+    background-color: var(--background-modifier-error);
+}
+
+.tarea-id {
+  font-size: 0.8em;
+  color: var(--text-faint);
+  margin-left: auto; /* Push ID to the right if needed */
+  padding-left: var(--size-4-2);
+}
+
+/* GTD List View Specifics */
+#list-view .gtd-list {
+  margin-bottom: var(--size-4-6);
+}
+#list-view h2 {
+  font-size: 1.2em;
+  border-bottom: 1px solid var(--background-modifier-border);
+  padding-bottom: var(--size-4-1);
+  margin-bottom: var(--size-4-3);
+}
+#list-view ul {
+    padding-left: 0;
+}
+#list-view .tasks-item {
+    border: 1px solid var(--background-modifier-border);
+    padding: var(--size-4-2);
+    border-radius: var(--radius-m);
+    background-color: var(--background-secondary);
+}
+#list-view .tasks-item:hover {
+    border-color: var(--interactive-accent);
+}
+
+/* General Controls */
+#refresh-button {
+    margin-bottom: var(--size-4-3);
+}
+input[type="radio"] {
+    margin-right: var(--size-4-1);
+}
+label {
+    margin-right: var(--size-4-4);
+    cursor: pointer;
+}
+
+/* Active Context Highlight */
+.active-context > .proyectos-area-header {
+    background-color: var(--background-secondary-alt);
+    border-left: 3px solid var(--interactive-accent);
+    padding-left: calc(var(--size-4-2) - 3px);
+}
