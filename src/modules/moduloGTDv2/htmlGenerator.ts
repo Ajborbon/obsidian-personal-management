@@ -1,5 +1,6 @@
 // Logic for generating the HTML view for GTDv2
 import type { GtdDataModel, HierarchicalItem, Task, ClassifiedTasks } from './model';
+import { DateTime } from 'luxon'; // Import Luxon
 
 // --- Constants ---
 const OBSIDIAN_APP_URI_SCHEME = 'obsidian://';
@@ -138,17 +139,128 @@ export function generateGtdViewHtml(
         }
     }
 
-    function renderGtdList(listName: string, tasks: Task[]): string {
+    // --- Sorting Helper Functions ---
+
+    /**
+     * Gets the relevant date (due highest priority, then scheduled) for sorting.
+     * Returns null if no relevant date exists.
+     */
+    function getTaskSortDate(task: Task): DateTime | null {
+        // Accept string, undefined, or null
+        const parseDate = (dateStr: string | undefined | null): DateTime | null => {
+            if (!dateStr) return null; // Handles undefined and null
+            const dt = DateTime.fromISO(dateStr);
+            return dt.isValid ? dt : null;
+        };
+
+        const dueDate = parseDate(task.dueDate);
+        const scheduledDate = parseDate(task.scheduledDate);
+
+        if (dueDate) return dueDate;
+        if (scheduledDate) return scheduledDate;
+        return null;
+    }
+
+    /**
+     * Compares two tasks based on date (due/scheduled) and then context/person tags.
+     * - Overdue tasks first (older first).
+     * - Tasks due/scheduled later come next (sooner first).
+     * - Tasks without dates come last.
+     * - Secondary sort by the first context (#cx-) or assigned person (#px-) tag alphabetically.
+     */
+    function compareTasks(a: Task, b: Task): number {
+        const dateA = getTaskSortDate(a);
+        const dateB = getTaskSortDate(b);
+        const now = DateTime.now().startOf('day'); // Compare against the start of today
+
+        // Handle null dates (put them at the end)
+        if (!dateA && !dateB) return 0; // Keep original order if both lack dates
+        if (!dateA) return 1; // a comes after b
+        if (!dateB) return -1; // a comes before b
+
+        const isAOverdue = dateA < now;
+        const isBOverdue = dateB < now;
+
+        // Sort by overdue status first
+        if (isAOverdue && !isBOverdue) return -1; // Overdue a comes before non-overdue b
+        if (!isAOverdue && isBOverdue) return 1; // Non-overdue a comes after overdue b
+
+        // If both are overdue, sort by date ascending (older first)
+        if (isAOverdue && isBOverdue) {
+            if (dateA < dateB) return -1;
+            if (dateA > dateB) return 1;
+        }
+
+        // If both are not overdue, sort by date ascending (sooner first)
+        if (!isAOverdue && !isBOverdue) {
+            if (dateA < dateB) return -1;
+            if (dateA > dateB) return 1;
+        }
+
+        // --- Dates are the same (or both null treated as same), sort by tag ---
+        const getFirstTag = (task: Task): string | null => {
+            const tags = [...task.contexts, ...task.assignedPersons].sort();
+            return tags.length > 0 ? tags[0] : null;
+        };
+
+        const tagA = getFirstTag(a);
+        const tagB = getFirstTag(b);
+
+        if (!tagA && !tagB) return 0;
+        if (!tagA) return 1; // Tasks without tags come after tasks with tags
+        if (!tagB) return -1;
+
+        return tagA.localeCompare(tagB); // Alphabetical sort
+    }
+
+
+    function renderGtdList(listId: keyof ClassifiedTasks, listName: string, tasks: Task[], vaultName: string): string {
         if (tasks.length === 0) return '';
-        // TODO: Add sorting within lists (e.g., by priority, date)
+
+        let sortedTasks = [...tasks]; // Create a copy to sort
+        let filterHtml = '';
+
+        // Apply specific sorting and filtering UI for Next Actions and Asignadas
+        if (listId === 'nextActions' || listId === 'asignadas') {
+            sortedTasks.sort(compareTasks);
+
+            // Extract unique tags for filtering
+            const uniqueTags = new Set<string>();
+            sortedTasks.forEach(task => {
+                task.contexts.forEach(tag => uniqueTags.add(tag));
+                task.assignedPersons.forEach(tag => uniqueTags.add(tag));
+            });
+
+            const sortedUniqueTags = Array.from(uniqueTags).sort();
+
+            // Generate filter HTML (using basic select multiple for now)
+            // Client-side filtering logic will be added in view.ts
+            if (sortedUniqueTags.length > 0) {
+                filterHtml = `
+                    <div class="gtd-list-filter" data-list-id="${listId}">
+                        <label for="filter-${listId}">Filtrar por Tag:</label>
+                        <select id="filter-${listId}" name="filter-${listId}" multiple size="3" style="width: 90%; margin-bottom: 5px;">
+                            ${sortedUniqueTags.map(tag => `<option value="${tag}">${tag}</option>`).join('')}
+                        </select>
+                        <button class="filter-update-button">Actualizar Vista</button>
+                    </div>
+                `;
+            }
+        }
+
+        // Change title for Ojalá Hoy
+        const displayListName = listId === 'ojalaHoy' ? 'Hoy - Ojalá Hoy' : listName;
+
         // Wrap in <details> element, closed by default (no 'open' attribute)
+        // Add data-list-id to the details element for easier targeting in view.ts
         return `
-            <details class="gtd-list-details">
+            <details class="gtd-list-details" data-list-id="${listId}">
                 <summary class="gtd-list-summary">
-                    <h2>${listName} (${tasks.length})</h2>
+                    <h2>${displayListName} (${tasks.length})</h2>
                 </summary>
+                ${filterHtml}
                 <ul class="tasks-list">
-                    ${tasks.map(task => renderTask(task, vaultName)).join('')}
+                    ${sortedTasks.map(task => renderTask(task, vaultName)).join('')}
                 </ul>
             </details>
         `;
@@ -169,26 +281,42 @@ export function generateGtdViewHtml(
         hierarchyHtml = '<p>No se encontró jerarquía para mostrar.</p>';
     }
 
+    // --- Get Active Note Details for Header ---
+    let activeNoteAlias = null; // Initialize alias variable
+    let activeNotePathDisplay = activeNotePath ?? 'N/A'; // Path or N/A
+
+    if (activeNotePath) {
+        const activeItem = model.items.get(activeNotePath);
+        if (activeItem?.aliases && activeItem.aliases.length > 0) {
+             activeNoteAlias = activeItem.aliases[0]; // Store the alias if found
+        }
+        // Keep activeNotePathDisplay as just the path
+    }
+
+
+    // --- Generate HTML for each GTD List ---
+    // Pass the listId and vaultName to renderGtdList
     const gtdListsHtml = `
-        ${renderGtdList('Inbox', classifiedTasks.inbox)}
-        ${renderGtdList('Next Actions', classifiedTasks.nextActions)}
-        ${renderGtdList('Calendar', classifiedTasks.calendar)}
-        ${renderGtdList('Ojalá Hoy', classifiedTasks.ojalaHoy)}
-        ${renderGtdList('Vencidas (Ojalá Hoy)', classifiedTasks.vencidas)}
-        ${renderGtdList('Asignadas', classifiedTasks.asignadas)}
-        ${renderGtdList('Proyectos', classifiedTasks.proyectos)}
-        ${renderGtdList('En Pausa', classifiedTasks.enPausa)}
-        ${renderGtdList('Someday/Maybe', classifiedTasks.somedayMaybe)}
-        ${renderGtdList('Esta Semana No', classifiedTasks.estaSemanaNo)}
-        ${renderGtdList('Conflictivas', classifiedTasks.conflictivas)}
+        ${renderGtdList('inbox', 'Inbox', classifiedTasks.inbox, vaultName)}
+        ${renderGtdList('nextActions', 'Next Actions', classifiedTasks.nextActions, vaultName)}
+        ${renderGtdList('calendar', 'Calendar', classifiedTasks.calendar, vaultName)}
+        ${renderGtdList('ojalaHoy', 'Ojalá Hoy', classifiedTasks.ojalaHoy, vaultName)}
+        ${renderGtdList('vencidas', 'Vencidas (Ojalá Hoy)', classifiedTasks.vencidas, vaultName)}
+        ${renderGtdList('asignadas', 'Asignadas', classifiedTasks.asignadas, vaultName)}
+        ${renderGtdList('proyectos', 'Proyectos', classifiedTasks.proyectos, vaultName)}
+        ${renderGtdList('enPausa', 'En Pausa', classifiedTasks.enPausa, vaultName)}
+        ${renderGtdList('somedayMaybe', 'Someday/Maybe', classifiedTasks.somedayMaybe, vaultName)}
+        ${renderGtdList('estaSemanaNo', 'Esta Semana No', classifiedTasks.estaSemanaNo, vaultName)}
+        ${renderGtdList('conflictivas', 'Conflictivas', classifiedTasks.conflictivas, vaultName)}
     `;
 
     // Return only the body content, suitable for embedding in an ItemView
     return `
     <h1>GTD v2 View</h1>
     <p>Vault: ${vaultName}</p>
-    <p>Active Note Context: ${activeNotePath ?? 'N/A'}</p>
-    <button id="refresh-button">Refresh View</button>
+    ${activeNoteAlias ? `<p>Active Note Alias: ${activeNoteAlias}</p>` : ''} 
+    <p>Active Note Path: ${activeNotePathDisplay}</p> 
+    <button id="refresh-button">Actualizar tareas</button> 
 
     <div>
         <label><input type="radio" name="view-mode" value="hierarchy" checked> Vista Jerárquica</label>

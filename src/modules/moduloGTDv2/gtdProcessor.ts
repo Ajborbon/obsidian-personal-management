@@ -102,11 +102,13 @@ export function classifyTasks(allTasks: Task[], taskMap: Map<string, Task>): Cla
             continue; // Skip other classifications
         }
 
-        // 6. Asignadas (#px- present, #cx- absent) - Exclusive
+        // 6. Asignadas (#px- present, #cx- absent) - Not exclusive if dated
+        let isAsignada = false;
         if (task.assignedPersons.length > 0 && task.contexts.length === 0) {
-            task.gtdList = 'Asignadas';
+            task.gtdList = 'Asignadas'; // Primary classification
             classified.asignadas.push(task);
-            continue; // Skip other classifications
+            isAsignada = true;
+            // DO NOT continue; - Allow checking for Ojalá Hoy / Vencidas
         }
 
         // 7. Next Actions (#cx- present) - Can have #px- simultaneously
@@ -132,29 +134,52 @@ export function classifyTasks(allTasks: Task[], taskMap: Map<string, Task>): Cla
             // Don't continue, might also qualify for Ojalá Hoy
         }
 
-        // 8. Ojalá Hoy (📅 or ⏳ for today, NO [hI::])
+        // 8. Ojalá Hoy / Vencidas (📅 or ⏳ for today/past, NO [hI::])
+        // Also includes assigned tasks with relevant dates.
         let isOjalaHoy = false;
-        const relevantDate = task.dueDate ?? task.scheduledDate;
-        if (relevantDate && !task.startTime) {
+        let isVencida = false;
+        const relevantDate = task.dueDate ?? task.scheduledDate; // Due takes precedence
+
+        if (relevantDate && !task.startTime) { // Must have a date, but not a specific time (that's Calendar)
             const dateDt = DateTime.fromISO(relevantDate);
             if (dateDt.isValid) {
                 if (dateDt.hasSame(now, 'day')) {
-                    task.gtdList = task.gtdList ?? 'Ojalá Hoy'; // Assign if not already Next Action
-                    classified.ojalaHoy.push(task);
-                    isOjalaHoy = true;
-                } else if (dateDt < now.startOf('day')) {
-                    // Overdue 'Ojalá Hoy' tasks
-                    task.isOverdue = true;
-                    // If it has context or assignment, it should appear in Vencidas
-                    // If not, it goes to Inbox as well.
-                    if (task.contexts.length > 0 || task.assignedPersons.length > 0) {
-                         classified.vencidas.push(task);
+                    // Qualifies for Ojalá Hoy
+                    // Add if it's a Next Action OR an Asignada task
+                    if (task.gtdList === 'Next Actions' || isAsignada) {
+                        // Avoid duplicates if already added via Next Actions path
+                        if (!classified.ojalaHoy.includes(task)) {
+                            classified.ojalaHoy.push(task);
+                        }
+                        // Set gtdList to Ojalá Hoy if not already set, or keep Next Actions/Asignadas?
+                        // Let's keep the primary classification (Next Action/Asignada) but ensure it appears here.
+                        isOjalaHoy = true;
+                    } else if (!task.gtdList) { // If not classified yet, it's primarily Ojalá Hoy
+                        task.gtdList = 'Ojalá Hoy';
+                        classified.ojalaHoy.push(task);
+                        isOjalaHoy = true;
                     }
-                    // Also add to Inbox if no context/assignment
-                    if (task.contexts.length === 0 && task.assignedPersons.length === 0) {
-                        // Mark for Inbox addition later
+                } else if (dateDt < now.startOf('day')) {
+                    // Qualifies for Vencidas
+                    task.isOverdue = true; // Mark as overdue
+                    // Add if it's a Next Action OR an Asignada task
+                    if (task.gtdList === 'Next Actions' || isAsignada) {
+                         // Avoid duplicates if already added via Next Actions path? (Shouldn't happen based on logic order)
+                         if (!classified.vencidas.includes(task)) {
+                             classified.vencidas.push(task);
+                         }
+                         isVencida = true;
+                    } else if (task.contexts.length === 0 && task.assignedPersons.length === 0) {
+                         // Overdue task without context/assignment -> Inbox conflict
+                         task.conflicts = task.conflicts ?? [];
+                         task.conflicts.push('Overdue task without context/assignment');
+                         // Don't add to Vencidas directly, let Inbox handle it
+                    } else if (!task.gtdList) {
+                        // If it wasn't Next Action or Asignada, but has context/assignment (implicit from above check)
+                        // This case seems unlikely given the order, but capture just in case.
+                        // Should probably go to Inbox if it reached here without classification.
                         task.conflicts = task.conflicts ?? [];
-                        task.conflicts.push('Overdue task without context/assignment');
+                        task.conflicts.push('Overdue task with unexpected state');
                     }
                 }
                 // Future dates are handled by "En Pausa" if 🛫, or ignored here if 📅/⏳
@@ -163,20 +188,28 @@ export function classifyTasks(allTasks: Task[], taskMap: Map<string, Task>): Cla
 
         // 9. Inbox (Default/Fallback and specific cases)
         // If a task hasn't been classified yet, or has conflicts, it goes to Inbox.
-        let requiresInbox = task.gtdList === undefined;
+        let requiresInbox = task.gtdList === undefined && !isOjalaHoy && !isVencida; // Not classified, not today, not overdue
 
-        // Specific Inbox criteria from prompt:
+        // Specific Inbox criteria:
         if (task.tags.includes('#inbox')) requiresInbox = true;
-        if (!task.tags || task.tags.length === 0) { // Approximation for "no tags or specific metadata"
-             // Be careful, this might catch too many things. Refine if needed.
-             // Let's rely on other rules first. If it falls through, it's likely Inbox.
-        }
-        // TODO: Add checks for partially processed, incorrect formats, conflicting times, past week without context.
+        // Add tasks with conflicts to Inbox for review
+        if (task.conflicts && task.conflicts.length > 0) requiresInbox = true;
 
-        if (requiresInbox || (task.conflicts && task.conflicts.length > 0)) {
-             // Avoid double-adding if already added to Vencidas but also needs Inbox review
-             if (!classified.vencidas.includes(task)) {
-                 task.gtdList = 'Inbox';
+        // TODO: Add other Inbox checks (partially processed, incorrect formats, etc.)
+
+        if (requiresInbox) {
+             // Ensure it's not already in another primary list (except potentially Asignadas/NextActions which can co-exist in date lists)
+             const alreadyInPrimaryList = classified.calendar.includes(task) ||
+                                         classified.proyectos.includes(task) ||
+                                         classified.somedayMaybe.includes(task) ||
+                                         classified.estaSemanaNo.includes(task) ||
+                                         classified.enPausa.includes(task);
+
+             if (!alreadyInPrimaryList && !classified.inbox.includes(task)) {
+                 task.gtdList = task.gtdList ?? 'Inbox'; // Assign Inbox if no other primary list assigned
+                 classified.inbox.push(task);
+             } else if (alreadyInPrimaryList && task.conflicts && task.conflicts.length > 0 && !classified.inbox.includes(task)) {
+                 // If it's in a primary list BUT has conflicts, also add to Inbox for review
                  classified.inbox.push(task);
              }
         }

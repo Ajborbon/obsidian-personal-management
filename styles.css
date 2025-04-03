@@ -1,9 +1,63 @@
+/* ======================================== */
+/*          Vista Registro Tiempo (RT)      */
+/* ======================================== */
 .vista-RT {
     padding-top: 2px;
     padding: 2px 10px 1px;
     /* Cualquier otro estilo que quieras aplicar */
 }
 
+/* ======================================== */
+/*          GTD v2 List Filters           */
+/* ======================================== */
+.gtd-list-filter {
+  padding: 8px 12px;
+  margin-bottom: 10px;
+  background-color: var(--background-secondary);
+  border-radius: 4px;
+  border: 1px solid var(--background-modifier-border);
+}
+
+.gtd-list-filter label {
+  display: block;
+  margin-bottom: 5px;
+  font-weight: 500;
+  font-size: 0.9em;
+  color: var(--text-muted);
+}
+
+.gtd-list-filter select[multiple] {
+  width: 100%;
+  padding: 5px;
+  border-radius: 4px;
+  border: 1px solid var(--background-modifier-border);
+  background-color: var(--background-primary);
+  color: var(--text-normal);
+  min-height: 60px; /* Ensure it's visible */
+  margin-bottom: 8px;
+}
+
+.gtd-list-filter .filter-update-button {
+  display: block; /* Make it block level */
+  width: 100%; /* Make it full width */
+  padding: 6px 12px;
+  background-color: var(--interactive-accent);
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  text-align: center;
+  font-weight: 500;
+  transition: background-color 0.2s ease;
+}
+
+.gtd-list-filter .filter-update-button:hover {
+  background-color: var(--interactive-accent-hover);
+}
+
+/* ======================================== */
+/*      Vista Registro Tiempo (RT) - Cont.  */
+/* ======================================== */
 .vista-RT p {
     font-size: 0.9em; /* Hace el texto de los párrafos más pequeño */
     /* Puedes ajustar el 0.8em al tamaño que prefieras */
@@ -31,7 +85,9 @@
     /* Cualquier otro estilo que quieras aplicar a h1 */
 }
 
-
+/* ======================================== */
+/*          Tablas Generales (RT)         */
+/* ======================================== */
 .table-resumenSemanal {
   overflow-y: auto; /* Permite desplazamiento vertical si el texto excede el espacio */
   overflow-x: hidden; /* Permite desplazamiento horizontal si el texto excede el espacio */
@@ -75,8 +131,9 @@
     display: block; /* Hace que el margen automático funcione */
  }
 
-
-/* Clase general para el modal */
+/* ======================================== */
+/*             Modal Inbox                */
+/* ======================================== */
 .modalInbox {
     /* Estilos generales para el modal, si es necesario */
     background-color: #f9f9f9; /* Solo un ejemplo */
@@ -124,7 +181,9 @@
     margin-left: 20px;
   }
 
-/* Tabla estilizada */
+/* ======================================== */
+/*          Tabla Estilizada General      */
+/* ======================================== */
 .table-wrapper {
   width: 100%;
   overflow-x: auto;
@@ -182,6 +241,9 @@
   text-decoration: underline;
 }
 
+/* ======================================== */
+/*      Controles Registro Tiempo (RT)    */
+/* ======================================== */
 /* Botón de "Nuevo Registro Tiempo" */
 .registro-tiempo-btn {
   background-color: #0078D4; /* Azul predeterminado */
@@ -229,7 +291,9 @@
   background-color: #005a9e;
 }
 
-
+/* ======================================== */
+/*          Modal Prompt General          */
+/* ======================================== */
 .prompt-modal {
   position: fixed;
   top: 50%;
@@ -283,7 +347,9 @@
   cursor: pointer;
 }
 
-/* Contenedor del registro activo */
+/* ======================================== */
+/*      Contenedor Tiempo Activo (RT)     */
+/* ======================================== */
 .active-time-container {
   width: 100%;              /* Ocupa el ancho completo del contenedor padre */
   box-sizing: border-box;   /* Incluye padding y border en el ancho */
@@ -421,7 +487,9 @@
   color: white; /* Texto blanco en hover */
 }
 
-
+/* ======================================== */
+/*      Tabla Estilizada - Anchos Col.    */
+/* ======================================== */
 /* Asegúrate de NO encerrar esto en la media query de modo oscuro */
 .styled-table {
   width: 100%;
@@ -459,7 +527,9 @@
   overflow: hidden;     /* Trunca el contenido si excede el ancho */
 }
 
-
+/* ======================================== */
+/*              MODO OSCURO               */
+/* ======================================== */
 /* ---- MODO NOCHE ---*/
 
 /* Ajustes de modo oscuro */
@@ -611,6 +681,9 @@
 
 }
 
+/* ======================================== */
+/*      Tabla Estilizada - Wrapping       */
+/* ======================================== */
   .styled-table {
     width: 100%;
     table-layout: fixed; /* Fuerza a que respete los anchos y permita el wrapping */
@@ -647,7 +720,9 @@
   }
 }
 
-
+/* ======================================== */
+/*      Bloque Relaciones de Nota         */
+/* ======================================== */
 /* Para añadir en tu archivo styles.css */
 
 .nota-relaciones {
@@ -695,6 +770,9 @@
   background-color: var(--background-secondary-alt);
 }
 
+/* ======================================== */
+/*          Árbol de Backlinks            */
+/* ======================================== */
 /* Para añadir en tu archivo styles.css */
 
 /* Contenedor principal del árbol de referencias */
@@ -797,7 +875,9 @@
   /* Tercer nivel */
 }
 
-/* Contenedor para los enlaces de Notion */
+/* ======================================== */
+/*          Contenedor Enlaces Notion     */
+/* ======================================== */
 .notion-links-container {
   margin: 15px 0;
   padding: 10px;
@@ -842,7 +922,9 @@
   background-color: var(--background-secondary-alt);
 }
 
-
+/* ======================================== */
+/*      Contenedor Estadísticas Tiempo    */
+/* ======================================== */
 /* Eliminar espacio a la izquierda de la tabla */
 /* Contenedor principal - eliminar el padding izquierdo */
 .tiempo-stats-container {
@@ -917,6 +999,9 @@
   color: var(--text-normal);
 }
 
+/* ======================================== */
+/*          Árbol de Tareas (dvjs)        */
+/* ======================================== */
 /* -----  Generar Arbol de tareas ---- */
 /* -----                          ---- */
 
@@ -1283,6 +1368,9 @@
   color: white;
 }
 
+/* ======================================== */
+/*      Árbol Backlinks - Toggle/Estado   */
+/* ======================================== */
 /* Backlink tree con toggle --- */
 
 /* Estilos para elementos toggle en el árbol de referencias */
@@ -1349,7 +1437,9 @@
   vertical-align: middle;
 }
 
-/* Estilos mejorados para el contenedor de registro activo */
+/* ======================================== */
+/*      Contenedor Tiempo Activo (RT) - Mejorado */
+/* ======================================== */
 .active-time-container {
   width: 100%;
   box-sizing: border-box;
@@ -1432,6 +1522,9 @@
   }
 }
 
+/* ======================================== */
+/*      Selector/Editor Tiempo (RT)       */
+/* ======================================== */
 /* Reloj del Registro de Tiempo*/
 
 /* Añade estos estilos en el archivo styles.css */
@@ -1623,7 +1716,9 @@
   background-color: rgba(0, 0, 0, 0.5);
 }
 
-
+/* ======================================== */
+/*          Índice de Proyectos (Árbol)   */
+/* ======================================== */
 /* Clases para el indice de proyectos */
 /* Estilos para el árbol de proyectos */
 .proyectos-tree-container {
@@ -1979,7 +2074,9 @@
   color: white;
 }
 
-
+/* ======================================== */
+/*          Vista Contextos GTD           */
+/* ======================================== */
 /* Contextos GTD */
 /* Estilos para la vista de ContextosGTD */
 
@@ -2310,8 +2407,9 @@
   color: var(--text-muted);
 }
 
-
-
+/* ======================================== */
+/*      Dashboard Campañas Proyectos GTD  */
+/* ======================================== */
 /* Clases para bloque dvjs de campañas para proyectos GTD */
 
 /* Estilos para el Dashboard de Proyectos y Campañas */
@@ -2737,6 +2835,9 @@
   opacity: 0.7;
 }
 
+/* ======================================== */
+/*          Vista GTD v2 General          */
+/* ======================================== */
 /* --- Styles for GTD v2 View --- */
 
 /* General View Container (within Obsidian tab) */
@@ -2769,6 +2870,9 @@
   cursor: pointer;
   background-color: var(--background-secondary);
   transition: background-color 0.2s ease;
+  overflow-x: auto; /* Enable horizontal scroll if content overflows */
+  /* Add some padding at the end for scrollbar clearance if needed */
+  padding-right: var(--size-4-4);
 }
 .proyectos-area-header:hover {
   background-color: var(--background-modifier-hover);
@@ -2795,9 +2899,9 @@
   font-weight: 500;
   text-decoration: none;
   flex-grow: 1; /* Allow name to take up space */
-  overflow: hidden;
-  text-overflow: ellipsis;
+  /* Remove overflow/ellipsis, allow nowrap to force full width */
   white-space: nowrap;
+  /* Optionally add min-width if needed, but flex-grow might suffice */
 }
 .item-link:hover {
   color: var(--text-accent);
@@ -2920,10 +3024,37 @@
 }
 
 /* GTD List View Specifics */
-#list-view .gtd-list {
-  margin-bottom: var(--size-4-6);
+.gtd-list-details { /* Target the details element */
+    margin-bottom: var(--size-4-4); /* Add some space between lists */
 }
-#list-view h2 {
+
+.gtd-list-summary { /* Target the summary (clickable header) */
+    display: flex; /* Align marker and title horizontally */
+    align-items: center; /* Vertically center marker and title */
+    gap: var(--size-4-2); /* Add space between marker and title */
+    padding: var(--size-4-2) var(--size-4-3); /* Adjust padding */
+    cursor: pointer;
+    background-color: var(--background-secondary);
+    border-radius: var(--radius-m); /* Rounded corners for the header */
+    list-style: none; /* Hide default marker if flexbox doesn't already */
+    transition: background-color 0.2s ease;
+}
+.gtd-list-summary::-webkit-details-marker { /* Hide default marker in Webkit */
+    display: none;
+}
+.gtd-list-summary:hover {
+    background-color: var(--background-modifier-hover);
+}
+
+.gtd-list-summary h2 { /* Target the h2 within the summary */
+    margin: 0; /* Remove default h2 margins */
+    font-size: 1.1em; /* Adjust title size if needed */
+    font-weight: 600;
+    flex-grow: 1; /* Allow title to take available space */
+}
+
+/* Keep original h2 styling for general list view titles if needed elsewhere */
+#list-view h2:not(.gtd-list-summary h2) {
   font-size: 1.2em;
   border-bottom: 1px solid var(--background-modifier-border);
   padding-bottom: var(--size-4-1);
@@ -2960,3 +3091,7 @@ label {
     border-left: 3px solid var(--interactive-accent);
     padding-left: calc(var(--size-4-2) - 3px);
 }
+
+/* ======================================== */
+/*                 FIN ESTILOS              */
+/* ======================================== */

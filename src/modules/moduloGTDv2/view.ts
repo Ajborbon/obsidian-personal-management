@@ -146,6 +146,53 @@ export class GtdV2View extends ItemView {
             });
         });
 
+        // --- GTD List Filtering ---
+        container.querySelectorAll('.filter-update-button').forEach(button => {
+            button.addEventListener('click', (event) => {
+                const filterDiv = (event.target as HTMLElement).closest('.gtd-list-filter');
+                if (!filterDiv) return;
+
+                const listId = filterDiv.getAttribute('data-list-id');
+                const selectElement = filterDiv.querySelector(`#filter-${listId}`) as HTMLSelectElement | null;
+                const listDetailsElement = filterDiv.closest('.gtd-list-details');
+                const taskListElement = listDetailsElement?.querySelector('.tasks-list');
+
+                if (!selectElement || !taskListElement) {
+                    console.error("Filter elements not found for list:", listId);
+                    return;
+                }
+
+                const selectedTags = Array.from(selectElement.selectedOptions).map(option => option.value);
+
+                console.log(`[GTDv2 View] Filtering list '${listId}' by tags:`, selectedTags);
+
+                const taskItems = taskListElement.querySelectorAll('.tasks-item');
+                taskItems.forEach(taskItem => {
+                    const taskElement = taskItem as HTMLElement; // Cast for style access
+                    if (selectedTags.length === 0) {
+                        // No filters selected, show all tasks in this list
+                        taskElement.style.display = '';
+                        return;
+                    }
+
+                    // Check if the task contains any of the selected tags
+                    const contextSpans = Array.from(taskElement.querySelectorAll('.meta.contexts, .meta.assigned'));
+                    const taskTags = contextSpans.flatMap(span => span.textContent?.trim().split(' ') ?? []);
+
+                    const hasMatchingTag = selectedTags.some(selectedTag => taskTags.includes(selectedTag));
+
+                    if (hasMatchingTag) {
+                        taskElement.style.display = ''; // Show if it matches
+                    } else {
+                        taskElement.style.display = 'none'; // Hide if it doesn't match
+                    }
+                });
+                 new Notice(`Vista de lista '${listId}' actualizada.`);
+            });
+        });
+        // --- End GTD List Filtering ---
+
+
         // Add click listeners for task text and checkbox to navigate TO THE TASK LINE
         container.querySelectorAll('.tasks-checkbox, .tasks-text').forEach(el => {
             el.addEventListener('click', (event) => {

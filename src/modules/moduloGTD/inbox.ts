@@ -27,7 +27,7 @@ export async function ingresarBandejaEntrada(plugin: Plugin): void {
     let destino = saveInCurrent ? activeFile : inboxFile;
     let hoy = DateTime.now().toFormat('yyyy-MM-dd');
     let hora = DateTime.now().toFormat('HH:mm');
-    inbox = `- [ ] 🧠 ${text} #inbox [created:: ${hoy}] a las ${hora}\n`;
+    inbox = `- [ ] 🧠 ${text} #inbox . Ingresada a las ${hora} de ➕ ${hoy} \n`;
 
     
     // Lógica para escribir en el archivo
