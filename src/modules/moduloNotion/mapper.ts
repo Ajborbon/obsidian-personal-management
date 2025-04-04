@@ -35,31 +35,33 @@ export class NotionMapper {
             title: [{ text: { content: frontmatter.nombre || noteTitle } }]
         };
 
-        // 2. fechainicio (Date)
-        if (frontmatter.fechainicio) {
-            const startDate = this.formatDate(frontmatter.fechainicio);
+        // 2. fechaInicio (Date) - Use camelCase to match Notion property name
+        if (frontmatter.fechaInicio) { // Check frontmatter using camelCase
+            const startDate = this.formatDate(frontmatter.fechaInicio);
             if (startDate) {
-                properties['fechainicio'] = { date: { start: startDate } };
+                properties['fechaInicio'] = { date: { start: startDate } }; // Send to Notion using camelCase
             } else {
-                 console.warn(`NotionMapper: Invalid date format for 'fechainicio': ${frontmatter.fechainicio}`);
+                 console.warn(`NotionMapper: Invalid date format for 'fechaInicio': ${frontmatter.fechaInicio}`);
             }
         }
 
-        // 3. fechaFin (Date)
+        // 3. fechaFin (Date) - Handle setting end date for 'fechaInicio' range AND potentially a separate 'fechaFin' property
         if (frontmatter.fechaFin) {
              const endDate = this.formatDate(frontmatter.fechaFin);
              if (endDate) {
-                 const fechainicioProp = properties['fechainicio'];
-                 // Use a type guard to check if fechainicio is a date property
-                 if (this.isDateProperty(fechainicioProp) && fechainicioProp.date?.start) {
-                     fechainicioProp.date.end = endDate;
+                 const fechaInicioProp = properties['fechaInicio'];
+                 // If fechaInicio was already set, add the end date to its range
+                 if (this.isDateProperty(fechaInicioProp) && fechaInicioProp.date?.start) {
+                     fechaInicioProp.date.end = endDate;
+                     console.log(`NotionMapper: Added end date ${endDate} to 'fechaInicio' property range.`);
                  } else {
-                     // Otherwise, just set fechaFin (assuming Notion DB has separate start/end or just uses start)
-                     // Adjust if your Notion DB expects fechaFin in a specific property
-                     properties['fechaFin'] = { date: { start: endDate } }; // Or adjust property name if needed
+                     // If fechaInicio wasn't set, we cannot create a range with only an end date.
+                     // Log a warning. A lone fechaFin won't be sent if fechaInicio isn't set.
+                     console.warn(`NotionMapper: 'fechaFin' (${endDate}) provided in Obsidian, but no 'fechaInicio' start date found. Cannot set range end in Notion.`);
                  }
+                 // Ensure we DO NOT attempt to set a separate 'fechaFin' property in Notion.
              } else {
-                  console.warn(`NotionMapper: Invalid date format for 'fechaFin': ${frontmatter.fechaFin}`);
+                  console.warn(`NotionMapper: Invalid date format for Obsidian frontmatter key 'fechaFin': ${frontmatter.fechaFin}`);
              }
         }
 
@@ -339,9 +341,13 @@ export class NotionMapper {
 
         if (databaseType === 'campaign') {
             // Map Campaign properties back
+            // Map Campaign properties back
             this.mapNotionProperty(notionProperties, 'nombre', frontmatter, 'nombre', 'title');
-            this.mapNotionProperty(notionProperties, 'fechainicio', frontmatter, 'fechainicio', 'date');
-            this.mapNotionProperty(notionProperties, 'fechaFin', frontmatter, 'fechaFin', 'date'); // Note: Notion might store start/end in one prop
+            // Map 'fechaInicio' (which might contain start AND end)
+            this.mapNotionProperty(notionProperties, 'fechaInicio', frontmatter, 'fechaInicio', 'date');
+            // The mapping of fechaFin from Notion's fechaInicio.end is handled within the 'date' case of mapNotionProperty below.
+            // Remove the separate, potentially conflicting call for 'fechaFin'.
+            // this.mapNotionProperty(notionProperties, 'fechaFin', frontmatter, 'fechaFin', 'date');
             this.mapNotionProperty(notionProperties, 'prioridad', frontmatter, 'prioridad', 'select');
             this.mapNotionProperty(notionProperties, 'indicadores', frontmatter, 'indicadores', 'url');
             this.mapNotionProperty(notionProperties, 'estadoC', frontmatter, 'estadoC', 'status');
@@ -377,12 +383,19 @@ export class NotionMapper {
         notionType: NotionPropertiesReceive[string]['type']
     ) {
         const prop = notionProperties[notionKey];
-        if (!prop || prop.type !== notionType) {
-            // console.warn(`NotionMapper: Property "${notionKey}" not found or type mismatch (expected ${notionType}, got ${prop?.type}).`);
-            return; // Skip if property doesn't exist or type doesn't match
+        // Remove specific debug logs for fechainicio, keep general checks
+        if (!prop) {
+            // console.log(`NotionMapper: Property "${notionKey}" not found in Notion properties.`);
+            return;
+        }
+        if (prop.type !== notionType) {
+            // console.warn(`NotionMapper: Property "${notionKey}" type mismatch (expected ${notionType}, got ${prop.type}).`);
+            return;
         }
 
         try {
+            // Removed specific debug log
+
             switch (prop.type) {
                 case 'title':
                     frontmatter[fmKey] = prop.title.map(rt => rt.plain_text).join('') || null;
@@ -403,10 +416,24 @@ export class NotionMapper {
                     frontmatter[fmKey] = prop.status?.name || null;
                     break;
                 case 'date':
-                    // Return only the start date for simplicity, Notion might have start/end
-                    frontmatter[fmKey] = prop.date?.start || null;
-                    // If you need end date too, you might store it as a separate fm key or an object
-                    // if (prop.date?.end) frontmatter[`${fmKey}_end`] = prop.date.end;
+                    const startDate = prop.date?.start || null;
+                    const endDate = prop.date?.end || null; // Extract end date, will be null if no end date
+
+                    // Always assign the start date to the primary frontmatter key (fmKey)
+                    frontmatter[fmKey] = startDate;
+
+                    // Specifically handle mapping the end date when processing the 'fechaInicio' Notion property
+                    if (notionKey === 'fechaInicio') {
+                        // Assign the extracted end date (which could be null) to the 'fechaFin' frontmatter key
+                        frontmatter['fechaFin'] = endDate;
+                        if (endDate) {
+                             console.log(`NotionMapper: Mapped 'fechaInicio.end' (${endDate}) to frontmatter key 'fechaFin'.`);
+                        } else {
+                             console.log(`NotionMapper: Setting frontmatter key 'fechaFin' to null as 'fechaInicio' range end is null.`);
+                        }
+                    }
+                    // No special handling needed here if notionKey is 'fechaFin', as it would just map its own start date.
+
                     break;
                 case 'checkbox':
                     frontmatter[fmKey] = prop.checkbox;
@@ -438,7 +465,7 @@ export class NotionMapper {
             // Exclude 'nombre' as it maps to the filename, not frontmatter
             return [
                 // 'nombre',
-                'fechainicio',
+                'fechaInicio', // Use correct camelCase key
                 'fechaFin',
                 'prioridad',
                 'indicadores',
