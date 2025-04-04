@@ -413,66 +413,122 @@ export class ModuloNotion {
                  console.log(`ModuloNotion: Updated Obsidian frontmatter from Notion for ${targetFile.basename} (mapped keys only)`);
             });
 
-            // 2. Update Content (Extract Preserved Sections, Use Notion Content, Append Preserved)
-            console.log("ModuloNotion: Starting content update with extraction and append strategy...");
+            // 2. Update Content (Region-based reconstruction)
+            console.log("ModuloNotion: Starting content update with region-based reconstruction strategy...");
             const currentObsidianContent = await this.plugin.app.vault.read(targetFile);
             const currentContentStartIndex = currentObsidianContent.indexOf('---', currentObsidianContent.indexOf('---') + 3);
             const originalObsidianBody = currentContentStartIndex !== -1
-                ? currentObsidianContent.substring(currentContentStartIndex + 3)
+                ? currentObsidianContent.substring(currentContentStartIndex + 3).trimStart() // Trim leading whitespace from body
                 : currentObsidianContent;
 
-            // Extract preserved content (full sections including headers) using the refined helper
-            const preservedDataviewBlocks = this.extractDataviewBlocks(originalObsidianBody);
-            const preservedRecursosSection = this.extractSectionContent(originalObsidianBody, /^## Recursos/m);
-            const preservedTareasSection = this.extractSectionContent(originalObsidianBody, /^## Tareas/m);
-            const preservedFinSection = this.extractSectionContent(originalObsidianBody, /^# Fin/m);
+            // Define types for preserved regions for clarity
+            type DataviewRegion = ReturnType<typeof this.extractDataviewBlocksWithIndices>[0];
+            type SectionRegion = ReturnType<typeof this.extractSectionContentWithIndices>; // Can be null initially
 
-            console.log(`ModuloNotion: Extracted ${preservedDataviewBlocks.length} dataview blocks.`);
-            if (preservedRecursosSection) console.log("ModuloNotion: Extracted ## Recursos section."); else console.log("ModuloNotion: ## Recursos section not found.");
-            if (preservedTareasSection) console.log("ModuloNotion: Extracted ## Tareas section."); else console.log("ModuloNotion: ## Tareas section not found.");
-            if (preservedFinSection) console.log("ModuloNotion: Extracted # Fin section."); else console.log("ModuloNotion: # Fin section not found.");
+            // Array to hold potentially null regions first
+            const potentiallyNullRegions: (DataviewRegion | SectionRegion)[] = [];
+
+
+            // Extract dataview blocks
+            const dataviewBlocks = this.extractDataviewBlocksWithIndices(originalObsidianBody);
+            potentiallyNullRegions.push(...dataviewBlocks);
+            console.log(`ModuloNotion: Found ${dataviewBlocks.length} dataview blocks.`);
+
+            // Extract sections
+            const recursosSection = this.extractSectionContentWithIndices(originalObsidianBody, /^## Recursos/m);
+            potentiallyNullRegions.push(recursosSection);
+            if (recursosSection) console.log("ModuloNotion: Found ## Recursos section."); else console.log("ModuloNotion: ## Recursos section not found.");
+
+            const tareasSection = this.extractSectionContentWithIndices(originalObsidianBody, /^## Tareas/m);
+            potentiallyNullRegions.push(tareasSection);
+            if (tareasSection) console.log("ModuloNotion: Found ## Tareas section."); else console.log("ModuloNotion: ## Tareas section not found.");
+
+            const finSection = this.extractSectionContentWithIndices(originalObsidianBody, /^# Fin/m);
+            potentiallyNullRegions.push(finSection);
+            if (finSection) console.log("ModuloNotion: Found # Fin section."); else console.log("ModuloNotion: # Fin section not found.");
+
+
+            // Filter out nulls and assert the correct type for the final array
+            const preservedRegions = potentiallyNullRegions.filter(
+                 (region): region is DataviewRegion | NonNullable<SectionRegion> => region !== null
+            );
+
+            // Sort preserved regions by their start index (now guaranteed non-null)
+            preservedRegions.sort((a, b) => a.start - b.start);
 
             // Get and clean Notion content
             const cleanedNotionMarkdown = notionMarkdown.replace(/```dataviewjs\s*[\s\S]*?```/gs, '').trim();
             console.log("ModuloNotion: Using cleaned Notion markdown as base content.");
 
-            // Construct the new body by appending preserved parts carefully
-            const bodyParts: string[] = [cleanedNotionMarkdown]; // Start with cleaned Notion content
+            // Reconstruct the body
+            const newBodyParts: string[] = [];
+            let lastIndex = 0;
+            let notionContentInserted = false;
 
-            if (preservedDataviewBlocks.length > 0) {
-                // Add dataview blocks, ensuring separation
-                bodyParts.push(preservedDataviewBlocks.join("\n\n"));
-                console.log("ModuloNotion: Added preserved dataview blocks to parts array.");
-            }
-            if (preservedRecursosSection !== null) { // Check for null explicitly
-                bodyParts.push(preservedRecursosSection);
-                console.log("ModuloNotion: Added preserved ## Recursos section to parts array.");
-            }
-            if (preservedTareasSection !== null) { // Check for null explicitly
-                bodyParts.push(preservedTareasSection);
-                console.log("ModuloNotion: Added preserved ## Tareas section to parts array.");
-            }
-            if (preservedFinSection !== null) { // Check for null explicitly
-                bodyParts.push(preservedFinSection);
-                console.log("ModuloNotion: Added preserved # Fin section to parts array.");
+            for (const region of preservedRegions) {
+                // Add the content *before* this preserved region
+                const contentBefore = originalObsidianBody.substring(lastIndex, region.start);
+                if (contentBefore.trim()) {
+                    if (!notionContentInserted) {
+                        console.log("ModuloNotion: Inserting Notion content into the first content region.");
+                        newBodyParts.push(cleanedNotionMarkdown);
+                        notionContentInserted = true;
+                    } else {
+                        // If Notion content was already inserted, append original content from subsequent gaps
+                        console.warn("ModuloNotion: Found additional content region after Notion content was inserted. Appending original content:", contentBefore.substring(0, 50) + "...");
+                        newBodyParts.push(contentBefore);
+                    }
+                }
+
+                // Add the preserved region itself
+                console.log(`ModuloNotion: Appending preserved region (Type: ${region.type}, Start: ${region.start})`);
+                newBodyParts.push(region.content);
+                lastIndex = region.end;
             }
 
-            // Join the parts with double newlines for separation, then trim final result
-            let finalBodyContent = bodyParts.join("\n\n").trim();
+            // Add any remaining content *after* the last preserved region
+            const contentAfter = originalObsidianBody.substring(lastIndex);
+            if (contentAfter.trim()) {
+                 if (!notionContentInserted) {
+                     console.log("ModuloNotion: Inserting Notion content into the final content region.");
+                     newBodyParts.push(cleanedNotionMarkdown);
+                     notionContentInserted = true;
+                 } else {
+                     console.warn("ModuloNotion: Found final content region after Notion content was inserted. Appending original content:", contentAfter.substring(0, 50) + "...");
+                     newBodyParts.push(contentAfter);
+                 }
+            }
+
+            // Handle case where there were NO preserved regions at all
+            if (preservedRegions.length === 0 && !notionContentInserted) {
+                 console.log("ModuloNotion: No preserved regions found. Using Notion content as the entire body.");
+                 newBodyParts.push(cleanedNotionMarkdown);
+                 notionContentInserted = true;
+            }
+
+            // Ensure Notion content is inserted if no suitable content region was found (e.g., empty file originally)
+             if (!notionContentInserted) {
+                 console.warn("ModuloNotion: Notion content was not inserted in any specific region. Appending it at the end.");
+                 newBodyParts.push(cleanedNotionMarkdown);
+             }
+
+
+            // Join the parts, ensuring proper spacing (use single newline between parts, trim each part first)
+            let finalBodyContent = newBodyParts.map(part => part.trim()).filter(part => part.length > 0).join("\n\n").trim(); // Join with double newline for better separation
 
             // Get updated frontmatter section
             const fileAfterFmUpdate = await this.plugin.app.vault.read(targetFile); // Read again after FM update
             const updatedFmStartIndex = fileAfterFmUpdate.indexOf('---', fileAfterFmUpdate.indexOf('---') + 3);
             const updatedFrontmatterSection = updatedFmStartIndex !== -1
                 ? fileAfterFmUpdate.substring(0, updatedFmStartIndex + 3)
-                 : "---\n---";
+                 : "---\n---"; // Default if no frontmatter found
 
-            // Use 'finalBodyContent' instead of 'newBody'
-            const finalContent = updatedFrontmatterSection + "\n" + finalBodyContent.trim() + "\n";
+            // Combine frontmatter and the reconstructed body
+            const finalContent = updatedFrontmatterSection + "\n" + finalBodyContent + "\n"; // Add newline after body
 
             await this.plugin.app.vault.modify(targetFile, finalContent);
 
-            console.log(`ModuloNotion: Updated Obsidian content from Notion for ${targetFile.basename}, preserving sections.`);
+            console.log(`ModuloNotion: Updated Obsidian content from Notion for ${targetFile.basename} using region reconstruction.`);
             new Notice(`¡Nota "${targetFile.basename}" actualizada desde Notion!`);
 
         } catch (error) {
@@ -483,7 +539,50 @@ export class ModuloNotion {
 
     // --- Helper functions for section extraction ---
 
-    // Extracts the content *under* a heading
+    // Extracts the *entire* section including the heading line, with indices
+    extractSectionContentWithIndices(content: string, sectionHeadingRegex: RegExp): { type: 'section'; start: number; end: number; content: string; heading: string } | null {
+        const match = content.match(sectionHeadingRegex);
+        if (!match || match.index === undefined) {
+            // console.log(`extractSectionContentWithIndices: Heading not found for regex: ${sectionHeadingRegex}`);
+            return null;
+        }
+
+        const sectionHeading = match[0].trim(); // e.g., "## Recursos" or "# Fin"
+        const sectionStartIndex = match.index;
+        // Start searching for the next heading *after* the start of the current one to avoid matching itself
+        const searchStartIndex = match.index + match[0].length; // Search after the heading line
+
+        // Find the start index of the *next* heading (# or ##) or the # Fin marker
+        // Search from the position *after* the current section's heading line starts
+        const nextMarkerMatch = content.substring(searchStartIndex).match(/^# |^## |^# Fin/m);
+
+        let sectionEndIndex;
+        if (nextMarkerMatch?.index !== undefined) {
+            // Found the start of the next marker; end the current section right before it.
+            // The index is relative to the substring starting at searchStartIndex.
+            sectionEndIndex = searchStartIndex + nextMarkerMatch.index;
+            // console.log(`extractSectionContentWithIndices: Found next marker for ${sectionHeadingRegex} at index ${sectionEndIndex}`);
+        } else {
+            // No subsequent marker found; the section goes to the end of the string.
+            sectionEndIndex = content.length;
+            // console.log(`extractSectionContentWithIndices: No next marker found for ${sectionHeadingRegex}. Section ends at content length ${sectionEndIndex}`);
+        }
+
+        // Extract the full section from its heading start to the calculated end.
+        const extractedContent = content.slice(sectionStartIndex, sectionEndIndex); // Use slice
+
+        // console.log(`extractSectionContentWithIndices: Extracted for ${sectionHeadingRegex}: start=${sectionStartIndex}, end=${sectionEndIndex}\n---\n${extractedContent}\n---`);
+        return {
+            type: 'section',
+            start: sectionStartIndex,
+            end: sectionEndIndex,
+            content: extractedContent,
+            heading: sectionHeading
+        };
+    }
+
+
+    // Extracts the content *under* a heading (Kept for potential other uses, but not used in syncNotionToObsidian)
     extractSection(content: string, regex: RegExp): string | null {
         const match = content.match(regex);
         if (!match || match.index === undefined) return null;
@@ -527,19 +626,37 @@ export class ModuloNotion {
         // Extract the full section from its heading start to the calculated end.
         const extracted = content.slice(sectionStartIndex, sectionEndIndex).trimEnd(); // Use slice for safety
         // console.log(`extractSectionContent: Extracted for ${sectionHeadingRegex}: \n---\n${extracted}\n---`);
-        return extracted;
+        return extracted.trimEnd(); // Trim trailing whitespace from the extracted section
     }
 
 
-    extractDataviewBlocks(content: string): string[] {
-        const blocks: string[] = [];
+    // Extracts dataviewjs blocks with their indices
+    extractDataviewBlocksWithIndices(content: string): { type: 'dataview'; start: number; end: number; content: string }[] {
+        const blocks: { type: 'dataview'; start: number; end: number; content: string }[] = [];
         const regex = /```dataviewjs\s*[\s\S]*?```/gs;
         let match;
         while ((match = regex.exec(content)) !== null) {
-            blocks.push(match[0]);
+            blocks.push({
+                type: 'dataview',
+                start: match.index,
+                end: match.index + match[0].length,
+                content: match[0]
+            });
         }
+        // console.log(`extractDataviewBlocksWithIndices: Found ${blocks.length} blocks.`);
         return blocks;
     }
+
+    // Old version kept temporarily for reference if needed, but should be removed later
+    extractDataviewBlocks(content: string): string[] {
+         const blocks: string[] = [];
+         const regex = /```dataviewjs\s*[\s\S]*?```/gs;
+         let match;
+         while ((match = regex.exec(content)) !== null) {
+             blocks.push(match[0]);
+         }
+         return blocks;
+     }
 
     // --- Modal Trigger ---
     showSyncDirectionModal(diffSummary: string, callback: (choice: string) => void) {
