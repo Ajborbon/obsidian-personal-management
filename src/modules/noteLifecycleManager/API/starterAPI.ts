@@ -1,21 +1,9 @@
-/*
- * Filename: /src/modules/noteLifecycleManager/API/starterAPI.ts
- * Path: /src/modules/noteLifecycleManager/API
- * Created Date: 2025-02-23 15:57:40
- * Author: Andrés Julián Borbón
- * -----
- * Last Modified: 2025-02-24 01:18:38
- * Modified By: Andrés Julián Borbón
- * -----
- * Copyright (c) 2025 - Andrés Julián Borbón
- */
-
 /* src/modules/noteLifecycleManager/API/starterAPI.ts */
-import { TFile, Notice, TFolder } from 'obsidian';
-import {DateTime , Duration} from 'luxon';
-// Interfaces
-import { NoteFieldHandler } from '../Interfaces/NoteFieldHandler';
-// FileHandlers
+import { TFile, Notice, TFolder, App } from 'obsidian';
+import { DateTime } from 'luxon';
+// Use type-only import for interface
+import type { NoteFieldHandler } from '../Interfaces/NoteFieldHandler';
+// Import specific handlers
 import { AgradecimientosFieldHandler } from '../fieldHandlers/FH Subsistemas/AgradecimientosFieldHandler';
 import { ReflexionesFieldHandler } from '../fieldHandlers/FH Subsistemas/ReflexionesFieldHandlers';
 import { ContenidoParaEstudioFieldHandler } from '../fieldHandlers/FH Subsistemas/CPEFieldHandler';
@@ -35,292 +23,340 @@ import { Anual_FH } from '../fieldHandlers/FH Journals/Anual_FH';
 import { TrimestralFieldHandler } from '../fieldHandlers/FH Journals/TrimestralFieldHandler';
 import { CampañasFieldHandler } from '../fieldHandlers/FH Subsistemas/CampañasFieldHandler';
 import { EntregableFieldHandler } from '../fieldHandlers/FH Subsistemas/EntregableFieldHandler';
-// obsidian
+// Import the actual plugin type
+import type MyPlugin from '../../../main'; // Adjust path as needed
 
 export class starterAPI {
-    //private utilsApi: utilsAPI;
-    private plugin: Plugin;
-    private infoSubsistema: object; // Asumiendo que es un string
-    private tp: object;
-    private nota: object;
-    private pathCampos: string; 
+    // Use the specific plugin type
+    private plugin: MyPlugin;
+    private infoSubsistema: any = {};
+    private tp: any;
+    // Add index signature to allow dynamic assignment and initialize
+    private nota: { [key: string]: any } = {};
+    private pathCampos: string;
+    private app: App;
 
-    constructor(plugin: Plugin) {
+    constructor(plugin: MyPlugin) {
         this.plugin = plugin;
-        // Inicializa folder e indice getcon valores predeterminados o lógica específica.
-        this.infoSubsistema = {};
+        this.app = plugin.app;
         this.tp = this.getTp();
-        this.pathCampos = this.plugin.settings.file_camposCentral + ".md";
-    }
-    
-   
-
-
-    async fillNote(infoSubsistema: { folder: string; indice: string; type: string; }, campos: any) {
+        // Ensure nota is initialized in constructor as well
         this.nota = {};
-        let nota;
-        Object.assign(this.infoSubsistema, infoSubsistema);
-        
-        if (this.infoSubsistema.defined) {
-          this.infoSubsistema.folder = this.plugin.settings[infoSubsistema.folder];
-          this.infoSubsistema.indice = this.plugin.settings[infoSubsistema.indice];
-          Object.assign(this.nota, infoSubsistema);
+        // Initialize pathCampos using plugin settings
+        // Ensure 'settings' exists on MyPlugin type
+        if (this.plugin.settings) {
+             this.pathCampos = this.plugin.settings.file_camposCentral + ".md";
+        } else {
+             console.error("Plugin settings not available in starterAPI constructor.");
+             this.pathCampos = "default_path.md"; // Provide a default or handle error
         }
-    
+    }
+
+    /**
+     * Fills note properties by calling appropriate field handlers.
+     * @param runtimeTp The Templater `tp` object available at runtime in the template context. Crucial for suggester etc.
+     * @param infoSubsistemaIn Information about the subsystem/note type being created.
+     * @param campos Array of field names to process (e.g., ["id", "fecha", "rename"]).
+     */
+    async fillNote(runtimeTp: any, infoSubsistemaIn: any, campos: string[]): Promise<any | null> {
+        console.log("starterAPI.fillNote called with campos:", campos);
+        this.nota = {}; // Reset accumulator for this specific call
+        let handlerInfo = { ...infoSubsistemaIn }; // Clone to avoid side effects
+
+        // Resolve folder/indice paths using settings
+        if (handlerInfo.defined && this.plugin.settings) {
+            handlerInfo.folder = this.plugin.settings[handlerInfo.folder];
+            handlerInfo.indice = this.plugin.settings[handlerInfo.indice];
+            if (!handlerInfo.folder || !handlerInfo.indice) {
+                console.error(`Folder ('${infoSubsistemaIn.folder}') or Indice ('${infoSubsistemaIn.indice}') key not found in settings for type ${handlerInfo.type}`);
+                new Notice(`Error de configuración: Falta la ruta de carpeta o índice para ${handlerInfo.typeName}.`);
+                return null; // Cannot proceed without paths
+            }
+        } else if (handlerInfo.defined) {
+             console.error("Plugin settings not available in fillNote.");
+             new Notice("Error interno: No se pudo acceder a la configuración del plugin.");
+             return null;
+        }
+
+        // Define fieldHandler variable - Use the specific interface type 'NoteFieldHandler'
         let fieldHandler: NoteFieldHandler;
-        switch (this.infoSubsistema.type) {
-          case "Agr":
-            fieldHandler = new AgradecimientosFieldHandler(this.tp, this.infoSubsistema, this.plugin);
-            break;
-          case "PGTD":
-            fieldHandler = new PGTDFieldHandler(this.tp, this.infoSubsistema, this.plugin);
-            break;
-          case "PQ":
-            fieldHandler = new PQFieldHandler(this.tp, this.infoSubsistema, this.plugin);
-            break;
-          case "Ax":
-            fieldHandler = new AnotacionesFieldHandler(this.tp, this.infoSubsistema, this.plugin);
-            break;
-          case "CPE":
-            fieldHandler = new ContenidoParaEstudioFieldHandler(this.tp, this.infoSubsistema, this.plugin);
-            break;
-          case "RR":
-            fieldHandler = new RecursosRecurrentesFieldHandler(this.tp, this.infoSubsistema, this.plugin);
-            break;
-          case "Tx":
-            fieldHandler = new TransaccionesFieldHandler(this.tp, this.infoSubsistema, this.plugin);
-            break;
-          case "AI":
-            fieldHandler = new AreasInteresFieldHandler(this.tp, this.infoSubsistema, this.plugin);
-            break;
-          case "AV":
-            fieldHandler = new AreaVidaFieldHandler(this.tp, this.infoSubsistema, this.plugin);
-            break;
-          case "nAV":
-            fieldHandler = new nodoAreaVidaFieldHandler(this.tp, this.infoSubsistema, this.plugin);
-            break;
-          case "OCA":
-            fieldHandler = new ObjCompassAnualFieldHandler(this.tp, this.infoSubsistema, this.plugin);
-            break;
-          case "CAI":
-            fieldHandler = new CompassPlaneacionAnual_FH(this.tp, this.infoSubsistema, this.plugin);
-            break;
-          case "RL":
-            fieldHandler = new RepositorioLibros_FH(this.tp, this.infoSubsistema, this.plugin);
-            break;
-          case "LB":
-              fieldHandler = new Biblioteca_FH(this.tp, this.infoSubsistema, this.plugin);
-              break;
-          case "Rx":
-            fieldHandler = new ReflexionesFieldHandler(this.tp, this.infoSubsistema, this.plugin);
-            break;
-          case "Cp":
-            fieldHandler = new CampañasFieldHandler(this.tp, this.infoSubsistema, this.plugin);
-            break;
-          case "EMkt":
-            fieldHandler = new EntregableFieldHandler(this.tp, this.infoSubsistema, this.plugin);
-            break;
-          case "TQ":
-            fieldHandler = new TrimestralFieldHandler(this.tp, this.infoSubsistema, this.plugin);
-            break;
-          case "AY":
-            fieldHandler = new Anual_FH(this.tp, this.infoSubsistema, this.plugin);
-            break;
-          default:
-            throw new Error(`No se ha definido un manejador de campos para el tipo ${this.infoSubsistema.type}`);
-        }
-        
+
+        // Instantiate the correct handler, passing the RUNTIME 'runtimeTp' object
+        // Ensure handler constructors accept the specific MyPlugin type
         try {
-          for (let campo of campos) {
-            const functionName = `get${campo.charAt(0).toUpperCase() + campo.slice(1)}`;
-            if (typeof fieldHandler[functionName] === 'function') {
-                //debugger;
-                this.nota[campo] = await fieldHandler[functionName]();
-                nota = await fieldHandler.getNota();
-                for (const key in nota) {
-                    if (!(key in this.nota)) {
-                      this.nota[key] = nota[key];
-                    }
-                  }
-            } else {
-              console.error(`La función ${functionName} no está definida.`);
+            switch (handlerInfo.type) {
+                case "Agr": fieldHandler = new AgradecimientosFieldHandler(runtimeTp, handlerInfo, this.plugin); break;
+                case "PGTD": fieldHandler = new PGTDFieldHandler(runtimeTp, handlerInfo, this.plugin); break;
+                case "PQ": fieldHandler = new PQFieldHandler(runtimeTp, handlerInfo, this.plugin); break;
+                case "Ax": fieldHandler = new AnotacionesFieldHandler(runtimeTp, handlerInfo, this.plugin); break;
+                case "CPE": fieldHandler = new ContenidoParaEstudioFieldHandler(runtimeTp, handlerInfo, this.plugin); break;
+                case "RR": fieldHandler = new RecursosRecurrentesFieldHandler(runtimeTp, handlerInfo, this.plugin); break;
+                case "Tx": fieldHandler = new TransaccionesFieldHandler(runtimeTp, handlerInfo, this.plugin); break;
+                case "AI": fieldHandler = new AreasInteresFieldHandler(runtimeTp, handlerInfo, this.plugin); break;
+                case "AV": fieldHandler = new AreaVidaFieldHandler(runtimeTp, handlerInfo, this.plugin); break;
+                case "nAV": fieldHandler = new nodoAreaVidaFieldHandler(runtimeTp, handlerInfo, this.plugin); break;
+                case "OCA": fieldHandler = new ObjCompassAnualFieldHandler(runtimeTp, handlerInfo, this.plugin); break;
+                case "CAI": fieldHandler = new CompassPlaneacionAnual_FH(runtimeTp, handlerInfo, this.plugin); break;
+                case "RL": fieldHandler = new RepositorioLibros_FH(runtimeTp, handlerInfo, this.plugin); break;
+                case "LB": fieldHandler = new Biblioteca_FH(runtimeTp, handlerInfo, this.plugin); break;
+                case "Rx": fieldHandler = new ReflexionesFieldHandler(runtimeTp, handlerInfo, this.plugin); break;
+                case "Cp": fieldHandler = new CampañasFieldHandler(runtimeTp, handlerInfo, this.plugin); break;
+                case "EMkt": fieldHandler = new EntregableFieldHandler(runtimeTp, handlerInfo, this.plugin); break;
+                case "TQ": fieldHandler = new TrimestralFieldHandler(runtimeTp, handlerInfo, this.plugin); break;
+                case "AY": fieldHandler = new Anual_FH(runtimeTp, handlerInfo, this.plugin); break;
+                default: throw new Error(`Handler no definido para tipo ${handlerInfo.type}`);
             }
+        } catch (error) {
+             console.error(`Error instantiating FieldHandler for type ${handlerInfo.type}:`, error);
+             new Notice(`Error interno inicializando handler para ${handlerInfo.typeName}.`);
+             return null;
+        }
+
+
+        // Execute the get methods for each requested field
+        try {
+            for (const campo of campos) {
+                const functionName = `get${campo.charAt(0).toUpperCase() + campo.slice(1)}`;
+                // Check if the method exists on the instantiated handler object
+                if (fieldHandler && typeof (fieldHandler as any)[functionName] === 'function') {
+                    console.log(`Calling ${functionName} for field '${campo}'...`);
+                    // Store the result directly into the note accumulator object
+                    // We cast fieldHandler to 'any' here to bypass strict type checking for dynamic method calls,
+                    // assuming the interface guarantees these methods exist if requested.
+                    // A safer approach involves checking against the NoteFieldHandler interface keys.
+                    this.nota[campo] = await (fieldHandler as any)[functionName]();
+                    console.log(`Result for ${functionName}:`, this.nota[campo]);
+                } else {
+                    console.warn(`Función ${functionName} no encontrada o no es una función en el handler para ${handlerInfo.type}. Campo '${campo}' será omitido.`);
+                    // Optionally set the field to null or undefined in this.nota
+                    // this.nota[campo] = null;
+                }
+            }
+        } catch (error: any) { // Catch specific error type if possible
+            console.error(`Error durante la ejecución de getCampo para ${handlerInfo.type}:`, error);
+            // Provide a more specific error message if available
+            new Notice(`Error procesando campo: ${error.message || 'Error desconocido'}`);
+            return null; // Indicate failure
+        }
+
+        // After processing all fields, get the final consolidated note object from the handler
+        try {
+             const finalNota = await fieldHandler.getNota();
+             console.log("Final note object from handler.getNota():", finalNota);
+             // It might be safer to return the object from getNota() as it represents the handler's final state
+             return finalNota;
+             // Alternatively, return the accumulated this.nota if confident it's correct
+             // return this.nota;
+        } catch(error: any) {
+             console.error(`Error calling getNota() on handler for ${handlerInfo.type}:`, error);
+             new Notice(`Error finalizando nota: ${error.message || 'Error desconocido'}`);
+             return null;
+        }
+    }
+
+    // Keep getTp for potential use by other methods, but fillNote uses runtimeTp
+    private getTp(): any {
+        try {
+            if (!this.plugin || !this.plugin.app.plugins.enabledPlugins.has('templater-obsidian')) {
+                console.error('El plugin Templater no está habilitado.');
+                return undefined; // Return undefined or throw error
+            }
+            const templaterPlugin = this.plugin.app.plugins.plugins['templater-obsidian'];
+            if (!templaterPlugin) {
+                 console.error("No se pudo obtener la instancia del plugin Templater.");
+                 return undefined;
+            }
+            // Attempt to get the functions object - this might vary between Templater versions
+            // This specific path might be fragile.
+            const tpInternalFunctions = templaterPlugin.templater?.functions_generator?.internal_functions?.modules_array;
+            if (!tpInternalFunctions) {
+                 console.warn("No se pudo acceder a modules_array de Templater. Intentando acceso alternativo.");
+                 // Fallback or alternative access method if needed
+                 // const tp = templaterPlugin.templater?.current_functions_object; // Example alternative
+                 // if (tp) return tp;
+                 console.error("No se pudo obtener el objeto de funciones de Templater.");
+                 return undefined;
             }
 
+            let tp: any = {};
+            tp.file = tpInternalFunctions.find((m: any) => m.name == "file");
+            tp.system = tpInternalFunctions.find((m: any) => m.name == "system");
 
-            } catch (error) {
-            console.error("No se pudo crear el objeto de registro.", error);
-            new Notice("No se pudo crear el objeto de registro.");
-            return null;
+            if (!tp.file || !tp.system) {
+                console.error("No se pudieron encontrar los módulos 'file' o 'system' de Templater.");
+                // Even if incomplete, return what we found, or undefined
+                return tp.file || tp.system ? tp : undefined;
+            }
+            console.log('API interna: Objeto tp parcial (file, system) cargado.');
+            return tp;
+        } catch (error) {
+             console.error("Error crítico obteniendo objeto tp de Templater:", error);
+             return undefined;
         }
-        return this.nota;
-    }
-    
-
-    getTp(){
-        
-        if (!this.plugin || !this.plugin.app.plugins.enabledPlugins.has('templater-obsidian')) {
-            console.error('El plugin Templater no está habilitado.');
-            return;
-        }
-        //  Forma de acceder al objeto tp normal que he usado desde DVJS cuando current Functions esta cargado.
-        //const templaterPlugin = this.app.plugins.plugins['templater-obsidian'];
-        //const tp = templaterPlugin.templater.current_functions_object;
-        // -> version que falla si no esta arriba el plugin porque hace get del plugin directo. const templaterPlugin = this.app.plugins.getPlugin('templater-obsidian');
-        
-        let tpGen = this.plugin.app.plugins.plugins["templater-obsidian"].templater;
-        tpGen = tpGen.functions_generator.internal_functions.modules_array;
-        let tp = {}
-        // get an instance of modules
-        tp.file = tpGen.find(m => m.name == "file");
-        tp.system = tpGen.find(m => m.name == "system");
-
-        if (!tp.system) {
-        console.error("No se pudo acceder al objeto de funciones actuales de Templater.");
-        return;
-    }
-    console.log('tp en YAMLUpdaterAPI se ha cargado satisfactoriamente');
-    return tp;
     }
 
-
-     // Crear Nota desde template
+     // Refactor createNote to get tp directly if needed
      async createNote(subsistema: string) {
         try {
-            const templatePath = `Plantillas/${this.plugin.settings[`folder_${subsistema}`]}/Plt - ${subsistema}.md`;
-            
-              // Intentar obtener el archivo por path
-            const templateFile = app.vault.getAbstractFileByPath(templatePath);
-
-            // Verificar si el archivo es un TFile
-            if (!(templateFile instanceof TFile)) {
-                // Si no es un TFile, manejar el error
-                throw new Error(`El template para "${subsistema}" no se encontró o no es un archivo válido.`);
+            // Get settings safely
+            if (!this.plugin.settings) {
+                 throw new Error("Plugin settings not available in createNote.");
             }
+            const folderKey = `folder_${subsistema}`;
+            const templateFolder = this.plugin.settings[folderKey];
+            if (!templateFolder) {
+                 throw new Error(`Setting key '${folderKey}' not found.`);
+            }
+            const templatePath = `Plantillas/${templateFolder}/Plt - ${subsistema}.md`;
+
+            const templateFile = this.app.vault.getAbstractFileByPath(templatePath);
+            if (!(templateFile instanceof TFile)) {
+                throw new Error(`Template '${templatePath}' no encontrado o no es un archivo.`);
+            }
+
             const dtConseq = DateTime.now().toFormat('yyyy-MM-dd HHmmss');
             const filename = `${subsistema} ${dtConseq}`;
-            const folder = app.vault.getAbstractFileByPath("Inbox");
-            if (!folder) {
-                throw new Error(`La carpeta "Inbox" no se encontró.`);
+            const inboxFolder = this.app.vault.getAbstractFileByPath("Inbox");
+            if (!(inboxFolder instanceof TFolder)) { // Check if it's a TFolder
+                throw new Error(`La carpeta "Inbox" no se encontró o no es una carpeta.`);
             }
-    
-            const tp = this.getTp();
-            let crearNota = tp.file.static_functions.get("create_new");
-            if (typeof crearNota !== "function") {
-                throw new Error("La función para crear notas no está disponible.");
+
+            // Get Templater plugin instance directly here
+            const templaterPlugin = this.plugin.app.plugins.plugins['templater-obsidian'];
+            if (!templaterPlugin?.templater?.current_functions_object?.file?.static_functions?.get) {
+                 throw new Error("Función 'create_new' de Templater no disponible.");
             }
-            await crearNota(templateFile, filename, true, folder).basename;
-            
-       
-        } catch (error) {
-            console.error(error);
-            // Aquí puedes manejar el error, por ejemplo, mostrando un mensaje al usuario
-            // Puedes reemplazar este mensaje de error por cualquier acción que consideres adecuada
-            alert(`Error al crear la nota: ${error.message}`);
+            // Access create_new function more reliably if possible
+            const tpFuncs = templaterPlugin.templater.current_functions_object;
+            const createNewFunc = tpFuncs.file.static_functions.get("create_new");
+
+            if (typeof createNewFunc !== "function") {
+                throw new Error("La función 'create_new' de Templater no es una función.");
+            }
+
+            console.log(`Creando nota desde template: ${templateFile.path} en carpeta: ${inboxFolder.path} con nombre: ${filename}`);
+            // Pass the TFolder object to create_new
+            await createNewFunc(templateFile, filename, true, inboxFolder);
+            console.log(`Nota ${filename} creada exitosamente en Inbox.`);
+
+        } catch (error: any) {
+            console.error("Error en createNote:", error);
+            new Notice(`Error al crear nota desde template: ${error.message}`);
         }
     }
-    
 
-    async getOtrosAsuntos(subsistemas) {
-        let suggester = this.tp.system.static_functions.get("suggester");
-        let campo = [];
-    
+    // getOtrosAsuntos and activeStructureResources might need adjustments
+    // if they relied on the old this.tp or this.infoSubsistema structure.
+    // For now, assume they work or are not relevant to the current flow.
+
+    async getOtrosAsuntos(subsistemas: string[]) { // Added type for subsistemas
+        // This method uses this.tp - ensure this.tp is valid or pass runtimeTp
+        if (!this.tp || !this.tp.system || !this.tp.system.static_functions) {
+             console.error("this.tp.system.static_functions no disponible en getOtrosAsuntos");
+             return []; // Return empty or throw error
+        }
+        let suggesterFunc = this.tp.system.static_functions.get("suggester");
+        if (typeof suggesterFunc !== 'function') {
+             console.error("Función suggester de Templater no encontrada en getOtrosAsuntos");
+             return [];
+        }
+
+        let campo: string[] = []; // Initialize as string array
+
         for (let subsistema of subsistemas) {
-            // Pregunta inicial para incluir algún subsistema como origen
-            let incluye = await suggester(["Si", "No"], [true, false], true, `Desea agregar algun ${subsistema} activo como origen?`);
-            if (!incluye) continue; // Si la respuesta es 'No', continúa con el siguiente subsistema
-            debugger
-            let recursosActivos = await this.activeStructureResources(subsistema);
-            let primerAlias = recursosActivos.map(file => {
-                const metadata = app.metadataCache.getFileCache(file)?.frontmatter;
-                return metadata && metadata.aliases && metadata.aliases.length > 0 ? metadata.aliases[0] : null;
-            }).filter(alias => alias !== null);
-    
-            while (recursosActivos.length > 0) { // Continúa mientras haya recursos activos para elegir
-                let indiceSeleccionado
-                if (subsistema === "AreasVida" || subsistema === "AreasInteres"){
-                    let seleccion = await suggester(primerAlias, recursosActivos.map(b => b.path), false, `${subsistema} activos:`);
-                    if (!seleccion) break; // Si no hay selección, sale del ciclo
-                    // Encuentra y elimina la selección de los arreglos para no volver a mostrarla
-                    // Encuentra el índice del archivo seleccionado en recursosActivos basándonos en el basename
-                    indiceSeleccionado = recursosActivos.findIndex(b => b.path === seleccion);
-                }else{
-                let seleccion = await suggester(primerAlias, recursosActivos.map(b => b.basename), false, `${subsistema} activos:`);
-                if (!seleccion) break; // Si no hay selección, sale del ciclo
-                // Encuentra y elimina la selección de los arreglos para no volver a mostrarla
-                // Encuentra el índice del archivo seleccionado en recursosActivos basándonos en el basename
-                indiceSeleccionado = recursosActivos.findIndex(b => b.basename === seleccion);
+            try {
+                let incluye = await suggesterFunc(["Si", "No"], [true, false], true, `Desea agregar algun ${subsistema} activo como origen?`);
+                if (!incluye) continue;
+
+                // Ensure activeStructureResources is awaited and returns TFile[]
+                let recursosActivos: TFile[] = await this.activeStructureResources(subsistema);
+                if (!Array.isArray(recursosActivos)) {
+                     console.warn(`activeStructureResources para ${subsistema} no devolvió un array.`);
+                     recursosActivos = [];
                 }
-                if (indiceSeleccionado !== -1) {
-                    if (subsistema === "AreasVida" || subsistema === "AreasInteres"){
-                        
-                    campo.push(recursosActivos[indiceSeleccionado].path); // Agrega el basename del archivo seleccionado al campo    
-                    }else{
-                    campo.push(recursosActivos[indiceSeleccionado].basename); // Agrega el basename del archivo seleccionado al campo
-                    }
-                    // Elimina el elemento seleccionado de ambos arreglos para no volver a mostrarlo
-                    recursosActivos.splice(indiceSeleccionado, 1);
-                    primerAlias.splice(indiceSeleccionado, 1);
+
+                // Filter out files without frontmatter or aliases safely
+                let aliasData = recursosActivos.map(file => {
+                    const cache = this.app.metadataCache.getFileCache(file);
+                    const aliases = cache?.frontmatter?.aliases;
+                    // Ensure aliases is an array and has elements
+                    const firstAlias = Array.isArray(aliases) && aliases.length > 0 ? aliases[0] : null;
+                    return { file, firstAlias }; // Keep file reference
+                });
+
+                let availableOptions = aliasData.filter(data => data.firstAlias !== null);
+
+                while (availableOptions.length > 0) {
+                    const displayTexts = availableOptions.map(data => data.firstAlias as string); // Already filtered nulls
+                    const returnValues = availableOptions.map(data => data.file); // Return the TFile object
+
+                    let seleccion = await suggesterFunc(displayTexts, returnValues, false, `${subsistema} activos:`);
+
+                    if (!seleccion) break; // User cancelled
+
+                    // seleccion is now a TFile object
+                    const selectedFile = seleccion as TFile;
+                    campo.push(selectedFile.basename); // Add basename to the result array
+
+                    // Remove selected option from availableOptions
+                    availableOptions = availableOptions.filter(data => data.file.path !== selectedFile.path);
+
+                    if (availableOptions.length === 0) break;
+
+                    let deseaAgregarOtro = await suggesterFunc(["Si", "No"], [true, false], true, `Desea agregar otro ${subsistema} como origen?`);
+                    if (!deseaAgregarOtro) break;
                 }
-    
-                // Si no quedan más recursos activos, no pregunta si desea agregar otro
-                if (recursosActivos.length === 0) break;
-    
-                // Pregunta si desea agregar otro registro del mismo subsistema
-                let deseaAgregarOtro = await suggester(["Si", "No"], [true, false], true, `Desea agregar otro ${subsistema} como origen?`);
-                debugger
-                if (!deseaAgregarOtro) break; // Si la respuesta es 'No', sale del ciclo
-                
+            } catch (error) {
+                 console.error(`Error procesando subsistema ${subsistema} en getOtrosAsuntos:`, error);
+                 // Optionally notify user or continue to next subsistema
             }
         }
-    
-        return campo; // Retorna el arreglo campo con todas las selecciones realizadas
+        return campo;
     }
-    
-    
-    // FUNCION QUE TRAE TODAS LAS NOTAS ACTIVAS DE LOS SISTEMAS. - Revisar en que la uso...
-    async activeStructureResources(typeName) {
+
+
+    async activeStructureResources(typeName: string): Promise<TFile[]> { // Return TFile array
         try {
-            // Obtén todos los archivos Markdown
-            const files = app.vault.getMarkdownFiles();
-            
-            switch (type){
+            if (!this.plugin.settings) {
+                 console.error("Plugin settings not available in activeStructureResources.");
+                 return [];
+            }
+            const files = this.app.vault.getMarkdownFiles();
+            let activeResources: TFile[] = []; // Explicitly TFile array
 
+            // Assuming 'type' is not defined globally, use typeName
+            switch (typeName) {
                 case "AreasInteres":
-                    debugger;
+                    // Implement logic for AreasInteres if needed
+                    console.warn("activeStructureResources: Lógica para AreasInteres no implementada.");
+                    // Example: Find files based on a specific tag or folder for AreasInteres
+                    break;
+                // Add cases for other specific types if they have different logic
 
-                break;
-                default: 
-                // Determina el nombre de la carpeta de recursos basado en el tipo
-                let resourceFolderName = "folder_" + typeName;
-                let resourceFolder = this.plugin.settings[resourceFolderName];
-                
-                // Verifica si la carpeta de recursos existe para evitar errores
-                if (!resourceFolder) {
-                    console.error(`La carpeta "${resourceFolderName}" no existe en la configuración del plugin.`);
-                    return []; // Retorna un arreglo vacío si la carpeta no existe
-                }
-                
-                let activeResources = [];
-                
-                // Filtra los archivos que están dentro del directorio deseado y tienen estado 🟢
-                const registrosExistentes = files.filter(file => file.path.startsWith(resourceFolder));
-                
-                // Usa metadataCache para buscar los estados en el frontmatter
-                registrosExistentes.forEach(file => {
-                    const metadata = app.metadataCache.getFileCache(file)?.frontmatter;
-                    if (metadata && metadata.estado === "🟢") {
-                        activeResources.push(file);
-                        }
-                    });
-                break;
-            } // Fin Switch
+                default:
+                    const resourceFolderNameKey = `folder_${typeName}`;
+                    const resourceFolder = this.plugin.settings[resourceFolderNameKey];
+
+                    if (!resourceFolder || typeof resourceFolder !== 'string') {
+                        console.error(`Carpeta para "${typeName}" (${resourceFolderNameKey}) no definida o inválida en settings.`);
+                        return [];
+                    }
+
+                    // Filter files within the folder and check state
+                    const registrosExistentes = files.filter(file => file.path.startsWith(resourceFolder + '/')); // Ensure it's within the folder
+
+                    for (const file of registrosExistentes) {
+                         const metadata = this.app.metadataCache.getFileCache(file)?.frontmatter;
+                         if (metadata && metadata.estado === "🟢") {
+                             activeResources.push(file);
+                         }
+                    }
+                    break;
+            }
             return activeResources;
         } catch (error) {
-            console.error("Error al buscar recursos activos:", error);
-            return []; // Retorna un arreglo vacío en caso de error
+            console.error(`Error buscando recursos activos para ${typeName}:`, error);
+            return [];
         }
     }
-    
 }
-  

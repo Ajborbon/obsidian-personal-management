@@ -133,4 +133,7 @@ export interface PluginMainSettings {
 
     // Notion specific settings (nested object)
     notionSettings: import("../modules/moduloNotion/settings").NotionModuleSettings; // Use inline import for clarity
+
+    // Index signature to allow accessing settings with dynamic keys like 'folder_Trimestral'
+    [key: string]: any;
     }
