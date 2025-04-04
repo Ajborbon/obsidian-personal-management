@@ -7,6 +7,8 @@
   "moduloTaskManager": true,
   "moduloDataviewQueries": true,
   "taskExecutionNavigatorModule": true,
+  "moduloGTDv2": true,
+  "moduloNotion": true,
   "file_camposCentral": "Estructura/Campos Sistema Gestion/Campos Sistema Central",
   "folder_Anotaciones": "Anotaciones/Notas",
   "indice_Anotaciones": "Anotaciones/Indice Anotaciones",
@@ -48,8 +50,10 @@
   "indice_Entregable": "Subsistemas/Marketing/Indice Entregables",
   "folder_AreasVida": "Estructura/Areas de Vida",
   "indice_AreasVida": "Estructura/Areas de Vida/Indice Areas de Vida",
+  "nameFile_AreasVida": "indexAV",
   "folder_AreasInteres": "Estructura/Areas de Interes",
   "indice_AreasInteres": "Estructura/Areas de Interes/Indice Areas de Interes",
+  "nameFile_AreasInteres": "indexAI",
   "folder_TemasInteres": "Estructura/Temas de Interes",
   "indice_TemasInteres": "Estructura/Temas de Interes/Indice Temas de Interes",
   "folder_RecursosRecurrentes": "Estructura/Recursos Recurrentes/Recursos",
@@ -87,11 +91,16 @@
   "indice_Reflexiones": "Registros Personales/Reflexiones/Indice Reflexiones",
   "folder_RegistrosAkashikos": "Registros Personales/Registros Akashikos/Notas",
   "indice_RegistrosAkashikos": "Registros Personales/Registros Akashikos/Indice Registros Akashikos",
+  "notionSettings": {
+    "notionApiKey": "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",
+    "campaignDbId": "1cba457fdf7581888ab1f25f15600f23",
+    "deliverableDbId": "1cba457fdf7581888ab1f25f15600f23",
+    "notionPublicDomain": "crezco360.notion.site",
+    "notionSubdomain": "crezco360"
+  },
   "titleDisplayMode": "alias",
   "folder_LecturaSesiones": "Subsistemas/Lectura/Sesiones de Lectura/Sesiones",
   "indice_LecturaSesiones": "Subsistemas/Lectura/Sesiones de Lectura/Indice Sesiones Lectura",
   "folder_Pagos": "Subsistemas/Pagos/Notas",
-  "indice_Pagos": "Subsistemas/Pagos/Indice Pagos",
-  "nameFile_AreasVida": "indexAV",
-  "nameFile_AreasInteres": "indexAI"
+  "indice_Pagos": "Subsistemas/Pagos/Indice Pagos"
 }

@@ -1,5 +1,7 @@
 import { Plugin, PluginSettingTab, Setting, TextComponent, ToggleComponent } from 'obsidian'; // Import specific components
 import type ManagementPlugin from './main'; // Import the specific plugin class type
+// Import both the class and the default settings constant
+import { NotionSettings, DEFAULT_NOTION_SETTINGS } from './modules/moduloNotion/settings';
 
 export class PluginMainSettingsTab extends PluginSettingTab {
     plugin: ManagementPlugin; // Use the specific plugin class type
@@ -85,6 +87,41 @@ export class PluginMainSettingsTab extends PluginSettingTab {
                                 // Note: No explicit activate/deactivate needed yet as it only controls command availability
                             }));
 
+                    // --- Notion Module Settings ---
+                    const notionSettingsContainer = tabContent.createDiv(); // Container for Notion settings
+
+                    new Setting(tabContent)
+                        .setName('Activar Módulo Notion')
+                        .setDesc('Activa o desactiva la integración con Notion.')
+                        .addToggle((toggle: ToggleComponent) => toggle
+                            .setValue(this.plugin.settings!.moduloNotion)
+                            .onChange(async (value: boolean) => {
+                                this.plugin.settings!.moduloNotion = value;
+                                await this.plugin.saveSettings(); // Save settings triggers applyConfiguration in main.ts
+                                // Show/hide Notion specific settings based on toggle
+                                notionSettingsContainer.style.display = value ? 'block' : 'none';
+                                // Force redraw if needed, though saveSettings should handle module loading/unloading
+                                // this.display(); // Avoid recursive call, applyConfiguration handles it
+                            }));
+
+                    // Add Notion specific settings UI (conditionally displayed)
+                    // Ensure notionSettings exists before accessing it
+                    if (!this.plugin.settings!.notionSettings) {
+                        // Use the imported constant directly
+                        this.plugin.settings!.notionSettings = DEFAULT_NOTION_SETTINGS; // Initialize if missing
+                    }
+                    NotionSettings.addSettingsUI(
+                        notionSettingsContainer,
+                        this.plugin,
+                        this.plugin.settings!.notionSettings, // Pass the nested settings object
+                        async () => { // Provide the save callback
+                            // No need to save notionSettings separately, saveSettings saves the whole object
+                            await this.plugin.saveSettings();
+                        }
+                    );
+                    // Initially hide Notion settings if module is disabled
+                    notionSettingsContainer.style.display = this.plugin.settings!.moduloNotion ? 'block' : 'none';
+                    // --- End Notion Module Settings ---
 
                     containerEl.createEl('h3', {text: 'Navegador de Tareas'});
 

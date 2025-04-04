@@ -1,5 +1,6 @@
 // src/defaults/defaultSettings.ts
 import type { PluginMainSettings } from '../interfaces/pluginMainSettings';
+import { DEFAULT_NOTION_SETTINGS } from '../modules/moduloNotion/settings'; // Import Notion defaults
 
 export const DEFAULT_SETTINGS: PluginMainSettings = {
   moduloRegistroTiempo: true,
@@ -11,6 +12,7 @@ export const DEFAULT_SETTINGS: PluginMainSettings = {
   moduloDataviewQueries: true,
   taskExecutionNavigatorModule: true,  // Activado por defecto
   moduloGTDv2: true, // Default value for the new module
+  moduloNotion: false, // <-- Add default for Notion module (disabled by default)
   file_camposCentral :"Estructura/Campos Sistema Gestion/Campos Sistema Central",
   folder_Anotaciones: "Anotaciones/Notas",
   indice_Anotaciones: "Anotaciones/Indice Anotaciones",
@@ -107,5 +109,7 @@ export const DEFAULT_SETTINGS: PluginMainSettings = {
    indice_Reflexiones: "Registros Personales/Reflexiones/Indice Reflexiones",
    folder_RegistrosAkashikos: "Registros Personales/Registros Akashikos/Notas",
    indice_RegistrosAkashikos: "Registros Personales/Registros Akashikos/Indice Registros Akashikos",
-   
+
+   // Add default Notion settings object
+   notionSettings: DEFAULT_NOTION_SETTINGS,
 };

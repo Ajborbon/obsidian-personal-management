@@ -22,13 +22,14 @@ import { VistaResumenSemanal } from "./modules/noteLifecycleManager/views/vistaR
 import { VistaRegistroDiario } from "./modules/noteLifecycleManager/views/vistaRegistroDiario";
 import GPThora from "./modules/GPThora/GPThora";
 import { librosAPI } from "./modules/moduloLibros/librosAPI";
+import { ModuloNotion } from "./modules/moduloNotion"; // <-- Import ModuloNotion
 import { updateSesionLectura } from "./modules/moduloRegistroTiempo/API/updateSesionLectura";
 import { TareasAPI } from "./modules/taskManager/api/tareasAPI";
 import { ModuloTabTitle } from './modules/moduloTabTitle';
 import { ModuloTaskManager } from './modules/taskManager';
 import { ModuloDataviewQueries } from './modules/dataviewQueries';
 import { TaskExecutionNavigatorModule } from './modules/taskExecutionNavigator';
-import { EntregableFieldHandler } from "./modules/noteLifecycleManager/fieldHandlers/FH Subsistemas/EntregableFieldHandler";
+// import { EntregableFieldHandler } from "./modules/noteLifecycleManager/fieldHandlers/FH Subsistemas/EntregableFieldHandler"; // Example: Comment out if not used directly here
 import { SeleccionMultipleModal } from "./modules/modales/seleccionMultipleModal";
 import { DatePickerModal } from "./modules/modales/datePickerModal";
 import { SpinnerModal } from "./modules/modales/spinnerModal";
@@ -72,6 +73,7 @@ export default class ManagementPlugin extends Plugin {
   moduloTaskManager: ModuloTaskManager | null = null;
   moduloDataviewQueries: ModuloDataviewQueries | null = null;
   taskExecutionNavigatorModule: TaskExecutionNavigatorModule | null = null;
+  moduloNotion: ModuloNotion | null = null; // <-- Declare ModuloNotion property
   // Declara una propiedad para mantener una instancia de `StatusBarExtension`.
 
   async onload() {
@@ -131,6 +133,7 @@ export default class ManagementPlugin extends Plugin {
     this.moduloTabTitle = new ModuloTabTitle(this as any);
     this.moduloTaskManager = new ModuloTaskManager(this as any);
     this.moduloDataviewQueries = new ModuloDataviewQueries(this as any);
+    this.moduloNotion = new ModuloNotion(this as any); // <-- Instantiate ModuloNotion
     /*
     (this.app as any).gpManagement = {
       getTareasVencidasAbiertas: () => this.tareasAPI.getTareasVencidasAbiertas(),
@@ -166,6 +169,10 @@ export default class ManagementPlugin extends Plugin {
         // Activar el módulo si está configurado en settings (opcional)
         if (this.settings!.taskExecutionNavigatorModule) { // Added non-null assertion
           this.taskExecutionNavigatorModule?.activate();
+      }
+      // Activate ModuloNotion if enabled in settings
+      if (this.settings!.moduloNotion) {
+          this.moduloNotion?.load(); // Use load method which includes command registration
       }
 
     // --- Add Command for ModuloGTDv2 ---
@@ -338,9 +345,19 @@ export default class ManagementPlugin extends Plugin {
 
     if (this.settings!.taskExecutionNavigatorModule) { // Added non-null assertion
       this.taskExecutionNavigatorModule?.activate();
-  } else {
-      this.taskExecutionNavigatorModule?.deactivate();
-  }
+    } else {
+        this.taskExecutionNavigatorModule?.deactivate();
+    }
+    // Apply ModuloNotion activation/deactivation
+    if (this.settings!.moduloNotion) {
+        if (!this.moduloNotion?.isLoaded) { // Load only if not already loaded
+            this.moduloNotion?.load();
+        }
+    } else {
+        if (this.moduloNotion?.isLoaded) { // Unload only if currently loaded
+            this.moduloNotion?.unload();
+        }
+    }
 
     //this.moduloTerceros?.activate(this);
   }
@@ -355,6 +372,9 @@ export default class ManagementPlugin extends Plugin {
       if (this.taskExecutionNavigatorModule) {
         this.taskExecutionNavigatorModule.deactivate();
     }
+    // Unload ModuloNotion
+    this.moduloNotion?.unload();
+
     delete (this.app as any).gpManagement;
     return Promise.resolve();
   }

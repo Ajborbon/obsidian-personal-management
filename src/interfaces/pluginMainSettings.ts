@@ -1,4 +1,6 @@
 // src/interfaces/PluginMainSettings.ts
+// Note: NotionModuleSettings is defined in its own file now, no need to import it here.
+// We import it where it's used (e.g., settingsTab.ts, main.ts)
 
 export interface PluginMainSettings {
     moduloRegistroTiempo: boolean,
@@ -10,6 +12,7 @@ export interface PluginMainSettings {
     moduloDataviewQueries: boolean;
     taskExecutionNavigatorModule: boolean;
     moduloGTDv2: boolean; // Added setting for the new GTD v2 module
+    moduloNotion: boolean; // <-- Add setting for Notion module
     // Archivos de campos
     file_camposCentral: string,
 
@@ -127,4 +130,7 @@ export interface PluginMainSettings {
     indice_Reflexiones: string,
     folder_RegistrosAkashikos: string,
     indice_RegistrosAkashikos: string,
+
+    // Notion specific settings (nested object)
+    notionSettings: import("../modules/moduloNotion/settings").NotionModuleSettings; // Use inline import for clarity
     }
