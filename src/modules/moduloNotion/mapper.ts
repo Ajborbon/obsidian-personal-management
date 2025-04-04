@@ -1,8 +1,20 @@
 import ManagementPlugin from "../../main"; // Adjust path as needed
-import type { CreatePageParameters, DatePropertyItemObjectResponse } from "@notionhq/client/build/src/api-endpoints"; // Import DatePropertyItemObjectResponse
+import type {
+    CreatePageParameters,
+    DatePropertyItemObjectResponse,
+    AppendBlockChildrenParameters,
+    PageObjectResponse, // Import PageObjectResponse for properties
+    BlockObjectResponse, // Import BlockObjectResponse for blocks
+    PartialBlockObjectResponse, // Import PartialBlockObjectResponse
+    RichTextItemResponse // Import RichTextItemResponse
+} from "@notionhq/client/build/src/api-endpoints";
 
-// Type alias for Notion properties object
-type NotionProperties = CreatePageParameters["properties"];
+// Type alias for Notion properties object (for sending)
+type NotionPropertiesSend = CreatePageParameters["properties"];
+// Type alias for Notion properties object (received)
+type NotionPropertiesReceive = PageObjectResponse["properties"];
+// Type alias for Notion blocks array
+export type NotionBlocks = AppendBlockChildrenParameters["children"]; // <-- Added export
 
 export class NotionMapper {
     plugin: ManagementPlugin;
@@ -12,9 +24,11 @@ export class NotionMapper {
         console.log("NotionMapper: Constructor called");
     }
 
+    // --- Mapping Obsidian Frontmatter -> Notion Properties ---
+
     // --- Mapping for "Campañas" Database ---
-    mapToCampaignProperties(noteTitle: string, frontmatter: any, noteContent: string): NotionProperties {
-        const properties: NotionProperties = {};
+    mapToCampaignProperties(noteTitle: string, frontmatter: any, noteContent: string): NotionPropertiesSend {
+        const properties: NotionPropertiesSend = {};
 
         // 1. nombre (Title) - Use note title as default, allow override from frontmatter
         properties['nombre'] = {
@@ -71,8 +85,8 @@ export class NotionMapper {
     }
 
     // --- Mapping for "Entregables" Database ---
-    mapToDeliverableProperties(noteTitle: string, frontmatter: any, noteContent: string): NotionProperties {
-        const properties: NotionProperties = {};
+    mapToDeliverableProperties(noteTitle: string, frontmatter: any, noteContent: string): NotionPropertiesSend {
+        const properties: NotionPropertiesSend = {};
 
         // 1. tarea (Title)
         properties['tarea'] = {
@@ -164,26 +178,45 @@ export class NotionMapper {
      * @returns ISO date string (YYYY-MM-DD) or null if invalid.
      */
     private formatDate(dateInput: any): string | null {
-        // ... (formatDate implementation remains the same) ...
         if (!dateInput) return null;
 
-        // Basic date parsing (adjust as needed)
         try {
-            let date: Date | null = null;
+            let dateStr = '';
             if (dateInput instanceof Date) {
-                date = dateInput;
-            } else if (typeof dateInput === 'string' || typeof dateInput === 'number') {
-                 // Attempt to parse common formats
-                 date = new Date(dateInput);
+                // If it's already a Date object, format it directly using UTC methods
+                const year = dateInput.getUTCFullYear();
+                const month = (dateInput.getUTCMonth() + 1).toString().padStart(2, '0');
+                const day = dateInput.getUTCDate().toString().padStart(2, '0');
+                return `${year}-${month}-${day}`;
+            } else if (typeof dateInput === 'string') {
+                dateStr = dateInput.trim();
+                // Check if it's already in YYYY-MM-DD format
+                if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+                    // Assume it's correct and pass it through.
+                    // We treat YYYY-MM-DD strings as representing the date in UTC.
+                    return dateStr;
+                }
+                // If not YYYY-MM-DD, try parsing by appending UTC time.
+                // This treats the input date string as UTC midnight.
+                const date = new Date(dateStr + 'T00:00:00Z');
+                 if (date && !isNaN(date.getTime())) {
+                    const year = date.getUTCFullYear();
+                    const month = (date.getUTCMonth() + 1).toString().padStart(2, '0');
+                    const day = date.getUTCDate().toString().padStart(2, '0');
+                    return `${year}-${month}-${day}`;
+                 }
+
+            } else if (typeof dateInput === 'number') {
+                 // Assuming it's a timestamp, create Date object and use UTC methods
+                 const date = new Date(dateInput);
+                 if (date && !isNaN(date.getTime())) {
+                    const year = date.getUTCFullYear();
+                    const month = (date.getUTCMonth() + 1).toString().padStart(2, '0');
+                    const day = date.getUTCDate().toString().padStart(2, '0');
+                    return `${year}-${month}-${day}`;
+                 }
             }
 
-            if (date && !isNaN(date.getTime())) {
-                 // Format to YYYY-MM-DD
-                 const year = date.getFullYear();
-                 const month = (date.getMonth() + 1).toString().padStart(2, '0');
-                 const day = date.getDate().toString().padStart(2, '0');
-                 return `${year}-${month}-${day}`;
-            }
         } catch (error) {
              console.error(`NotionMapper: Error formatting date: ${dateInput}`, error);
         }
@@ -197,5 +230,236 @@ export class NotionMapper {
      */
     private isDateProperty(prop: any): prop is { date: { start: string; end?: string | null } } {
         return typeof prop === 'object' && prop !== null && 'date' in prop && typeof prop.date === 'object' && prop.date !== null;
+    }
+
+    // --- Content Mapping ---
+
+    /**
+     * Converts Markdown content string into an array of Notion blocks.
+     * Basic implementation: Splits by double newline into paragraphs.
+     * @param markdownContent - The Markdown content of the note.
+     * @returns An array of Notion blocks.
+     */
+    mapContentToBlocks(markdownContent: string): NotionBlocks {
+        if (!markdownContent) {
+            return [];
+        }
+
+        const blocks: NotionBlocks = [];
+        const lines = markdownContent.split('\n'); // Split by single newline
+
+        for (const line of lines) {
+            const trimmedLine = line.trim();
+            if (trimmedLine === '') {
+                // Create an empty paragraph block for empty lines
+                blocks.push({
+                    object: 'block',
+                    type: 'paragraph',
+                    paragraph: {
+                        rich_text: [] // Empty rich_text array for empty line
+                    }
+                });
+            } else {
+                // Create a paragraph block with the line content
+                blocks.push({
+                    object: 'block',
+                    type: 'paragraph', // Keep only one 'type' property
+                    paragraph: {
+                        rich_text: [{
+                            type: 'text',
+                            text: {
+                                content: line, // Use the original line content, preserving leading/trailing spaces? Or trimmedLine? Let's use 'line' for now.
+                            },
+                        }],
+                    },
+                });
+            }
+        }
+        // Remove potential trailing empty block if the original text ended with newlines?
+        // Or keep it to represent the trailing newlines? Let's keep it for now.
+
+        console.log(`NotionMapper: Mapped content to ${blocks.length} blocks.`);
+        return blocks;
+    }
+
+
+    // --- Mapping Notion -> Obsidian ---
+
+    /**
+     * Converts an array of Notion blocks into a Markdown string.
+     * Basic implementation: Handles paragraphs.
+     * @param blocks - Array of Notion BlockObjectResponse or PartialBlockObjectResponse.
+     * @returns Markdown string representation.
+     */
+    mapNotionBlocksToMarkdown(blocks: (BlockObjectResponse | PartialBlockObjectResponse)[]): string {
+        let markdown = "";
+        for (const block of blocks) {
+            // Ensure it's a full block response before accessing type-specific properties
+            if (!('type' in block)) continue;
+
+            switch (block.type) {
+                case 'paragraph':
+                    const paragraphText = block.paragraph.rich_text.map(rt => rt.plain_text).join('');
+                    if (paragraphText.trim() === '') {
+                        // If the paragraph block is effectively empty, represent it as a single empty line
+                        markdown += "\n";
+                    } else {
+                        // Otherwise, add the text and a single newline
+                        markdown += paragraphText + "\n";
+                    }
+                    break;
+                // TODO: Add cases for other block types (headings, lists, code, etc.) preserving single newlines
+                // case 'heading_1':
+                //     markdown += `# ${block.heading_1.rich_text.map(rt => rt.plain_text).join('')}\n`; // Single newline
+                //     markdown += `# ${block.heading_1.rich_text.map(rt => rt.plain_text).join('')}\n\n`;
+                //     break;
+                // case 'bulleted_list_item':
+                //     markdown += `* ${block.bulleted_list_item.rich_text.map(rt => rt.plain_text).join('')}\n`; // Needs proper list handling
+                //     break;
+                default:
+                    // For unsupported blocks, maybe add a placeholder or log it
+                    console.warn(`NotionMapper: Unsupported block type "${block.type}" encountered during Markdown conversion.`);
+                    // Optionally add raw JSON as a comment or placeholder:
+                    // markdown += `<!-- Unsupported block type: ${block.type} -->\n\n`;
+                    break;
+            }
+        }
+        // Return the raw markdown, preserving leading/trailing newlines if they resulted from empty blocks
+        return markdown;
+    }
+
+    /**
+     * Converts Notion page properties into an Obsidian frontmatter object.
+     * @param notionProperties - The properties object from a Notion PageObjectResponse.
+     * @param databaseType - 'campaign' or 'deliverable' to determine mapping.
+     * @returns An object representing Obsidian frontmatter.
+     */
+    mapNotionPropertiesToFrontmatter(notionProperties: NotionPropertiesReceive, databaseType: 'campaign' | 'deliverable'): Record<string, any> {
+        const frontmatter: Record<string, any> = {};
+
+        if (databaseType === 'campaign') {
+            // Map Campaign properties back
+            this.mapNotionProperty(notionProperties, 'nombre', frontmatter, 'nombre', 'title');
+            this.mapNotionProperty(notionProperties, 'fechainicio', frontmatter, 'fechainicio', 'date');
+            this.mapNotionProperty(notionProperties, 'fechaFin', frontmatter, 'fechaFin', 'date'); // Note: Notion might store start/end in one prop
+            this.mapNotionProperty(notionProperties, 'prioridad', frontmatter, 'prioridad', 'select');
+            this.mapNotionProperty(notionProperties, 'indicadores', frontmatter, 'indicadores', 'url');
+            this.mapNotionProperty(notionProperties, 'estadoC', frontmatter, 'estadoC', 'status');
+
+        } else { // deliverable
+            // Map Deliverable properties back
+            this.mapNotionProperty(notionProperties, 'tarea', frontmatter, 'tarea', 'title');
+            this.mapNotionProperty(notionProperties, 'tipo', frontmatter, 'tipo', 'select');
+            this.mapNotionProperty(notionProperties, 'canales', frontmatter, 'canales', 'multi_select');
+            this.mapNotionProperty(notionProperties, 'estadoE', frontmatter, 'estadoE', 'status');
+            this.mapNotionProperty(notionProperties, 'prioridad', frontmatter, 'prioridad', 'select');
+            this.mapNotionProperty(notionProperties, 'publicacion', frontmatter, 'publicacion', 'date');
+            this.mapNotionProperty(notionProperties, 'piezaNube', frontmatter, 'piezaNube', 'url');
+            this.mapNotionProperty(notionProperties, 'urlCanva', frontmatter, 'urlCanva', 'url');
+            this.mapNotionProperty(notionProperties, 'hits', frontmatter, 'hits', 'number');
+            this.mapNotionProperty(notionProperties, 'pedidosAlCliente', frontmatter, 'pedidosAlCliente', 'rich_text');
+            this.mapNotionProperty(notionProperties, 'pendientesCliente', frontmatter, 'pendientesCliente', 'checkbox');
+            this.mapNotionProperty(notionProperties, 'proyecto', frontmatter, 'proyecto', 'relation');
+        }
+
+        console.log("NotionMapper: Mapped Notion Properties to Frontmatter:", frontmatter);
+        return frontmatter;
+    }
+
+    /**
+     * Helper to safely extract and map a single Notion property to a frontmatter key.
+     */
+    private mapNotionProperty(
+        notionProperties: NotionPropertiesReceive,
+        notionKey: string,
+        frontmatter: Record<string, any>,
+        fmKey: string,
+        notionType: NotionPropertiesReceive[string]['type']
+    ) {
+        const prop = notionProperties[notionKey];
+        if (!prop || prop.type !== notionType) {
+            // console.warn(`NotionMapper: Property "${notionKey}" not found or type mismatch (expected ${notionType}, got ${prop?.type}).`);
+            return; // Skip if property doesn't exist or type doesn't match
+        }
+
+        try {
+            switch (prop.type) {
+                case 'title':
+                    frontmatter[fmKey] = prop.title.map(rt => rt.plain_text).join('') || null;
+                    break;
+                case 'rich_text':
+                    frontmatter[fmKey] = prop.rich_text.map(rt => rt.plain_text).join('') || null;
+                    break;
+                case 'number':
+                    frontmatter[fmKey] = prop.number; // Can be null
+                    break;
+                case 'select':
+                    frontmatter[fmKey] = prop.select?.name || null;
+                    break;
+                case 'multi_select':
+                    frontmatter[fmKey] = prop.multi_select.map(s => s.name); // Array of strings
+                    break;
+                case 'status':
+                    frontmatter[fmKey] = prop.status?.name || null;
+                    break;
+                case 'date':
+                    // Return only the start date for simplicity, Notion might have start/end
+                    frontmatter[fmKey] = prop.date?.start || null;
+                    // If you need end date too, you might store it as a separate fm key or an object
+                    // if (prop.date?.end) frontmatter[`${fmKey}_end`] = prop.date.end;
+                    break;
+                case 'checkbox':
+                    frontmatter[fmKey] = prop.checkbox;
+                    break;
+                case 'url':
+                    frontmatter[fmKey] = prop.url; // Can be null
+                    break;
+                case 'relation':
+                    // Store array of related page IDs
+                    frontmatter[fmKey] = prop.relation.map(r => r.id);
+                    break;
+                // Add cases for other types as needed (email, phone_number, files, created_by, etc.)
+                default:
+                    console.warn(`NotionMapper: Unhandled Notion property type "${prop.type}" for key "${notionKey}".`);
+            }
+        } catch (error) {
+             console.error(`NotionMapper: Error mapping Notion property "${notionKey}" (type ${prop.type}) to frontmatter key "${fmKey}":`, error);
+        }
+    }
+
+    /**
+     * Returns a list of Obsidian frontmatter keys that are mapped to Notion properties
+     * for the specified database type.
+     * @param databaseType - 'campaign' or 'deliverable'.
+     * @returns Array of relevant frontmatter keys.
+     */
+    getMappedFrontmatterKeys(databaseType: 'campaign' | 'deliverable'): string[] {
+        if (databaseType === 'campaign') {
+            // Exclude 'nombre' as it maps to the filename, not frontmatter
+            return [
+                // 'nombre',
+                'fechainicio',
+                'fechaFin',
+                'prioridad',
+                'indicadores',
+                'estadoC'
+            ];
+        } else { // deliverable
+             // Exclude 'tarea' as it maps to the filename, not frontmatter
+            return [
+                // 'tarea',
+                'tipo',
+                'canales',
+                'estadoE',
+                'prioridad',
+                'publicacion',
+                'piezaNube',
+                'urlCanva',
+                'hits',
+                'pedidosAlCliente',
+                'pendientesCliente',
+                'proyecto'
+            ];
+        }
     }
 }

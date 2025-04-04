@@ -94,9 +94,10 @@
   "notionSettings": {
     "notionApiKey": "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",
     "campaignDbId": "1cba457fdf7581888ab1f25f15600f23",
-    "deliverableDbId": "1cba457fdf7581888ab1f25f15600f23",
+    "deliverableDbId": "1cba457fdf7581bf85bcde0fe6b7a8c9",
     "notionPublicDomain": "crezco360.notion.site",
-    "notionSubdomain": "crezco360"
+    "notionSubdomain": "crezco360",
+    "notionUser": "crezco360"
   },
   "titleDisplayMode": "alias",
   "folder_LecturaSesiones": "Subsistemas/Lectura/Sesiones de Lectura/Sesiones",
