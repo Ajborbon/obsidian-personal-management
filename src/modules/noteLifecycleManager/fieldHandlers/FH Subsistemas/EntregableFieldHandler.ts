@@ -37,24 +37,30 @@ export class EntregableFieldHandler extends NoteFieldHandler implements Entregab
             
             if (siAsunto) {
                 this.nota.asuntoDefinido = true; // Para que no ejecute la busqueda de Area Vida, Area de Interés, proyecto Q o GTD
-                
-                // Verificamos si existe un campo que comience con "NotionID-" en el frontmatter
-                let notionID = null;
-                
+
+                // Verificamos si existe un campo que comience con "NotionID-campaign" o exactamente "proyecto" en el frontmatter
+                let notionID: string | null = null; // Initialize notionID
+
                 for (const key in nota.frontmatter) {
-                    if (key.startsWith("NotionID-")) {
+                    if (key.startsWith("NotionID-campaign")) {
                         notionID = nota.frontmatter[key];
                         console.log(`Encontrado NotionID: ${notionID} con clave: ${key}`);
-                        break;
+                        break; // Exit loop once found
                     }
                 }
-                
-                // Si encontramos un NotionID, lo guardamos en el campo proyecto
+
+                // Fallback: If NotionID-campaign key wasn't found, check for "proyecto" key
+                if (notionID === null && nota.frontmatter && nota.frontmatter["proyecto"]) {
+                    notionID = nota.frontmatter["proyecto"];
+                    console.log(`Encontrado NotionID (fallback): ${notionID} con clave: proyecto`);
+                }
+
+                // Si encontramos un NotionID (ya sea de campaign o de proyecto), lo guardamos en el campo proyecto
                 if (notionID) {
-                    this.nota.proyecto = [notionID];
+                    this.nota.proyecto = [notionID]; // Aseguramos que sea un array
                     console.log(`Asignado NotionID al proyecto: ${notionID}`);
                 }
-                
+
                 let nivel;
                 switch (nota?.frontmatter?.type) { // La nota activa es una:
                     default:
