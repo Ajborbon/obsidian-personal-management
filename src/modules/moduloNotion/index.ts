@@ -413,37 +413,62 @@ export class ModuloNotion {
                  console.log(`ModuloNotion: Updated Obsidian frontmatter from Notion for ${targetFile.basename} (mapped keys only)`);
             });
 
-            // 2. Update Content (Preserving Sections)
+            // 2. Update Content (Extract Preserved Sections, Use Notion Content, Append Preserved)
+            console.log("ModuloNotion: Starting content update with extraction and append strategy...");
             const currentObsidianContent = await this.plugin.app.vault.read(targetFile);
             const currentContentStartIndex = currentObsidianContent.indexOf('---', currentObsidianContent.indexOf('---') + 3);
-            const currentBody = currentContentStartIndex !== -1
+            const originalObsidianBody = currentContentStartIndex !== -1
                 ? currentObsidianContent.substring(currentContentStartIndex + 3)
                 : currentObsidianContent;
 
-            const preservedSections: { [key: string]: string | null } = {
-                recursos: this.extractSection(currentBody, /^## Recursos\s*$/m),
-                tareas: this.extractSection(currentBody, /^## Tareas\s*$/m),
-                fin: this.extractSection(currentBody, /^# Fin\s*$/m),
-            };
-            const preservedDataviewBlocks = this.extractDataviewBlocks(currentBody);
+            // Extract preserved content (full sections including headers) using the refined helper
+            const preservedDataviewBlocks = this.extractDataviewBlocks(originalObsidianBody);
+            const preservedRecursosSection = this.extractSectionContent(originalObsidianBody, /^## Recursos/m);
+            const preservedTareasSection = this.extractSectionContent(originalObsidianBody, /^## Tareas/m);
+            const preservedFinSection = this.extractSectionContent(originalObsidianBody, /^# Fin/m);
 
-            // Safeguard: Ensure incoming Notion content doesn't have dataview blocks before appending preserved ones
-            notionMarkdown = notionMarkdown.replace(/```dataviewjs\s*[\s\S]*?```/gs, '');
-            console.log("ModuloNotion: Removed any potential dataviewjs blocks from incoming Notion markdown.");
+            console.log(`ModuloNotion: Extracted ${preservedDataviewBlocks.length} dataview blocks.`);
+            if (preservedRecursosSection) console.log("ModuloNotion: Extracted ## Recursos section."); else console.log("ModuloNotion: ## Recursos section not found.");
+            if (preservedTareasSection) console.log("ModuloNotion: Extracted ## Tareas section."); else console.log("ModuloNotion: ## Tareas section not found.");
+            if (preservedFinSection) console.log("ModuloNotion: Extracted # Fin section."); else console.log("ModuloNotion: # Fin section not found.");
 
-            let newBody = notionMarkdown.trim();
-            if (preservedSections.recursos !== null) newBody += "\n\n## Recursos\n" + preservedSections.recursos;
-            if (preservedSections.tareas !== null) newBody += "\n\n## Tareas\n" + preservedSections.tareas;
-            if (preservedDataviewBlocks.length > 0) newBody += "\n\n" + preservedDataviewBlocks.join("\n\n");
-            if (preservedSections.fin !== null) newBody += "\n\n# Fin\n" + preservedSections.fin;
+            // Get and clean Notion content
+            const cleanedNotionMarkdown = notionMarkdown.replace(/```dataviewjs\s*[\s\S]*?```/gs, '').trim();
+            console.log("ModuloNotion: Using cleaned Notion markdown as base content.");
 
-            const fileAfterFmUpdate = await this.plugin.app.vault.read(targetFile);
+            // Construct the new body by appending preserved parts carefully
+            const bodyParts: string[] = [cleanedNotionMarkdown]; // Start with cleaned Notion content
+
+            if (preservedDataviewBlocks.length > 0) {
+                // Add dataview blocks, ensuring separation
+                bodyParts.push(preservedDataviewBlocks.join("\n\n"));
+                console.log("ModuloNotion: Added preserved dataview blocks to parts array.");
+            }
+            if (preservedRecursosSection !== null) { // Check for null explicitly
+                bodyParts.push(preservedRecursosSection);
+                console.log("ModuloNotion: Added preserved ## Recursos section to parts array.");
+            }
+            if (preservedTareasSection !== null) { // Check for null explicitly
+                bodyParts.push(preservedTareasSection);
+                console.log("ModuloNotion: Added preserved ## Tareas section to parts array.");
+            }
+            if (preservedFinSection !== null) { // Check for null explicitly
+                bodyParts.push(preservedFinSection);
+                console.log("ModuloNotion: Added preserved # Fin section to parts array.");
+            }
+
+            // Join the parts with double newlines for separation, then trim final result
+            let finalBodyContent = bodyParts.join("\n\n").trim();
+
+            // Get updated frontmatter section
+            const fileAfterFmUpdate = await this.plugin.app.vault.read(targetFile); // Read again after FM update
             const updatedFmStartIndex = fileAfterFmUpdate.indexOf('---', fileAfterFmUpdate.indexOf('---') + 3);
             const updatedFrontmatterSection = updatedFmStartIndex !== -1
                 ? fileAfterFmUpdate.substring(0, updatedFmStartIndex + 3)
-                : "---\n---";
+                 : "---\n---";
 
-            const finalContent = updatedFrontmatterSection + "\n" + newBody.trim() + "\n";
+            // Use 'finalBodyContent' instead of 'newBody'
+            const finalContent = updatedFrontmatterSection + "\n" + finalBodyContent.trim() + "\n";
 
             await this.plugin.app.vault.modify(targetFile, finalContent);
 
@@ -457,6 +482,8 @@ export class ModuloNotion {
     }
 
     // --- Helper functions for section extraction ---
+
+    // Extracts the content *under* a heading
     extractSection(content: string, regex: RegExp): string | null {
         const match = content.match(regex);
         if (!match || match.index === undefined) return null;
@@ -467,6 +494,42 @@ export class ModuloNotion {
             : content.length;
         return content.substring(sectionStartMarkerEnd, sectionEndIndex).trim();
     }
+
+    // Extracts the *entire* section including the heading line
+    extractSectionContent(content: string, sectionHeadingRegex: RegExp): string | null {
+        const match = content.match(sectionHeadingRegex); // Find the start of the section (e.g., /^## Recursos/m)
+        if (!match || match.index === undefined) {
+            // console.log(`extractSectionContent: Heading not found for regex: ${sectionHeadingRegex}`);
+            return null; // Section heading not found
+        }
+
+        const sectionStartIndex = match.index;
+        // Find the index right after the starting heading's line break
+        const headingLineEndMatch = content.substring(sectionStartIndex).match(/\r?\n/);
+        const contentStartIndex = headingLineEndMatch ? sectionStartIndex + headingLineEndMatch[0].length + (headingLineEndMatch.index ?? 0) : content.length;
+
+        // Find the start index of the *next* heading (# or ##) or the # Fin marker
+        // Search from the position *after* the current section's heading line ends
+        const nextMarkerMatch = content.substring(contentStartIndex).match(/^# |^## |^# Fin/m);
+
+        let sectionEndIndex;
+        if (nextMarkerMatch?.index !== undefined) {
+            // Found the start of the next marker; end the current section right before it.
+            // The index is relative to the substring starting at contentStartIndex.
+            sectionEndIndex = contentStartIndex + nextMarkerMatch.index;
+            // console.log(`extractSectionContent: Found next marker for ${sectionHeadingRegex} at index ${sectionEndIndex}`);
+        } else {
+            // No subsequent marker found; the section goes to the end of the string.
+            sectionEndIndex = content.length;
+            // console.log(`extractSectionContent: No next marker found for ${sectionHeadingRegex}. Section ends at content length ${sectionEndIndex}`);
+        }
+
+        // Extract the full section from its heading start to the calculated end.
+        const extracted = content.slice(sectionStartIndex, sectionEndIndex).trimEnd(); // Use slice for safety
+        // console.log(`extractSectionContent: Extracted for ${sectionHeadingRegex}: \n---\n${extracted}\n---`);
+        return extracted;
+    }
+
 
     extractDataviewBlocks(content: string): string[] {
         const blocks: string[] = [];
