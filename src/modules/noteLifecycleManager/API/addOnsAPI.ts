@@ -580,11 +580,11 @@ mostrarEnlacesSincronizados(dv, pagina) {
         // Recopilamos todos los enlaces relevantes
         const enlaces = [];
         
-        // 1. Enlaces que comienzan con "link-" (Notion)
+        // 1. Enlaces que comienzan con "link-" o "NotionLink-" (Notion)
         Object.entries(meta)
-            .filter(([key, value]) => key.startsWith("link-") && isValidUrl(value))
+            .filter(([key, value]) => (key.startsWith("link-") || key.startsWith("NotionLink-")) && isValidUrl(value))
             .forEach(([key, value]) => enlaces.push({
-                label: "Notion",
+                label: "Notion", // Keeping label generic as "Notion" for both types
                 url: value
             }));
         
