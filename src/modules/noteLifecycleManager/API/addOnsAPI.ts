@@ -1773,270 +1773,276 @@ agregarTareasAContenedor(tareas, contenedor, dv, pagina) {
 }
 
 
-/**
- * Obtiene y procesa notas vinculadas a una nota actual, con opciones de ordenamiento
- * @param params Objeto con parámetros como notaActualPath y sortOrder
- * @returns Objeto con la tabla HTML y metadatos
- */
+async _findAllDescendantPaths(startPath, allFilesMetadataCache, visitedPaths = new Set()) {
+    // Evitar ciclos infinitos
+    if (visitedPaths.has(startPath)) {
+        return new Set();
+    }
+    visitedPaths.add(startPath);
+
+    const descendants = new Set([startPath]); // Incluir el nodo inicial
+
+    // Iterar sobre todos los metadatos cacheados
+    for (const [filePath, metadata] of Object.entries(allFilesMetadataCache)) {
+        // Solo nos interesan los Entregables con 'asunto'
+        if (!metadata || metadata.typeName !== "Entregable" || !metadata.asunto) {
+            continue;
+        }
+
+        // Comprobar si este Entregable apunta al 'startPath' actual
+        let linksToStartPath = false;
+        const asuntos = Array.isArray(metadata.asunto) ? metadata.asunto : [metadata.asunto];
+
+        for (const asunto of asuntos) {
+            let referencedPath = null;
+            try {
+                if (asunto && typeof asunto === 'object' && asunto.path) {
+                    referencedPath = asunto.path;
+                } else if (typeof asunto === 'string') {
+                    // Intentar resolver wikilinks [[path|alias]] o [[path]]
+                    const wikiLinkMatch = asunto.match(/\[\[(.*?)(?:\|.*?)?\]\]/);
+                    if (wikiLinkMatch) {
+                        const linkTarget = wikiLinkMatch[1];
+                        // Usar la API de Obsidian para obtener el TFile correspondiente al link
+                        const targetFile = app.metadataCache.getFirstLinkpathDest(linkTarget, filePath); // filePath es el 'sourcePath'
+                        if (targetFile) {
+                            referencedPath = targetFile.path;
+                        } else {
+                             // Fallback si no se resuelve: comparar directamente el texto del link
+                             const startNoteFile = app.vault.getAbstractFileByPath(startPath);
+                             if (linkTarget === startPath || (startNoteFile && linkTarget === startNoteFile.basename)) {
+                                 referencedPath = startPath;
+                             }
+                        }
+                    } else {
+                         // Si no es wikilink, podría ser un path directo o nombre (menos fiable)
+                         const startNoteFile = app.vault.getAbstractFileByPath(startPath);
+                         if (asunto === startPath || (startNoteFile && asunto === startNoteFile.basename)) {
+                             referencedPath = startPath;
+                         }
+                    }
+                }
+            } catch (e) {
+                console.warn(`[WARN] Error resolviendo asunto '${JSON.stringify(asunto)}' en ${filePath}: ${e.message}`);
+            }
+
+            // Si el path referenciado coincide con el startPath actual
+            if (referencedPath === startPath) {
+                linksToStartPath = true;
+                break; // Encontramos un enlace, no necesitamos seguir buscando en los asuntos de esta nota
+            }
+        }
+
+        // Si esta nota enlaza a startPath, buscar recursivamente sus descendientes
+        if (linksToStartPath) {
+            // Llamada recursiva para encontrar los descendientes de este hijo
+            // Pasamos una copia del set 'visitedPaths' para evitar problemas entre ramas
+            const childDescendants = await this._findAllDescendantPaths(filePath, allFilesMetadataCache, new Set(visitedPaths));
+            // Añadir todos los descendientes encontrados al conjunto principal
+            childDescendants.forEach(desc => descendants.add(desc));
+        }
+    }
+
+    return descendants;
+}
+
+// Modificación de obtenerNotasVinculadas
 async obtenerNotasVinculadas(params) {
-    console.log("[DEBUG] Iniciando obtenerNotasVinculadas con parámetros:", params);
-    
+    console.log("[DEBUG] Iniciando obtenerNotasVinculadas v2 con parámetros:", params);
+
     try {
-        // Extraer parámetros
         const { notaActualPath, sortOrder = "hits" } = params;
-        console.log("[DEBUG] notaActualPath:", notaActualPath);
-        console.log("[DEBUG] sortOrder:", sortOrder);
-        
-        if (!notaActualPath) {
-            console.error("[ERROR] No se proporcionó la ruta de la nota actual");
-            return { error: "No se proporcionó la ruta de la nota actual" };
-        }
-        
-        // Obtener la nota actual
-        const currentNote = app.vault.getAbstractFileByPath(notaActualPath);
-        console.log("[DEBUG] currentNote:", currentNote?.path || "No encontrada");
-        
-        if (!currentNote) {
-            console.error("[ERROR] No se pudo encontrar la nota actual en la ruta:", notaActualPath);
-            return { error: "No se pudo encontrar la nota actual" };
-        }
-        
-        // Calcular la fecha actual (inicio del día)
+        if (!notaActualPath) return { error: "No se proporcionó la ruta de la nota actual" };
+
+        const currentNoteFile = app.vault.getAbstractFileByPath(notaActualPath);
+        if (!currentNoteFile) return { error: "No se pudo encontrar la nota actual" };
+
         const today = window.moment().startOf("day");
-        console.log("[DEBUG] Fecha actual:", today.format("YYYY-MM-DD"));
-        
-        // Filtrar notas vinculadas
         const allFiles = app.vault.getMarkdownFiles();
-        console.log("[DEBUG] Total de archivos markdown:", allFiles.length);
-        
-        let linkedNotes = [];
-        let processingErrors = 0;
-        let notesWithAsunto = 0;
-        let notesTypeEntregable = 0;
-        let possibleMatches = 0;
-        
+
+        // 1. Pre-calcular metadatos para eficiencia
+        console.log("[DEBUG] Pre-calculando metadatos...");
+        const allFilesMetadataCache = {};
         for (const file of allFiles) {
             try {
-                console.log("[DEBUG] Procesando archivo:", file.path);
-                
-                const metadata = app.metadataCache.getFileCache(file)?.frontmatter;
-                
-                if (!metadata) {
-                    console.log("[DEBUG] Archivo sin frontmatter:", file.path);
-                    continue;
-                }
-                
-                console.log("[DEBUG] Metadata typeName:", metadata.typeName);
-                console.log("[DEBUG] Metadata asunto:", JSON.stringify(metadata.asunto));
-                
-                if (metadata.typeName !== "Entregable") {
-                    console.log("[DEBUG] Archivo no es un Entregable, se salta");
-                    continue;
-                }
-                
+                allFilesMetadataCache[file.path] = app.metadataCache.getFileCache(file)?.frontmatter;
+            } catch (e) {
+                console.warn(`[WARN] Error al obtener metadatos para ${file.path}: ${e.message}`);
+                allFilesMetadataCache[file.path] = null; // Marcar como nulo si hay error
+            }
+        }
+        console.log("[DEBUG] Metadatos pre-calculados.");
+
+
+        // 2. Encontrar todos los paths válidos (nota actual y sus descendientes Entregable)
+        console.log("[DEBUG] Buscando todos los descendientes de:", notaActualPath);
+        const validParentPaths = await this._findAllDescendantPaths(notaActualPath, allFilesMetadataCache);
+        console.log("[DEBUG] Paths válidos encontrados:", Array.from(validParentPaths));
+
+        let linkedNotes = [];
+        let processingErrors = 0;
+        let notesTypeEntregable = 0;
+        let notesWithAsunto = 0;
+        let linkedMatches = 0;
+
+        // 3. Iterar sobre los metadatos cacheados
+        console.log("[DEBUG] Iterando sobre metadatos para encontrar notas vinculadas...");
+        for (const [filePath, metadata] of Object.entries(allFilesMetadataCache)) {
+            try {
+                if (!metadata) continue; // Saltar si hubo error al leer metadatos
+
+                // Solo procesar Entregables con 'asunto'
+                if (metadata.typeName !== "Entregable") continue;
                 notesTypeEntregable++;
-                
-                if (!metadata.asunto) {
-                    console.log("[DEBUG] Entregable sin asunto, se salta");
-                    continue;
-                }
-                
+                if (!metadata.asunto) continue;
                 notesWithAsunto++;
-                
-                // Verificar si esta nota hace referencia a la nota actual
-                let isLinked = false;
-                
-                console.log("[DEBUG] Comprobando si referencia a la nota actual:", notaActualPath);
-                console.log("[DEBUG] Tipo de asunto:", typeof metadata.asunto);
-                
-                if (Array.isArray(metadata.asunto)) {
-                    console.log("[DEBUG] asunto es un array con", metadata.asunto.length, "elementos");
-                    
-                    // Para cada elemento en el array asunto
-                    for (const asunto of metadata.asunto) {
-                        console.log("[DEBUG] Elemento asunto:", JSON.stringify(asunto));
-                        
+
+                // 4. Comprobar si enlaza a CUALQUIERA de los paths válidos
+                let isLinkedToValidParent = false;
+                const asuntos = Array.isArray(metadata.asunto) ? metadata.asunto : [metadata.asunto];
+
+                for (const asunto of asuntos) {
+                    let referencedPath = null;
+                    try {
                         if (asunto && typeof asunto === 'object' && asunto.path) {
-                            console.log("[DEBUG] asunto tiene path:", asunto.path);
-                            console.log("[DEBUG] ¿Coincide con notaActualPath?", asunto.path === notaActualPath);
-                            
-                            if (asunto.path === notaActualPath) {
-                                isLinked = true;
-                                possibleMatches++;
-                                console.log("[DEBUG] ¡COINCIDENCIA ENCONTRADA en path!");
-                                break;
-                            }
+                            referencedPath = asunto.path;
                         } else if (typeof asunto === 'string') {
-                            console.log("[DEBUG] asunto es string:", asunto);
-                            console.log("[DEBUG] ¿Incluye notaActualPath?", asunto.includes(notaActualPath));
-                            
-                            if (asunto.includes(notaActualPath)) {
-                                isLinked = true;
-                                possibleMatches++;
-                                console.log("[DEBUG] ¡COINCIDENCIA ENCONTRADA en string!");
-                                break;
-                            }
-                            
-                            // También buscar en el contenido del enlace wiki
-                            const wikiLinkMatch = asunto.match(/\[\[(.*?)(?:\|(.*?))?\]\]/);
+                            const wikiLinkMatch = asunto.match(/\[\[(.*?)(?:\|.*?)?\]\]/);
                             if (wikiLinkMatch) {
-                                const linkPath = wikiLinkMatch[1];
-                                console.log("[DEBUG] Detectado enlace wiki, path:", linkPath);
-                                
-                                if (linkPath === currentNote.basename || linkPath === notaActualPath) {
-                                    isLinked = true;
-                                    possibleMatches++;
-                                    console.log("[DEBUG] ¡COINCIDENCIA ENCONTRADA en wikilink!");
-                                    break;
+                                const linkTarget = wikiLinkMatch[1];
+                                const targetFile = app.metadataCache.getFirstLinkpathDest(linkTarget, filePath);
+                                if (targetFile) {
+                                    referencedPath = targetFile.path;
+                                } else {
+                                     // Fallback: Comprobar si el texto del link coincide con algún path válido
+                                     if (validParentPaths.has(linkTarget)) {
+                                         referencedPath = linkTarget;
+                                     } else {
+                                         // Comprobar si coincide con el basename de algún path válido
+                                         for (const validPath of validParentPaths) {
+                                             const validFile = app.vault.getAbstractFileByPath(validPath);
+                                             if (validFile && linkTarget === validFile.basename) {
+                                                 referencedPath = validPath;
+                                                 break;
+                                             }
+                                         }
+                                     }
                                 }
+                            } else {
+                                 // Si no es wikilink, comprobar si es un path válido directamente
+                                 if (validParentPaths.has(asunto)) {
+                                     referencedPath = asunto;
+                                 } else {
+                                     // Comprobar si coincide con el basename de algún path válido
+                                     for (const validPath of validParentPaths) {
+                                         const validFile = app.vault.getAbstractFileByPath(validPath);
+                                         if (validFile && asunto === validFile.basename) {
+                                             referencedPath = validPath;
+                                             break;
+                                         }
+                                     }
+                                 }
                             }
                         }
+                    } catch (e) {
+                         console.warn(`[WARN] Error resolviendo asunto '${JSON.stringify(asunto)}' en ${filePath}: ${e.message}`);
                     }
-                } else if (typeof metadata.asunto === 'object' && metadata.asunto.path) {
-                    console.log("[DEBUG] asunto es un objeto con path:", metadata.asunto.path);
-                    console.log("[DEBUG] ¿Coincide con notaActualPath?", metadata.asunto.path === notaActualPath);
-                    
-                    if (metadata.asunto.path === notaActualPath) {
-                        isLinked = true;
-                        possibleMatches++;
-                        console.log("[DEBUG] ¡COINCIDENCIA ENCONTRADA en objeto!");
-                    }
-                } else if (typeof metadata.asunto === 'string') {
-                    console.log("[DEBUG] asunto es un string simple:", metadata.asunto);
-                    console.log("[DEBUG] ¿Incluye notaActualPath?", metadata.asunto.includes(notaActualPath));
-                    
-                    if (metadata.asunto.includes(notaActualPath)) {
-                        isLinked = true;
-                        possibleMatches++;
-                        console.log("[DEBUG] ¡COINCIDENCIA ENCONTRADA en string simple!");
-                    }
-                    
-                    // También buscar en el contenido del enlace wiki
-                    const wikiLinkMatch = metadata.asunto.match(/\[\[(.*?)(?:\|(.*?))?\]\]/);
-                    if (wikiLinkMatch) {
-                        const linkPath = wikiLinkMatch[1];
-                        console.log("[DEBUG] Detectado enlace wiki en string simple, path:", linkPath);
-                        
-                        // Comparar tanto con el nombre de archivo como con la ruta
-                        const matchesPath = linkPath === notaActualPath;
-                        const matchesBasename = linkPath === currentNote.basename;
-                        
-                        console.log("[DEBUG] ¿Coincide con ruta completa?", matchesPath);
-                        console.log("[DEBUG] ¿Coincide con nombre de archivo?", matchesBasename);
-                        
-                        if (matchesPath || matchesBasename) {
-                            isLinked = true;
-                            possibleMatches++;
-                            console.log("[DEBUG] ¡COINCIDENCIA ENCONTRADA en wikilink simple!");
-                        }
+
+
+                    // Si el path referenciado está en nuestro conjunto de padres válidos
+                    if (referencedPath && validParentPaths.has(referencedPath)) {
+                        isLinkedToValidParent = true;
+                        break; // Encontramos un enlace válido, no necesitamos seguir buscando
                     }
                 }
-                
-                if (isLinked) {
-                    console.log("[DEBUG] ✅ Nota vinculada encontrada:", file.path);
-                    
-                    // Procesar la nota
+
+
+                if (isLinkedToValidParent) {
+                    linkedMatches++;
+                    console.log("[DEBUG] ✅ Nota vinculada encontrada:", filePath);
+
+                    // Procesar la nota (hits, alias, estado, diferenciaDias)
                     let hits = parseFloat(metadata.hits);
-                    if (isNaN(hits)) {
-                        console.log("[DEBUG] hits no es un número, estableciendo a 0");
-                        hits = 0;
-                    }
-                    
-                    const alias = metadata.aliases?.[0] || file.basename;
+                    if (isNaN(hits)) hits = 0;
+
+                    const fileTFile = app.vault.getAbstractFileByPath(filePath); // Obtener TFile
+                    const alias = metadata.aliases?.[0] || (fileTFile ? fileTFile.basename : filePath); // Usar basename si TFile existe
                     const estado = metadata.estado || "Sin estado";
-                    
+
                     let diferenciaDias = null;
                     if (metadata.publicacion) {
-                        console.log("[DEBUG] Tiene fecha de publicación:", metadata.publicacion);
                         const pubDate = window.moment(metadata.publicacion.toString(), "YYYY-MM-DD").startOf("day");
-                        
                         if (pubDate.isValid()) {
                             diferenciaDias = pubDate.diff(today, "days");
-                            console.log("[DEBUG] diferenciaDias calculado:", diferenciaDias);
-                        } else {
-                            console.log("[DEBUG] La fecha de publicación no es válida");
                         }
                     }
-                    
-                    linkedNotes.push({ 
-                        alias, 
-                        hits, 
-                        estado, 
+
+                    linkedNotes.push({
+                        alias,
+                        hits,
+                        estado,
                         diferenciaDias,
-                        file
+                        file: fileTFile // Guardar el TFile para usar en la tabla
                     });
-                    
-                    console.log("[DEBUG] Nota añadida al resultado con alias:", alias);
-                } else {
-                    console.log("[DEBUG] No está vinculada, se omite");
                 }
             } catch (error) {
                 processingErrors++;
-                console.error(`[ERROR] Error procesando archivo ${file.path}:`, error);
+                console.error(`[ERROR] Error procesando archivo ${filePath}:`, error);
             }
         }
-        
-        console.log(`[DEBUG] Proceso completado. Notas vinculadas encontradas: ${linkedNotes.length}`);
-        console.log(`[DEBUG] Estadísticas de procesamiento:`);
+
+        console.log(`[DEBUG] Proceso v2 completado. Notas vinculadas encontradas: ${linkedNotes.length}`);
+        console.log(`[DEBUG] Estadísticas v2:`);
         console.log(`[DEBUG] - Total archivos procesados: ${allFiles.length}`);
         console.log(`[DEBUG] - Notas tipo Entregable: ${notesTypeEntregable}`);
         console.log(`[DEBUG] - Notas con asunto: ${notesWithAsunto}`);
-        console.log(`[DEBUG] - Posibles coincidencias: ${possibleMatches}`);
+        console.log(`[DEBUG] - Coincidencias vinculadas: ${linkedMatches}`);
         console.log(`[DEBUG] - Errores de procesamiento: ${processingErrors}`);
-        
+
         if (linkedNotes.length === 0) {
-            console.log("[DEBUG] No se encontraron notas vinculadas");
-            
-            // Crear mensaje de información
             const infoElement = document.createElement("div");
-            infoElement.innerHTML = `<p>No se encontraron entregables vinculados a esta nota.</p>
-                                     <p><small>Estadísticas: ${notesTypeEntregable} entregables procesados, 
-                                     ${notesWithAsunto} con asunto, ${possibleMatches} posibles coincidencias.</small></p>`;
-            
-            return {
-                tablaElement: infoElement,
-                totalNotas: 0,
-                totalHits: 0
-            };
+            infoElement.innerHTML = `<p>No se encontraron entregables vinculados a esta nota o sus descendientes.</p>
+                                     <p><small>Estadísticas: ${notesTypeEntregable} entregables procesados, ${notesWithAsunto} con asunto, ${linkedMatches} coincidencias.</small></p>`;
+            return { tablaElement: infoElement, totalNotas: 0, totalHits: 0 };
         }
-        
-        // Ordenar notas según el criterio
+
+        // Ordenar notas
         console.log("[DEBUG] Ordenando notas por:", sortOrder);
-        
         if (sortOrder === "hits") {
             linkedNotes.sort((a, b) => b.hits - a.hits);
-        } else {
+        } else { // sortOrder === "time"
             const safeDiff = d => d == null ? Infinity : d;
             linkedNotes.sort((a, b) => {
-                if (a.estado === "🔵" && b.estado !== "🔵") return 1;
-                if (b.estado === "🔵" && a.estado !== "🔵") return -1;
+                // Priorizar no publicados (estado != '🔵')
+                const aPublicado = a.estado === "🔵";
+                const bPublicado = b.estado === "🔵";
+                if (aPublicado && !bPublicado) return 1;
+                if (!aPublicado && bPublicado) return -1;
+                // Si ambos son publicados o no publicados, ordenar por días
                 return safeDiff(a.diferenciaDias) - safeDiff(b.diferenciaDias);
             });
         }
-        
-        console.log("[DEBUG] Creando tabla HTML");
-        
+
         // Crear la tabla HTML
-        const tablaElement = this.crearTablaNotasVinculadas(linkedNotes);
-        
+        console.log("[DEBUG] Creando tabla HTML");
+        const tablaElement = this.crearTablaNotasVinculadas(linkedNotes); // Usar la función existente
+
         const totalHits = linkedNotes.reduce((sum, nota) => sum + nota.hits, 0);
         console.log("[DEBUG] Total hits:", totalHits);
-        
+
         return {
             tablaElement,
             totalNotas: linkedNotes.length,
             totalHits
         };
+
     } catch (error) {
-        console.error("[ERROR] Error en obtenerNotasVinculadas:", error);
-        
-        // Crear elemento de error
+        console.error("[ERROR] Error en obtenerNotasVinculadas v2:", error);
         const errorElement = document.createElement("div");
-        errorElement.innerHTML = `<p style="color: red;">Error al procesar notas vinculadas: ${error.message}</p>
+        errorElement.innerHTML = `<p style="color: red;">Error al procesar notas vinculadas (v2): ${error.message}</p>
                                  <p>Revisa la consola para más detalles.</p>`;
-        
-        return { 
-            error: "Error al procesar notas vinculadas: " + error.message,
+        return {
+            error: "Error al procesar notas vinculadas (v2): " + error.message,
             tablaElement: errorElement
         };
     }
