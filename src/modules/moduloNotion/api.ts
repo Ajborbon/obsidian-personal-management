@@ -11,7 +11,7 @@ import type {
 import { Notice, requestUrl } from "obsidian"; // Import requestUrl
 import type { RequestUrlParam, RequestUrlResponse } from "obsidian"; // Use type import for these
 import ManagementPlugin from "../../main"; // Adjust path as needed
-import type { NotionModuleSettings } from "./index"; // Import settings interface from index.ts
+import type { NotionModuleSettings } from "./settings"; // Import settings interface from settings.ts
 import type { NotionBlocks } from "./mapper"; // Import NotionBlocks type
 
 // Custom fetch implementation using Obsidian's requestUrl
@@ -336,6 +336,49 @@ export class NotionApi {
         console.log(`NotionApi: Total blocks fetched for ${blockId}: ${allBlocks.length}`);
         return allBlocks;
     }
+
+    // --- Comment Handling ---
+    /** Lists all comments for a given page ID, handling pagination */
+    async listPageComments(pageId: string): Promise<any[]> { // Using any[] for now, replace with actual CommentObjectResponse if available/needed
+        const client = this.getClient();
+        if (!client) throw new Error("NotionApi: Client not initialized.");
+        if (!pageId) throw new Error("NotionApi: Page ID is required to list comments.");
+
+        const allComments: any[] = [];
+        let hasMore = true;
+        let startCursor: string | undefined = undefined;
+
+        console.log(`NotionApi: Listing comments for page ${pageId}...`);
+        while (hasMore) {
+            try {
+                // The comments.list endpoint uses 'block_id' but for page comments, it's the page ID.
+                const params = { block_id: pageId, page_size: 100 }; // Max page size is 100
+                if (startCursor) {
+                    // @ts-ignore - Notion SDK types might not perfectly align if start_cursor isn't expected directly here, but API supports it.
+                    params.start_cursor = startCursor;
+                }
+                // @ts-ignore - Notion SDK might place comments under beta or specific namespace
+                const response = await client.comments.list(params);
+
+                allComments.push(...response.results);
+                hasMore = response.has_more;
+                startCursor = response.next_cursor ?? undefined;
+                // console.log(`NotionApi: Fetched ${response.results.length} comments, has_more: ${hasMore}`); // Verbose
+            } catch (error) {
+                // Handle specific error if comments endpoint isn't found (e.g., old SDK version)
+                if (error instanceof Error && error.message.includes("client.comments is not a function")) {
+                     console.error("NotionApi: client.comments.list is not available. Ensure Notion SDK version supports comments API or check initialization.");
+                     new Notice("Error: La versión del SDK de Notion no soporta comentarios o falló la inicialización.", 5000);
+                     throw new Error("Comments API not available in SDK.");
+                }
+                this.handleNotionError(error, `listing comments for page ${pageId}`);
+                throw error; // Stop listing if an error occurs
+            }
+        }
+        console.log(`NotionApi: Total comments fetched for page ${pageId}: ${allComments.length}`);
+        return allComments;
+    }
+
 
     // --- Error Handling ---
     private handleNotionError(error: unknown, context: string) {

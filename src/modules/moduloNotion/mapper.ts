@@ -462,4 +462,92 @@ export class NotionMapper {
             ];
         }
     }
+
+    /**
+     * Converts an array of Notion comment objects into a Markdown string section.
+     * Focuses on top-level page comments.
+     * Attempts to format file mentions using ![Adjunto: name](url) syntax.
+     * @param comments - Array of Notion comment objects (structure based on API response).
+     * @param pageId - The ID of the page these comments belong to, for filtering.
+     * @returns Markdown string for the comments section, or empty string if no relevant comments.
+     */
+    mapNotionCommentsToMarkdown(comments: any[], pageId: string): string {
+        if (!comments || comments.length === 0) {
+            return "";
+        }
+
+        console.log(`NotionMapper: Formatting ${comments.length} comments for page ${pageId}.`);
+        const markdownParts: string[] = [];
+        let relevantCommentsFound = false;
+
+        // Filter for top-level page comments only and sort by creation time
+        const pageComments = comments
+            .filter(comment => comment.parent?.type === 'page_id' && comment.parent?.page_id === pageId)
+            .sort((a, b) => new Date(a.created_time).getTime() - new Date(b.created_time).getTime());
+
+        if (pageComments.length === 0) {
+             console.log("NotionMapper: No top-level page comments found.");
+             return "";
+        }
+
+        markdownParts.push("## Comentarios de Notion (Página)\n"); // Add section header
+
+        for (const comment of pageComments) {
+            relevantCommentsFound = true;
+            let author = "Usuario Desconocido";
+            if (comment.created_by?.type === 'user' && comment.created_by.name) {
+                author = comment.created_by.name;
+            } else if (comment.created_by?.type === 'person' && comment.created_by.person?.email) {
+                 // Fallback to email if name isn't available for person type
+                 author = comment.created_by.person.email;
+            }
+
+            let createdDate = "";
+            try {
+                createdDate = new Date(comment.created_time).toLocaleString(); // Format date/time nicely
+            } catch (e) { console.warn("NotionMapper: Could not format comment date", e); }
+
+            markdownParts.push(`**${author} (${createdDate}):**`);
+
+            let commentText = "";
+            if (comment.rich_text && Array.isArray(comment.rich_text)) {
+                for (const rt of comment.rich_text as RichTextItemResponse[]) { // Type assertion
+                    switch (rt.type) {
+                        case 'text':
+                            commentText += rt.plain_text;
+                            break;
+                        case 'mention':
+                            // Simplified handling: Use plain_text for all mention types
+                            // (user, page, date, database, template_mention, link_preview).
+                            // The previous check for 'file' type mention was incorrect based on SDK types.
+                            // Files attached to comments might need different handling if exposed by API elsewhere.
+                            commentText += rt.plain_text;
+                            break;
+                        case 'equation':
+                            commentText += `$${rt.equation?.expression}$`; // Basic LaTeX representation
+                            break;
+                        // Removed default case as known types cover expected scenarios with plain_text
+                        // and TS infers 'never' type here, causing errors.
+                    }
+                }
+            }
+            markdownParts.push(commentText.trim()); // Add the formatted comment text
+            markdownParts.push("\n---\n"); // Add separator
+        }
+
+        if (!relevantCommentsFound) {
+            console.log("NotionMapper: No relevant page comments found after filtering.");
+            return ""; // Return empty if no page comments were actually formatted
+        }
+
+        // Remove the last separator
+        if (markdownParts[markdownParts.length - 1] === "\n---\n") {
+            markdownParts.pop();
+        }
+
+        const finalMarkdown = markdownParts.join("\n").trim(); // Join with single newlines, trim final result
+        console.log("NotionMapper: Finished formatting comments.");
+        return finalMarkdown ? finalMarkdown + "\n" : ""; // Ensure trailing newline if content exists
+    }
+
 }

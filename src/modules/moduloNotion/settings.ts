@@ -2,21 +2,28 @@ import ManagementPlugin from "../../main"; // Adjust path as needed
 import { PluginSettingTab, Setting, App } from "obsidian";
 // Removed import from index
 
-// Define and export the structure for Notion settings
-export interface NotionModuleSettings {
-    notionApiKey: string;
+// Define the structure for a single Notion connection
+export interface NotionConnection {
+    id: string; // Unique identifier (e.g., timestamp or UUID)
+    name: string; // User-defined name for the connection
     campaignDbId: string;
     deliverableDbId: string;
-    notionUser: string; // Use notionUser
-    // Add other settings as needed, e.g., default mappings, sync options
+    // Optional future fields: apiKey, subdomain
+}
+
+// Define and export the structure for Notion module settings
+export interface NotionModuleSettings {
+    notionApiKey: string; // Global API Key for now
+    notionUser: string; // Global User/Subdomain for now
+    connections: NotionConnection[]; // Array to hold multiple connections
+    // Add other global settings as needed
 }
 
 // Define the default values for Notion settings
 export const DEFAULT_NOTION_SETTINGS: NotionModuleSettings = {
     notionApiKey: '',
-    campaignDbId: '',
-    deliverableDbId: '',
     notionUser: '', // Use notionUser
+    connections: [], // Initialize connections as an empty array
 };
 
 export class NotionSettings {
@@ -71,28 +78,83 @@ export class NotionSettings {
                     await saveCallback();
                 }));
 
-        new Setting(containerEl)
-            .setName('ID Base de Datos Campañas')
-            .setDesc('El ID de tu base de datos de Notion para Campañas.')
-            .addText(text => text
-                .setPlaceholder('xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx')
-                .setValue(settings.campaignDbId)
-                .onChange(async (value) => {
-                    settings.campaignDbId = value.trim();
-                    await saveCallback();
-                }));
+        // --- Settings for individual connections ---
+        containerEl.createEl('h3', { text: 'Conexiones de Bases de Datos' });
 
-        new Setting(containerEl)
-            .setName('ID Base de Datos Entregables')
-            .setDesc('El ID de tu base de datos de Notion para Entregables.')
-            .addText(text => text
-                .setPlaceholder('yyyyyyyy-yyyy-yyyy-yyyy-yyyyyyyyyyyy')
-                .setValue(settings.deliverableDbId)
-                .onChange(async (value) => {
-                    settings.deliverableDbId = value.trim();
-                    await saveCallback();
-                }));
+        const connectionsContainer = containerEl.createDiv('notion-connections-container');
 
+        // Function to render the connections list (to be called initially and after changes)
+        const renderConnections = () => {
+            connectionsContainer.empty(); // Clear previous connections UI
+
+            if (!Array.isArray(settings.connections)) {
+                 console.warn("NotionSettings UI: settings.connections is not an array. Initializing.");
+                 settings.connections = []; // Initialize if it's not an array
+            }
+
+
+            settings.connections.forEach((connection, index) => {
+                const connectionEl = connectionsContainer.createDiv({ cls: 'notion-connection-item setting-item' }); // Add setting-item class for spacing
+
+                new Setting(connectionEl)
+                    .setName(`Conexión: ${connection.name || '(Sin nombre)'}`)
+                    .setDesc('Configura los detalles de esta conexión.')
+                    .addText(text => text
+                        .setPlaceholder('Nombre descriptivo (ej: Proyecto Cliente X)')
+                        .setValue(connection.name)
+                        .onChange(async (value) => {
+                            connection.name = value;
+                            await saveCallback();
+                            // No need to re-render just for name change display in header
+                        }))
+                    .addText(text => text
+                        .setPlaceholder('ID BD Campañas')
+                        .setValue(connection.campaignDbId)
+                        .onChange(async (value) => {
+                            connection.campaignDbId = value.trim();
+                            await saveCallback();
+                        }))
+                     .addText(text => text
+                         .setPlaceholder('ID BD Entregables')
+                         .setValue(connection.deliverableDbId)
+                         .onChange(async (value) => {
+                             connection.deliverableDbId = value.trim();
+                             await saveCallback();
+                         }))
+                    .addButton(button => button
+                        .setButtonText('Eliminar')
+                        .setWarning() // Make button red
+                        .onClick(async () => {
+                            settings.connections.splice(index, 1); // Remove connection from array
+                            await saveCallback();
+                            renderConnections(); // Re-render the connections list
+                        }));
+            });
+
+            // Add "Add New Connection" button below the list
+            new Setting(connectionsContainer)
+                .addButton(button => button
+                    .setButtonText('Añadir Nueva Conexión')
+                    .setCta() // Call to action style
+                    .onClick(async () => {
+                        const newConnection: NotionConnection = {
+                            id: Date.now().toString(), // Simple unique ID
+                            name: '',
+                            campaignDbId: '',
+                            deliverableDbId: ''
+                        };
+                        settings.connections.push(newConnection);
+                        await saveCallback();
+                        renderConnections(); // Re-render to show the new connection fields
+                    }));
+        };
+
+        // Initial rendering of connections
+        renderConnections();
+
+
+        // Keep the global User/Subdomain setting (moved below connections)
+        containerEl.createEl('h3', { text: 'Configuración Global' }); // Add header for global settings
         new Setting(containerEl)
             .setName('Usuario/Subdominio de Notion') // Keep UI text generic
             .setDesc('Tu subdominio público de Notion (ej: "crezco360" si tu URL pública es crezco360.notion.site). Necesario para generar los links públicos.')
